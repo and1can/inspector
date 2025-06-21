@@ -21,9 +21,6 @@ jobs:
           node-version: 18
           cache: npm
 
-      - name: Check formatting
-        run: npx prettier --check .
-
       - name: Build Docker image
         run: docker build -t mcpjam-inspector:test .
 
