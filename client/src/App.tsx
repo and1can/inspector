@@ -48,7 +48,7 @@ import { useConfigState } from "./hooks/useConfigState";
 import { loadOAuthTokens, handleOAuthDebugConnect } from "./services/oauth";
 
 // Utils
-import { getMCPProxyAddress } from "./utils/configUtils";
+import { getMCPProxyAddressAsync } from "./utils/configUtils";
 import { handleRootsChange, MCPHelperDependencies } from "./utils/mcpHelpers";
 
 import ElicitationModal from "./components/ElicitationModal";
@@ -687,9 +687,11 @@ const App = () => {
 
   // Fetch default environment
   useEffect(() => {
-    fetch(`${getMCPProxyAddress(configState.config)}/config`)
-      .then((response) => response.json())
-      .then((data) => {
+    const fetchConfig = async () => {
+      try {
+        const proxyAddress = await getMCPProxyAddressAsync(configState.config);
+        const response = await fetch(`${proxyAddress}/config`);
+        const data = await response.json();
         const currentConfig =
           serverState.serverConfigs[serverState.selectedServerName];
         if (currentConfig?.transportType === "stdio") {
@@ -701,10 +703,12 @@ const App = () => {
             } as StdioServerDefinition,
           }));
         }
-      })
-      .catch((error) =>
-        console.error("Error fetching default environment:", error),
-      );
+      } catch (error) {
+        console.error("Error fetching default environment:", error);
+      }
+    };
+
+    fetchConfig();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 

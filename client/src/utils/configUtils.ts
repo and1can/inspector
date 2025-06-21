@@ -4,12 +4,58 @@ import {
   DEFAULT_INSPECTOR_CONFIG,
 } from "@/lib/constants";
 
+// Cache for the actual port to avoid repeated fetches
+let cachedActualPort: string | null = null;
+
+// Function to fetch the actual port from the server
+const fetchActualPort = async (): Promise<string> => {
+  if (cachedActualPort !== null) {
+    return cachedActualPort;
+  }
+
+  // Try multiple ports starting from the default port
+  const startPort = parseInt(DEFAULT_MCP_PROXY_LISTEN_PORT);
+  const maxAttempts = 5; // Try 5 consecutive ports
+
+  for (let attempt = 0; attempt < maxAttempts; attempt++) {
+    const tryPort = startPort + attempt;
+    
+    try {
+      const response = await fetch(`${window.location.protocol}//${window.location.hostname}:${tryPort}/port`);
+      
+      if (response.ok) {
+        const data = await response.json();
+        const actualPort = data.port.toString();
+        cachedActualPort = actualPort;
+        return actualPort;
+      }
+    } catch (error) {
+      // Continue to next port
+      console.debug(`Port discovery: failed to connect to port ${tryPort}:`, error);
+    }
+  }
+
+  console.warn('Failed to discover actual port, using default:', DEFAULT_MCP_PROXY_LISTEN_PORT);
+  return DEFAULT_MCP_PROXY_LISTEN_PORT;
+};
+
 export const getMCPProxyAddress = (config: InspectorConfig): string => {
   const proxyFullAddress = config.MCP_PROXY_FULL_ADDRESS.value as string;
   if (proxyFullAddress) {
     return proxyFullAddress;
   }
   return `${window.location.protocol}//${window.location.hostname}:${DEFAULT_MCP_PROXY_LISTEN_PORT}`;
+};
+
+// New async version that fetches the actual port
+export const getMCPProxyAddressAsync = async (config: InspectorConfig): Promise<string> => {
+  const proxyFullAddress = config.MCP_PROXY_FULL_ADDRESS.value as string;
+  if (proxyFullAddress) {
+    return proxyFullAddress;
+  }
+  
+  const actualPort = await fetchActualPort();
+  return `${window.location.protocol}//${window.location.hostname}:${actualPort}`;
 };
 
 export const getMCPServerRequestTimeout = (config: InspectorConfig): number => {
