@@ -96,6 +96,9 @@ describe("AuthDebugger", () => {
     latestError: null,
     statusMessage: null,
     validationError: null,
+    resourceMetadata: null,
+    resourceMetadataError: null,
+    authServerUrl: null,
   };
 
   const defaultProps = {

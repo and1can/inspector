@@ -51,6 +51,9 @@ export const useConfigState = () => {
     latestError: null,
     statusMessage: null,
     validationError: null,
+    resourceMetadata: null,
+    resourceMetadataError: null,
+    authServerUrl: null,
   });
 
   // Helper function to update specific auth state properties
