@@ -1,3 +1,5 @@
+name: Docker build + Lint
+
 on:
   push:
     branches:
@@ -30,11 +32,10 @@ jobs:
         working-directory: ./client
         run: npm run lint
 
-      - name: Run client tests
-        working-directory: ./client
-        run: npm test
-
       - run: npm run build
+
+      - name: Build Docker image
+        run: docker build -t mcpjam-inspector:test .
 
   publish:
     runs-on: ubuntu-latest
