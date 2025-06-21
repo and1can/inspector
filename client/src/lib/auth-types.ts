@@ -38,6 +38,7 @@ export interface AuthDebuggerState {
   latestError: Error | null;
   statusMessage: StatusMessage | null;
   validationError: string | null;
+  loading: boolean;
 }
 
 export const EMPTY_DEBUGGER_STATE: AuthDebuggerState = {
@@ -54,4 +55,5 @@ export const EMPTY_DEBUGGER_STATE: AuthDebuggerState = {
   latestError: null,
   statusMessage: null,
   validationError: null,
+  loading: false,
 };
