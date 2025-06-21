@@ -26,13 +26,30 @@ const createMessage = (
 });
 
 const getClaudeApiKey = (mcpClient: unknown): string => {
-  return mcpClient &&
+  // Check if we have a valid aiProvider (this means API key was provided and provider was initialized)
+  if (
+    mcpClient &&
+    typeof mcpClient === "object" &&
+    mcpClient !== null &&
+    "aiProvider" in mcpClient &&
+    mcpClient.aiProvider
+  ) {
+    // If aiProvider exists, it means the API key was provided during initialization
+    return "valid"; // Return a non-empty string to indicate API key is available
+  }
+  
+  // Fallback: check for old anthropic property (for backward compatibility)
+  if (
+    mcpClient &&
     typeof mcpClient === "object" &&
     mcpClient !== null &&
     "anthropic" in mcpClient &&
     (mcpClient as { anthropic?: Anthropic }).anthropic
-    ? (mcpClient as { anthropic: Anthropic }).anthropic.apiKey || ""
-    : "";
+  ) {
+    return (mcpClient as { anthropic: Anthropic }).anthropic.apiKey || "";
+  }
+  
+  return "";
 };
 
 const validateSendConditions = (
