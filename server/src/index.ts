@@ -396,10 +396,21 @@ const findAvailablePort = async (startPort: number): Promise<number> => {
 
 const PORT = process.env.PORT || 6277;
 
+// Store the actual running port
+let actualPort: number;
+
+// Add endpoint to get the actual running port
+app.get("/port", (req, res) => {
+  res.json({
+    port: actualPort,
+  });
+});
+
 // Start server with dynamic port finding
 const startServer = async () => {
   try {
     const availablePort = await findAvailablePort(Number(PORT));
+    actualPort = availablePort;
 
     const server = app.listen(availablePort);
     server.on("listening", () => {

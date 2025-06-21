@@ -30,6 +30,7 @@ import readline from "readline/promises";
 import packageJson from "../package.json";
 import {
   getMCPProxyAddress,
+  getMCPProxyAddressAsync,
   getMCPServerRequestMaxTotalTimeout,
   getMCPServerRequestTimeout,
   resetRequestTimeoutOnProgress,
@@ -147,7 +148,7 @@ export class MCPJamClient extends Client<Request, Notification, Result> {
   }
   async connectStdio() {
     const serverUrl = new URL(
-      `${getMCPProxyAddress(this.inspectorConfig)}/stdio`,
+      `${await getMCPProxyAddressAsync(this.inspectorConfig)}/stdio`,
     );
 
     // Type guard to ensure we have a stdio server config
@@ -215,7 +216,7 @@ export class MCPJamClient extends Client<Request, Notification, Result> {
   async connectSSE() {
     try {
       const serverUrl = new URL(
-        `${getMCPProxyAddress(this.inspectorConfig)}/sse`,
+        `${await getMCPProxyAddressAsync(this.inspectorConfig)}/sse`,
       );
       serverUrl.searchParams.append(
         "url",
@@ -261,7 +262,7 @@ export class MCPJamClient extends Client<Request, Notification, Result> {
   async connectStreamableHttp() {
     try {
       const serverUrl = new URL(
-        `${getMCPProxyAddress(this.inspectorConfig)}/mcp`,
+        `${await getMCPProxyAddressAsync(this.inspectorConfig)}/mcp`,
       );
       serverUrl.searchParams.append(
         "url",
@@ -310,7 +311,7 @@ export class MCPJamClient extends Client<Request, Notification, Result> {
   async checkProxyHealth() {
     try {
       const proxyHealthUrl = new URL(
-        `${getMCPProxyAddress(this.inspectorConfig)}/health`,
+        `${await getMCPProxyAddressAsync(this.inspectorConfig)}/health`,
       );
       this.addClientLog("Checking MCP proxy server health", "debug");
       const proxyHealthResponse = await fetch(proxyHealthUrl);
