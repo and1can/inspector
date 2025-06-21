@@ -55,10 +55,10 @@ npm run build
 ```
 
 You can also build each part individually:
+
 - `npm run build-client`
 - `npm run build-server`
 - `npm run build-cli`
-
 
 ## Testing
 
@@ -104,4 +104,4 @@ Your commit messages should be structured as follows:
 4.  Open a **Pull Request** to the `main` branch of the original repository.
 5.  In your PR description, please explain the changes you've made and link any relevant issues.
 
-Thank you for your contribution! 
+Thank you for your contribution!

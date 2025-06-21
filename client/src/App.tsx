@@ -534,7 +534,7 @@ const App = () => {
             onStdErrNotification,
             onPendingRequest,
             getRootsCallback,
-            onElicitationRequest
+            onElicitationRequest,
           );
         } catch (error) {
           addClientLog(

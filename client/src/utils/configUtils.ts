@@ -19,10 +19,12 @@ const fetchActualPort = async (): Promise<string> => {
 
   for (let attempt = 0; attempt < maxAttempts; attempt++) {
     const tryPort = startPort + attempt;
-    
+
     try {
-      const response = await fetch(`${window.location.protocol}//${window.location.hostname}:${tryPort}/port`);
-      
+      const response = await fetch(
+        `${window.location.protocol}//${window.location.hostname}:${tryPort}/port`,
+      );
+
       if (response.ok) {
         const data = await response.json();
         const actualPort = data.port.toString();
@@ -31,11 +33,17 @@ const fetchActualPort = async (): Promise<string> => {
       }
     } catch (error) {
       // Continue to next port
-      console.debug(`Port discovery: failed to connect to port ${tryPort}:`, error);
+      console.debug(
+        `Port discovery: failed to connect to port ${tryPort}:`,
+        error,
+      );
     }
   }
 
-  console.warn('Failed to discover actual port, using default:', DEFAULT_MCP_PROXY_LISTEN_PORT);
+  console.warn(
+    "Failed to discover actual port, using default:",
+    DEFAULT_MCP_PROXY_LISTEN_PORT,
+  );
   return DEFAULT_MCP_PROXY_LISTEN_PORT;
 };
 
@@ -48,12 +56,14 @@ export const getMCPProxyAddress = (config: InspectorConfig): string => {
 };
 
 // New async version that fetches the actual port
-export const getMCPProxyAddressAsync = async (config: InspectorConfig): Promise<string> => {
+export const getMCPProxyAddressAsync = async (
+  config: InspectorConfig,
+): Promise<string> => {
   const proxyFullAddress = config.MCP_PROXY_FULL_ADDRESS.value as string;
   if (proxyFullAddress) {
     return proxyFullAddress;
   }
-  
+
   const actualPort = await fetchActualPort();
   return `${window.location.protocol}//${window.location.hostname}:${actualPort}`;
 };
