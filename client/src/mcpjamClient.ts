@@ -15,6 +15,7 @@ import {
   CreateMessageResult,
   ListRootsRequestSchema,
   CreateMessageRequest,
+  ElicitRequestSchema,
 } from "@modelcontextprotocol/sdk/types.js";
 import { Anthropic } from "@anthropic-ai/sdk";
 import {
@@ -89,6 +90,7 @@ export class MCPJamClient extends Client<Request, Notification, Result> {
     resolve: (result: CreateMessageResult) => void,
     reject: (error: Error) => void,
   ) => void;
+  onElicitationRequest?: (request: any, resolve: any) => void;
   getRoots?: () => unknown[];
   addRequestHistory: (request: object, response?: object) => void;
   addClientLog: (message: string, level: ClientLogLevels) => void;
@@ -106,6 +108,7 @@ export class MCPJamClient extends Client<Request, Notification, Result> {
       resolve: (result: CreateMessageResult) => void,
       reject: (error: Error) => void,
     ) => void,
+    onElicitationRequest?: (request: any, resolve: any) => void,
     getRoots?: () => unknown[],
   ) {
     super(
@@ -113,6 +116,7 @@ export class MCPJamClient extends Client<Request, Notification, Result> {
       {
         capabilities: {
           sampling: {},
+          elicitation: {},
           roots: {
             listChanged: true,
           },
@@ -136,6 +140,7 @@ export class MCPJamClient extends Client<Request, Notification, Result> {
     this.inspectorConfig = inspectorConfig;
     this.onStdErrNotification = onStdErrNotification;
     this.onPendingRequest = onPendingRequest;
+    this.onElicitationRequest = onElicitationRequest;
     this.getRoots = getRoots;
     this.addRequestHistory = addRequestHistory;
     this.addClientLog = addClientLog;
@@ -506,6 +511,14 @@ export class MCPJamClient extends Client<Request, Notification, Result> {
         this.setRequestHandler(CreateMessageRequestSchema, (request) => {
           return new Promise((resolve, reject) => {
             this.onPendingRequest?.(request, resolve, reject);
+          });
+        });
+      }
+
+      if (this.onElicitationRequest) {
+        this.setRequestHandler(ElicitRequestSchema, (request) => {
+          return new Promise((resolve) => {
+            this.onElicitationRequest?.(request, resolve);
           });
         });
       }
