@@ -1,6 +1,6 @@
 import { CompatibilityCallToolResult } from "@modelcontextprotocol/sdk/types.js";
 import { useEffect, useState, useCallback } from "react";
-import { History, ChevronDown } from "lucide-react";
+import { History, ChevronDown, GripHorizontal } from "lucide-react";
 import { useDraggablePane } from "../lib/hooks/useDraggablePane";
 import TabbedHistoryPanel from "./TabbedHistoryPanel";
 import { ClientLogInfo } from "@/hooks/helpers/types";
@@ -27,30 +27,70 @@ const HistoryAndNotifications = ({
 
   const {
     height: historyPaneHeight,
+    isDragging,
     handleDragStart,
     resetHeight,
-  } = useDraggablePane(500);
+    setCustomHeight,
+  } = useDraggablePane(500, "historyPaneHeight");
 
   const toggleCollapse = useCallback(() => {
     setIsHistoryCollapsed(!isHistoryCollapsed);
   }, [isHistoryCollapsed]);
 
+  // Handle double-click to reset height
+  const handleDoubleClick = useCallback(() => {
+    if (!isHistoryCollapsed) {
+      resetHeight();
+    }
+  }, [isHistoryCollapsed, resetHeight]);
+
+  // Handle keyboard shortcuts
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Only handle shortcuts when history is not collapsed and not in an input field
+      if (isHistoryCollapsed || 
+          (e.target as HTMLElement)?.tagName?.toLowerCase() === 'input' ||
+          (e.target as HTMLElement)?.tagName?.toLowerCase() === 'textarea') {
+        return;
+      }
+
+      // Alt + Up/Down to adjust height
+      if (e.altKey && (e.key === 'ArrowUp' || e.key === 'ArrowDown')) {
+        e.preventDefault();
+        const increment = e.shiftKey ? 50 : 25; // Shift for larger increments
+        const newHeight = e.key === 'ArrowUp' 
+          ? historyPaneHeight + increment 
+          : historyPaneHeight - increment;
+        setCustomHeight(newHeight);
+      }
+      
+      // Alt + R to reset height
+      if (e.altKey && e.key === 'r') {
+        e.preventDefault();
+        resetHeight();
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isHistoryCollapsed, historyPaneHeight, setCustomHeight, resetHeight]);
+
   useEffect(() => {
     if (toolResult) {
-      resetHeight();
+      // Only expand if collapsed, but don't reset the height
       setIsHistoryCollapsed(false);
     }
-  }, [toolResult, resetHeight]);
+  }, [toolResult]);
 
   useEffect(() => {
     if (clientLogs.length > 0) {
       const isLastError = clientLogs[clientLogs.length - 1].level === "error";
       if (isLastError) {
-        resetHeight();
+        // Only expand if collapsed, but don't reset the height
         setIsHistoryCollapsed(false);
       }
     }
-  }, [clientLogs, resetHeight]);
+  }, [clientLogs]);
 
   return (
     <div
@@ -63,10 +103,25 @@ const HistoryAndNotifications = ({
         height: `${isHistoryCollapsed ? 60 : historyPaneHeight}px`,
       }}
     >
-      {/* Simple Drag Handle */}
+      {/* Enhanced Drag Handle */}
       <div
-        className="absolute w-full h-2 -top-1 cursor-row-resize"
+        className={`absolute w-full h-3 -top-1.5 cursor-row-resize group flex items-center justify-center ${
+          isDragging ? "bg-primary/20" : "hover:bg-border/20"
+        } transition-all duration-200`}
         onMouseDown={handleDragStart}
+        onDoubleClick={handleDoubleClick}
+        title="Drag to resize • Double-click to reset • Alt+↑/↓ to adjust • Alt+R to reset"
+      >
+        <div className={`flex items-center space-x-1 opacity-0 group-hover:opacity-100 transition-opacity duration-200 ${isDragging ? "opacity-100" : ""}`}>
+          <GripHorizontal className="w-4 h-4 text-muted-foreground" />
+        </div>
+      </div>
+
+      {/* Visual indicator line */}
+      <div 
+        className={`absolute w-full h-0.5 -top-0.5 transition-all duration-200 ${
+          isDragging ? "bg-primary" : "bg-border/50"
+        }`} 
       />
 
       {/* Content */}
