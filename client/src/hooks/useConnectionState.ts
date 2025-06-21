@@ -6,7 +6,6 @@ import {
   CreateMessageRequest,
   CreateMessageResult,
   Root,
-  ElicitRequestSchema,
 } from "@modelcontextprotocol/sdk/types.js";
 import { StdErrNotification } from "@/lib/notificationTypes";
 import { ConnectionStatus } from "@/lib/constants";

@@ -51,9 +51,7 @@ import { loadOAuthTokens, handleOAuthDebugConnect } from "./services/oauth";
 import { getMCPProxyAddress } from "./utils/configUtils";
 import { handleRootsChange, MCPHelperDependencies } from "./utils/mcpHelpers";
 
-import ElicitationModal, {
-  ElicitationRequest,
-} from "./components/ElicitationModal";
+import ElicitationModal from "./components/ElicitationModal";
 
 // Types
 import {
@@ -141,7 +139,7 @@ const App = () => {
   );
 
   const onElicitationRequest = useCallback(
-    (request: ElicitationRequest, resolve: (result: any) => void) => {
+    (request: any, resolve: (result: any) => void) => {
       mcpOperations.setPendingElicitationRequest({
         id: nextRequestId.current++,
         message: request.params.message,
