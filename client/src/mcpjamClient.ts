@@ -17,7 +17,11 @@ import {
   CreateMessageRequest,
   ElicitRequestSchema,
 } from "@modelcontextprotocol/sdk/types.js";
-import { Anthropic } from "@anthropic-ai/sdk";
+import {
+  AIProvider,
+  SupportedProvider,
+  providerFactory,
+} from "@/lib/providers";
 import {
   MessageParam,
   Tool,
@@ -60,9 +64,9 @@ import { HttpServerDefinition, MCPJamServerConfig } from "@/lib/serverTypes";
 import { mappedTools } from "@/utils/mcpjamClientHelpers";
 import { ClientLogLevels } from "./hooks/helpers/types";
 
-// Add interface for extended MCP client with Anthropic
+// Add interface for extended MCP client with AI provider
 export interface ExtendedMcpClient extends Client {
-  anthropic: Anthropic;
+  aiProvider: AIProvider;
   processQuery: (
     query: string,
     tools: Tool[],
@@ -74,7 +78,7 @@ export interface ExtendedMcpClient extends Client {
 }
 
 export class MCPJamClient extends Client<Request, Notification, Result> {
-  anthropic?: Anthropic;
+  aiProvider?: AIProvider;
   clientTransport: Transport | undefined;
   serverConfig: MCPJamServerConfig;
   headers: HeadersInit;
@@ -91,6 +95,7 @@ export class MCPJamClient extends Client<Request, Notification, Result> {
     resolve: (result: CreateMessageResult) => void,
     reject: (error: Error) => void,
   ) => void;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   onElicitationRequest?: (request: any, resolve: any) => void;
   getRoots?: () => unknown[];
   addRequestHistory: (request: object, response?: object) => void;
@@ -103,12 +108,14 @@ export class MCPJamClient extends Client<Request, Notification, Result> {
     bearerToken?: string,
     headerName?: string,
     onStdErrNotification?: (notification: StdErrNotification) => void,
-    claudeApiKey?: string,
+    apiKey?: string,
+    providerType: SupportedProvider = "anthropic",
     onPendingRequest?: (
       request: CreateMessageRequest,
       resolve: (result: CreateMessageResult) => void,
       reject: (error: Error) => void,
     ) => void,
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     onElicitationRequest?: (request: any, resolve: any) => void,
     getRoots?: () => unknown[],
   ) {
@@ -124,10 +131,8 @@ export class MCPJamClient extends Client<Request, Notification, Result> {
         },
       },
     );
-    this.anthropic = new Anthropic({
-      apiKey: claudeApiKey,
-      dangerouslyAllowBrowser: true,
-    });
+    
+    // Assign properties first
     this.serverConfig = serverConfig;
     this.headers = {};
     this.mcpProxyServerUrl = new URL(
@@ -145,6 +150,20 @@ export class MCPJamClient extends Client<Request, Notification, Result> {
     this.getRoots = getRoots;
     this.addRequestHistory = addRequestHistory;
     this.addClientLog = addClientLog;
+    
+    // Initialize AI provider if API key is provided
+    if (apiKey) {
+      try {
+        this.aiProvider = providerFactory.createProvider(providerType, {
+          apiKey,
+          dangerouslyAllowBrowser: true,
+        });
+        this.addClientLog(`AI provider initialized: ${providerType}`, "info");
+      } catch (error) {
+        this.addClientLog(`Failed to initialize AI provider: ${error}`, "error");
+        // Don't throw here, just log the error
+      }
+    }
   }
   async connectStdio() {
     const serverUrl = new URL(
@@ -553,12 +572,9 @@ export class MCPJamClient extends Client<Request, Notification, Result> {
   }
 
   updateApiKey = (newApiKey: string) => {
-    if (this.anthropic) {
-      this.anthropic = new Anthropic({
-        apiKey: newApiKey,
-        dangerouslyAllowBrowser: true,
-      });
-      this.addClientLog("Anthropic API key updated", "info");
+    if (this.aiProvider) {
+      this.aiProvider.updateApiKey(newApiKey);
+      this.addClientLog("AI provider API key updated", "info");
     }
   };
 
@@ -721,8 +737,8 @@ export class MCPJamClient extends Client<Request, Notification, Result> {
     onUpdate?: (content: string) => void,
     model: string = "claude-3-5-sonnet-latest",
   ): Promise<string> {
-    if (!this.anthropic) {
-      const errorMessage = "Anthropic client not initialized";
+    if (!this.aiProvider) {
+      const errorMessage = "AI provider not initialized";
       this.addClientLog(errorMessage, "error");
       throw new Error(errorMessage);
     }
@@ -753,14 +769,28 @@ export class MCPJamClient extends Client<Request, Notification, Result> {
 
   private async makeInitialApiCall(
     context: ReturnType<typeof this.initializeQueryContext>,
-  ) {
-    this.addClientLog("Making initial API call to Anthropic", "debug");
-    return this.anthropic!.messages.create({
+  ): Promise<Message> {
+    if (!this.aiProvider) {
+      throw new Error("AI provider not initialized");
+    }
+    
+    this.addClientLog("Making initial API call to AI provider", "debug");
+    const response = await this.aiProvider.createMessage({
       model: context.model,
       max_tokens: 1000,
-      messages: context.messages,
-      tools: context.sanitizedTools,
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      messages: context.messages as any,
+      tools: context.sanitizedTools.map(tool => ({
+        name: tool.name,
+        description: tool.description,
+        input_schema: tool.input_schema
+      }))
     });
+
+    // Convert provider response back to Anthropic Message format
+    // This is a temporary adapter - for now we'll assume Anthropic format
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    return response as any;
   }
 
   private async processIterations(
@@ -961,14 +991,28 @@ export class MCPJamClient extends Client<Request, Notification, Result> {
 
   private async makeFollowUpApiCall(
     context: ReturnType<typeof this.initializeQueryContext>,
-  ) {
-    this.addClientLog("Making follow-up API call to Anthropic", "debug");
-    return this.anthropic!.messages.create({
+  ): Promise<Message> {
+    if (!this.aiProvider) {
+      throw new Error("AI provider not initialized");
+    }
+    
+    this.addClientLog("Making follow-up API call to AI provider", "debug");
+    const response = await this.aiProvider.createMessage({
       model: context.model,
       max_tokens: 1000,
-      messages: context.messages,
-      tools: context.sanitizedTools,
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      messages: context.messages as any,
+      tools: context.sanitizedTools.map(tool => ({
+        name: tool.name,
+        description: tool.description,
+        input_schema: tool.input_schema
+      }))
     });
+
+    // Convert provider response back to Anthropic Message format
+    // This is a temporary adapter - for now we'll assume Anthropic format
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    return response as any;
   }
 
   private sendIterationUpdate(

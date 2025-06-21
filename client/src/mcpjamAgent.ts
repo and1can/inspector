@@ -206,7 +206,8 @@ export class MCPJamAgent {
       this.bearerToken, // bearerToken
       this.headerName, // headerName
       this.onStdErrNotification, // onStdErrNotification
-      this.claudeApiKey, // claudeApiKey
+      this.claudeApiKey, // apiKey
+      "anthropic", // providerType
       this.onPendingRequest, // onPendingRequest
       this.onElicitationRequest, // onElicitationRequest
       this.getRoots, // getRoots
