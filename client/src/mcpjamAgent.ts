@@ -5,6 +5,7 @@ import {
   Resource,
   Prompt,
   ServerCapabilities,
+  ElicitRequest,
 } from "@modelcontextprotocol/sdk/types.js";
 import { MCPJamServerConfig } from "./lib/serverTypes";
 import { createDefaultConfig } from "./utils/configUtils";
@@ -15,6 +16,7 @@ import {
 } from "@modelcontextprotocol/sdk/types.js";
 import { ConnectionStatus } from "./lib/constants";
 import { ClientLogLevels } from "./hooks/helpers/types";
+import { ElicitationResponse } from "./components/ElicitationModal";
 
 export interface MCPClientOptions {
   id?: string;
@@ -30,7 +32,10 @@ export interface MCPClientOptions {
     resolve: (result: CreateMessageResult) => void,
     reject: (error: Error) => void,
   ) => void;
-  onElicitationRequest?: (request: any, resolve: any) => void;
+  onElicitationRequest?: (
+    request: ElicitRequest,
+    resolve: (result: ElicitationResponse) => void,
+  ) => void;
   getRoots?: () => unknown[];
   addRequestHistory: (request: object, response?: object) => void;
   addClientLog: (message: string, level: ClientLogLevels) => void;
@@ -57,7 +62,10 @@ export class MCPJamAgent {
     resolve: (result: CreateMessageResult) => void,
     reject: (error: Error) => void,
   ) => void;
-  private onElicitationRequest?: (request: any, resolve: any) => void;
+  private onElicitationRequest?: (
+    request: ElicitRequest,
+    resolve: (result: ElicitationResponse) => void,
+  ) => void;
   private getRoots?: () => unknown[];
   private addRequestHistory: (request: object, response?: object) => void;
   private addClientLog: (message: string, level: ClientLogLevels) => void;

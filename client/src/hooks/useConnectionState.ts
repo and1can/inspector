@@ -5,11 +5,13 @@ import { InspectorConfig } from "@/lib/configurationTypes";
 import {
   CreateMessageRequest,
   CreateMessageResult,
+  ElicitRequest,
   Root,
 } from "@modelcontextprotocol/sdk/types.js";
 import { StdErrNotification } from "@/lib/notificationTypes";
 import { ConnectionStatus } from "@/lib/constants";
 import { ClientLogLevels } from "@/hooks/helpers/types";
+import { ElicitationResponse } from "@/components/ElicitationModal";
 
 export const useConnectionState = (
   addRequestHistory: (request: object, response?: object) => void,
@@ -35,7 +37,10 @@ export const useConnectionState = (
         reject: (error: Error) => void,
       ) => void,
       getRoots: () => Root[],
-      onElicitationRequest?: (request: any, resolve: any) => void,
+      onElicitationRequest?: (
+        request: ElicitRequest,
+        resolve: (result: ElicitationResponse) => void,
+      ) => void,
     ) => {
       if (Object.keys(serverConfigs).length === 0) {
         console.log("No servers configured, skipping connection");
@@ -85,7 +90,10 @@ export const useConnectionState = (
         reject: (error: Error) => void,
       ) => void,
       getRoots: () => Root[],
-      onElicitationRequest?: (request: any, resolve: any) => void,
+      onElicitationRequest?: (
+        request: ElicitRequest,
+        resolve: (result: ElicitationResponse) => void,
+      ) => void,
     ) => {
       const options: MCPClientOptions = {
         servers: serverConfigs,
@@ -123,7 +131,10 @@ export const useConnectionState = (
         reject: (error: Error) => void,
       ) => void,
       getRoots: () => Root[],
-      onElicitationRequest?: (request: any, resolve: any) => void,
+      onElicitationRequest?: (
+        request: ElicitRequest,
+        resolve: (result: ElicitationResponse) => void,
+      ) => void,
     ) => {
       console.log("🔧 addServer called with:", { name, serverConfig });
 

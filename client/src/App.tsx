@@ -5,6 +5,7 @@ import {
   PromptReference,
   CreateMessageRequest,
   CreateMessageResult,
+  ElicitRequest,
 } from "@modelcontextprotocol/sdk/types.js";
 import React, {
   Suspense,
@@ -51,7 +52,9 @@ import { loadOAuthTokens, handleOAuthDebugConnect } from "./services/oauth";
 import { getMCPProxyAddressAsync } from "./utils/configUtils";
 import { handleRootsChange, MCPHelperDependencies } from "./utils/mcpHelpers";
 
-import ElicitationModal from "./components/ElicitationModal";
+import ElicitationModal, {
+  ElicitationResponse,
+} from "./components/ElicitationModal";
 
 // Types
 import {
@@ -139,7 +142,10 @@ const App = () => {
   );
 
   const onElicitationRequest = useCallback(
-    (request: any, resolve: (result: any) => void) => {
+    (
+      request: ElicitRequest,
+      resolve: (result: ElicitationResponse) => void,
+    ) => {
       mcpOperations.setPendingElicitationRequest({
         id: nextRequestId.current++,
         message: request.params.message,
