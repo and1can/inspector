@@ -7,21 +7,30 @@ export type JsonValue =
   | JsonValue[]
   | { [key: string]: JsonValue };
 
-export type JsonSchemaType = {
-  type:
-    | "string"
-    | "number"
-    | "integer"
-    | "boolean"
-    | "array"
-    | "object"
-    | "null";
-  description?: string;
-  required?: boolean;
-  default?: JsonValue;
-  properties?: Record<string, JsonSchemaType>;
-  items?: JsonSchemaType;
-};
+  export type JsonSchemaType = {
+    type:
+      | "string"
+      | "number"
+      | "integer"
+      | "boolean"
+      | "array"
+      | "object"
+      | "null";
+    title?: string;
+    description?: string;
+    required?: boolean | string[];
+    default?: JsonValue;
+    properties?: Record<string, JsonSchemaType>;
+    items?: JsonSchemaType;
+    minimum?: number;
+    maximum?: number;
+    minLength?: number;
+    maxLength?: number;
+    pattern?: string;
+    format?: string;
+    enum?: string[];
+    enumNames?: string[];
+  };
 
 export type JsonObject = { [key: string]: JsonValue };
 

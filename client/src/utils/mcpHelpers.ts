@@ -19,6 +19,7 @@ import { z } from "zod";
 import { Prompt } from "../components/PromptsTab";
 import { PendingRequest } from "../components/SamplingTab";
 import { StdErrNotification } from "../lib/notificationTypes";
+import { ElicitationRequest } from "@/components/ElicitationModal";
 
 // Types for function dependencies
 export interface MCPHelperDependencies {
@@ -63,6 +64,9 @@ export interface MCPHelperDependencies {
         }
       >
     >
+  >;
+  setPendingElicitationRequest: React.Dispatch<
+    React.SetStateAction<ElicitationRequest | null>
   >;
   progressTokenRef: React.MutableRefObject<number>;
 }

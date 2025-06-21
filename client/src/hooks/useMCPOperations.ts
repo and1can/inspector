@@ -21,6 +21,7 @@ import {
   ClientLogLevels,
   RequestHistoryInfo,
 } from "@/hooks/helpers/types";
+import { ElicitationRequest } from "@/components/ElicitationModal";
 
 export interface PendingRequest {
   id: number;
@@ -78,6 +79,8 @@ export const useMCPOperations = () => {
   const [pendingSampleRequests, setPendingSampleRequests] = useState<
     PendingRequest[]
   >([]);
+  const [pendingElicitationRequest, setPendingElicitationRequest] =
+    useState<ElicitationRequest | null>(null);
   const [requestHistory, setRequestHistory] = useState<RequestHistoryInfo[]>(
     [],
   );
@@ -182,6 +185,10 @@ export const useMCPOperations = () => {
     },
     [addRequestHistory],
   );
+
+  const handleCloseElicitationModal = () => {
+    setPendingElicitationRequest(null);
+  };
 
   const listResourceTemplates = useCallback(
     async (mcpAgent: MCPJamAgent | null, selectedServerName: string) => {
@@ -722,6 +729,8 @@ export const useMCPOperations = () => {
     setRoots,
     pendingSampleRequests,
     setPendingSampleRequests,
+    pendingElicitationRequest,
+    setPendingElicitationRequest,
     progressTokenRef,
 
     // Operations
@@ -745,5 +754,6 @@ export const useMCPOperations = () => {
     addClientLog,
     clearClientLogs,
     getClientLogs,
+    handleCloseElicitationModal,
   };
 };

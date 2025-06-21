@@ -6,6 +6,7 @@ import {
   CreateMessageRequest,
   CreateMessageResult,
   Root,
+  ElicitRequestSchema,
 } from "@modelcontextprotocol/sdk/types.js";
 import { StdErrNotification } from "@/lib/notificationTypes";
 import { ConnectionStatus } from "@/lib/constants";
@@ -35,6 +36,7 @@ export const useConnectionState = (
         reject: (error: Error) => void,
       ) => void,
       getRoots: () => Root[],
+      onElicitationRequest?: (request: any, resolve: any) => void,
     ) => {
       if (Object.keys(serverConfigs).length === 0) {
         console.log("No servers configured, skipping connection");
@@ -49,6 +51,7 @@ export const useConnectionState = (
         claudeApiKey,
         onStdErrNotification,
         onPendingRequest,
+        onElicitationRequest,
         getRoots,
         addRequestHistory: addRequestHistory,
         addClientLog: addClientLog,
@@ -83,6 +86,7 @@ export const useConnectionState = (
         reject: (error: Error) => void,
       ) => void,
       getRoots: () => Root[],
+      onElicitationRequest?: (request: any, resolve: any) => void,
     ) => {
       const options: MCPClientOptions = {
         servers: serverConfigs,
@@ -92,6 +96,7 @@ export const useConnectionState = (
         claudeApiKey,
         onStdErrNotification,
         onPendingRequest,
+        onElicitationRequest,
         getRoots,
         addRequestHistory: addRequestHistory,
         addClientLog: addClientLog,
@@ -119,6 +124,7 @@ export const useConnectionState = (
         reject: (error: Error) => void,
       ) => void,
       getRoots: () => Root[],
+      onElicitationRequest?: (request: any, resolve: any) => void,
     ) => {
       console.log("🔧 addServer called with:", { name, serverConfig });
 
@@ -132,6 +138,7 @@ export const useConnectionState = (
           claudeApiKey,
           onStdErrNotification,
           onPendingRequest,
+          onElicitationRequest,
           getRoots,
           addRequestHistory: addRequestHistory,
           addClientLog: addClientLog,

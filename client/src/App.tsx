@@ -51,6 +51,10 @@ import { loadOAuthTokens, handleOAuthDebugConnect } from "./services/oauth";
 import { getMCPProxyAddress } from "./utils/configUtils";
 import { handleRootsChange, MCPHelperDependencies } from "./utils/mcpHelpers";
 
+import ElicitationModal, {
+  ElicitationRequest,
+} from "./components/ElicitationModal";
+
 // Types
 import {
   MCPJamServerConfig,
@@ -136,6 +140,18 @@ const App = () => {
     [mcpOperations],
   );
 
+  const onElicitationRequest = useCallback(
+    (request: ElicitationRequest, resolve: (result: any) => void) => {
+      mcpOperations.setPendingElicitationRequest({
+        id: nextRequestId.current++,
+        message: request.params.message,
+        requestedSchema: request.params.requestedSchema,
+        resolve,
+      });
+    },
+    [mcpOperations],
+  );
+
   const getRootsCallback = useCallback(() => rootsRef.current, []);
 
   // Connection info
@@ -196,6 +212,7 @@ const App = () => {
             onStdErrNotification,
             onPendingRequest,
             getRootsCallback,
+            onElicitationRequest,
           );
           if (options.autoConnect) {
             console.log("🔌 Auto-connecting to all servers...");
@@ -236,6 +253,7 @@ const App = () => {
       configState,
       onStdErrNotification,
       onPendingRequest,
+      onElicitationRequest,
       getRootsCallback,
       addClientLog,
     ],
@@ -518,6 +536,7 @@ const App = () => {
             onStdErrNotification,
             onPendingRequest,
             getRootsCallback,
+            onElicitationRequest
           );
         } catch (error) {
           addClientLog(
@@ -538,6 +557,7 @@ const App = () => {
     configState.claudeApiKey,
     onStdErrNotification,
     onPendingRequest,
+    onElicitationRequest,
     getRootsCallback,
     addClientLog,
   ]);
@@ -1071,6 +1091,10 @@ const App = () => {
             onClearLogs={mcpOperations.clearClientLogs}
           />
         </div>
+        <ElicitationModal
+          request={mcpOperations.pendingElicitationRequest}
+          onClose={mcpOperations.handleCloseElicitationModal}
+        />
       </div>
 
       {/* GitHub Star Modal */}

@@ -30,6 +30,7 @@ export interface MCPClientOptions {
     resolve: (result: CreateMessageResult) => void,
     reject: (error: Error) => void,
   ) => void;
+  onElicitationRequest?: (request: any, resolve: any) => void;
   getRoots?: () => unknown[];
   addRequestHistory: (request: object, response?: object) => void;
   addClientLog: (message: string, level: ClientLogLevels) => void;
@@ -56,6 +57,7 @@ export class MCPJamAgent {
     resolve: (result: CreateMessageResult) => void,
     reject: (error: Error) => void,
   ) => void;
+  private onElicitationRequest?: (request: any, resolve: any) => void;
   private getRoots?: () => unknown[];
   private addRequestHistory: (request: object, response?: object) => void;
   private addClientLog: (message: string, level: ClientLogLevels) => void;
@@ -69,6 +71,7 @@ export class MCPJamAgent {
     this.claudeApiKey = options.claudeApiKey;
     this.onStdErrNotification = options.onStdErrNotification;
     this.onPendingRequest = options.onPendingRequest;
+    this.onElicitationRequest = options.onElicitationRequest;
     this.getRoots = options.getRoots;
     this.addRequestHistory = options.addRequestHistory;
     this.addClientLog = options.addClientLog;
@@ -197,6 +200,7 @@ export class MCPJamAgent {
       this.onStdErrNotification, // onStdErrNotification
       this.claudeApiKey, // claudeApiKey
       this.onPendingRequest, // onPendingRequest
+      this.onElicitationRequest, // onElicitationRequest
       this.getRoots, // getRoots
     );
 
