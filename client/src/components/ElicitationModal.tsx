@@ -13,6 +13,7 @@ import { JsonSchemaType, JsonValue } from "@/utils/jsonUtils";
 import { generateDefaultValue } from "@/utils/schemaUtils";
 import Ajv from "ajv";
 
+// TODO: This is a temporary type for the elicitation request. Move this elsewhere.
 export interface ElicitationRequest {
   id: number;
   message: string;
@@ -20,6 +21,7 @@ export interface ElicitationRequest {
   resolve: (response: ElicitationResponse) => void;
 }
 
+// TODO: This is a temporary type for the elicitation request. Move this elsewhere.
 export interface ElicitationResponse {
   action: "accept" | "reject" | "cancel";
   content?: Record<string, unknown>;
