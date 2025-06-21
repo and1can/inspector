@@ -1,10 +1,9 @@
 ---
 name: Pull Request
 about: Create a pull request to help us improve
-title: ''
-labels: ''
-assignees: ''
-
+title: ""
+labels: ""
+assignees: ""
 ---
 
 ## Description
@@ -14,7 +13,8 @@ Please include a summary of the change and which issue is fixed. Please also inc
 Fixes # (issue)
 
 ## Motivation and Context
-*A brief description of the motivation behind this PR. Link to any related issues.*
+
+_A brief description of the motivation behind this PR. Link to any related issues._
 
 ## Type of change
 
@@ -33,7 +33,8 @@ Please describe the tests that you ran to verify your changes. Provide instructi
 - [ ] Test B
 
 ## Breaking Changes
-*If your change is a breaking change, please describe the impact and migration path for existing users.*
+
+_If your change is a breaking change, please describe the impact and migration path for existing users._
 
 ## Checklist:
 
@@ -44,4 +45,5 @@ Please describe the tests that you ran to verify your changes. Provide instructi
 - [ ] I have added or updated documentation as needed
 
 ## Additional context
-*Add any other context about the problem here.* 
+
+_Add any other context about the problem here._

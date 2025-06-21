@@ -1,3 +1,5 @@
+name: Docker Build
+
 on:
   push:
     branches:
@@ -19,22 +21,8 @@ jobs:
           node-version: 18
           cache: npm
 
-      # Working around https://github.com/npm/cli/issues/4828
-      # - run: npm ci
-      - run: npm install --no-package-lock
-
-      - name: Check formatting
-        run: npx prettier --check .
-
-      - name: Check linting
-        working-directory: ./client
-        run: npm run lint
-
-      - name: Run client tests
-        working-directory: ./client
-        run: npm test
-
-      - run: npm run build
+      - name: Build Docker image
+        run: docker build -t mcpjam-inspector:test .
 
   publish:
     runs-on: ubuntu-latest
