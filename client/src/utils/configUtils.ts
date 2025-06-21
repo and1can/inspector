@@ -55,7 +55,6 @@ export const getMCPProxyAddressAsync = async (config: InspectorConfig): Promise<
   }
   
   const actualPort = await fetchActualPort();
-  console.log("xcxc actualPort", actualPort);
   return `${window.location.protocol}//${window.location.hostname}:${actualPort}`;
 };
 
