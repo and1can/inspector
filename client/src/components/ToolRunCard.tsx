@@ -6,7 +6,7 @@ import DynamicJsonForm from "./DynamicJsonForm";
 import type { JsonValue, JsonSchemaType } from "@/utils/jsonUtils";
 import { generateDefaultValue } from "@/utils/schemaUtils";
 import { Tool } from "@modelcontextprotocol/sdk/types.js";
-import { Loader2, Send, Code2, Save, X } from "lucide-react";
+import { Loader2, Send, Code2, Save, X, ClipboardPaste } from "lucide-react";
 import { useEffect, useState } from "react";
 import {
   createMcpJamRequest,
@@ -18,6 +18,7 @@ import {
   McpJamRequest,
   UpdateMcpJamRequestInput,
 } from "@/lib/requestTypes";
+import { tryParseJson } from "@/utils/jsonUtils";
 
 const BUTTON_STYLES = {
   save: "flex-1 h-8 bg-gradient-to-r from-secondary/20 to-secondary/10 hover:from-secondary/30 hover:to-secondary/20 text-foreground font-medium rounded-lg border-border/40 hover:border-border/60 transition-all duration-300 text-xs",
@@ -202,13 +203,118 @@ const ParametersSection = ({
 
   if (Object.keys(properties).length === 0) return null;
 
+  const handlePasteInputs = async () => {
+    try {
+      // Check if clipboard API is available
+      if (!navigator.clipboard) {
+        alert("Clipboard access is not available in this browser. Please use a modern browser with HTTPS.");
+        return;
+      }
+
+      // Read text from clipboard
+      const clipboardText = await navigator.clipboard.readText();
+      
+      if (!clipboardText.trim()) {
+        alert("Clipboard is empty or contains no text.");
+        return;
+      }
+
+      // Try to parse as JSON with forgiving parser
+      const parseResult = tryParseJson(clipboardText);
+      
+      if (!parseResult.success) {
+        // If basic JSON parsing fails, try to fix common issues
+        let fixedJson = clipboardText.trim();
+        
+        // Try to fix unquoted keys (common LLM output issue)
+        fixedJson = fixedJson.replace(/(\w+)(\s*:)/g, '"$1"$2');
+        
+        // Try to fix single quotes
+        fixedJson = fixedJson.replace(/'/g, '"');
+        
+        // Try parsing again
+        const retryResult = tryParseJson(fixedJson);
+        
+        if (!retryResult.success) {
+          alert("Could not parse clipboard content as JSON. Please ensure the clipboard contains valid JSON data.");
+          return;
+        }
+        
+        // Use the fixed JSON result
+        if (typeof retryResult.data === 'object' && retryResult.data !== null && !Array.isArray(retryResult.data)) {
+          const jsonData = retryResult.data as Record<string, unknown>;
+          
+          // Populate form fields with matching keys
+          Object.entries(jsonData).forEach(([key, value]) => {
+            if (key in properties) {
+              onParamChange(key, value);
+            }
+          });
+          
+          // Show success message
+          const matchedKeys = Object.keys(jsonData).filter(key => key in properties);
+          if (matchedKeys.length > 0) {
+            alert(`Successfully populated ${matchedKeys.length} field(s): ${matchedKeys.join(', ')}`);
+          } else {
+            alert("No matching fields found in the JSON data.");
+          }
+        } else {
+          alert("Clipboard content must be a JSON object, not an array or primitive value.");
+        }
+        return;
+      }
+
+      // Handle successful JSON parsing
+      if (typeof parseResult.data === 'object' && parseResult.data !== null && !Array.isArray(parseResult.data)) {
+        const jsonData = parseResult.data as Record<string, unknown>;
+        
+        // Populate form fields with matching keys
+        Object.entries(jsonData).forEach(([key, value]) => {
+          if (key in properties) {
+            onParamChange(key, value);
+          }
+        });
+        
+        // Show success message
+        const matchedKeys = Object.keys(jsonData).filter(key => key in properties);
+        if (matchedKeys.length > 0) {
+          alert(`Successfully populated ${matchedKeys.length} field(s): ${matchedKeys.join(', ')}`);
+        } else {
+          alert("No matching fields found in the JSON data.");
+        }
+      } else {
+        alert("Clipboard content must be a JSON object, not an array or primitive value.");
+      }
+      
+    } catch (error) {
+      console.error("Failed to paste inputs:", error);
+      if (error instanceof Error && error.name === 'NotAllowedError') {
+        alert("Clipboard access denied. Please grant clipboard permissions or copy the content again.");
+      } else {
+        alert("Failed to read from clipboard. Please try again.");
+      }
+    }
+  };
+
   return (
     <div className="space-y-2">
-      <div className="flex items-center space-x-1.5 pb-1.5 border-b border-border/20">
-        <Code2 className="w-3 h-3 text-muted-foreground" />
-        <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
-          Parameters
-        </span>
+      <div className="flex items-center justify-between pb-1.5 border-b border-border/20">
+        <div className="flex items-center space-x-1.5">
+          <Code2 className="w-3 h-3 text-muted-foreground" />
+          <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+            Parameters
+          </span>
+        </div>
+        <Button
+          onClick={handlePasteInputs}
+          variant="outline"
+          size="sm"
+          className="h-6 px-2 text-xs hover:bg-primary/10 hover:text-primary hover:border-primary/20 transition-all duration-200"
+          title="Paste JSON from clipboard to populate input fields"
+        >
+          <ClipboardPaste className="w-3 h-3 mr-1" />
+          Paste Inputs
+        </Button>
       </div>
 
       <div className="space-y-2.5">
