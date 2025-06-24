@@ -1,6 +1,9 @@
 import React, { useState, useEffect, useRef } from "react";
 import { useMcpClient } from "@/context/McpClientContext";
 import { Tool } from "@modelcontextprotocol/sdk/types.js";
+import {
+  Tool as MessageTool,
+} from "@anthropic-ai/sdk/resources/messages/messages.mjs";
 import { Anthropic } from "@anthropic-ai/sdk";
 import { Send, User, Loader2, Key, ChevronDown } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -8,6 +11,7 @@ import { CLAUDE_MODELS } from "@/lib/constants";
 import { ToolCallMessage } from "./ToolCallMessage";
 import { parseToolCallContent } from "@/utils/toolCallHelpers";
 import { ClaudeLogo } from "./ClaudeLogo";
+import { MCPJamClient } from "@/mcpjamClient";
 
 interface Message {
   role: "user" | "assistant";
@@ -324,27 +328,16 @@ const ChatTab: React.FC = () => {
 
   const processUserQuery = async (userMessage: string) => {
     if (
-      !mcpClient ||
-      !("processQuery" in mcpClient) ||
-      typeof mcpClient.processQuery !== "function"
+      !mcpClient || mcpClient instanceof MCPJamClient
     ) {
       throw new Error(
         "Chat functionality is not available. Please ensure you have a valid API key and the server is connected.",
       );
     }
 
-    await (
-      mcpClient as typeof mcpClient & {
-        processQuery: (
-          query: string,
-          tools: Tool[],
-          onUpdate?: (content: string) => void,
-          model?: string,
-        ) => Promise<string>;
-      }
-    ).processQuery(
+    await (mcpClient as MCPJamClient).processQuery(
       userMessage,
-      tools,
+      tools as unknown as MessageTool[],
       (content: string) => {
         const assistantMessage = createMessage("assistant", content);
         addMessageToChat(assistantMessage);
