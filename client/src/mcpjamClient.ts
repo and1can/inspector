@@ -736,6 +736,7 @@ export class MCPJamClient extends Client<Request, Notification, Result> {
     tools: Tool[],
     onUpdate?: (content: string) => void,
     model: string = "claude-3-5-sonnet-latest",
+    signal?: AbortSignal,
   ): Promise<string> {
     if (!this.aiProvider) {
       const errorMessage = "AI provider not initialized";
@@ -743,14 +744,19 @@ export class MCPJamClient extends Client<Request, Notification, Result> {
       throw new Error(errorMessage);
     }
 
+    // Check if already aborted before starting
+    if (signal?.aborted) {
+      throw new Error("Chat was cancelled");
+    }
+
     this.addClientLog(
       `Processing query with ${tools.length} tools using model ${model}`,
       "info",
     );
     const context = this.initializeQueryContext(query, tools, model);
-    const response = await this.makeInitialApiCall(context);
+    const response = await this.makeInitialApiCall(context, signal);
 
-    return this.processIterations(response, context, onUpdate);
+    return this.processIterations(response, context, onUpdate, signal);
   }
 
   private initializeQueryContext(query: string, tools: Tool[], model: string) {
@@ -769,9 +775,15 @@ export class MCPJamClient extends Client<Request, Notification, Result> {
 
   private async makeInitialApiCall(
     context: ReturnType<typeof this.initializeQueryContext>,
+    signal?: AbortSignal,
   ): Promise<Message> {
     if (!this.aiProvider) {
       throw new Error("AI provider not initialized");
+    }
+    
+    // Check if aborted before making API call
+    if (signal?.aborted) {
+      throw new Error("Chat was cancelled");
     }
     
     this.addClientLog("Making initial API call to AI provider", "debug");
@@ -787,6 +799,11 @@ export class MCPJamClient extends Client<Request, Notification, Result> {
       }))
     });
 
+    // Check if aborted after API call
+    if (signal?.aborted) {
+      throw new Error("Chat was cancelled");
+    }
+
     // Convert provider response back to Anthropic Message format
     // This is a temporary adapter - for now we'll assume Anthropic format
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -797,18 +814,24 @@ export class MCPJamClient extends Client<Request, Notification, Result> {
     initialResponse: Message,
     context: ReturnType<typeof this.initializeQueryContext>,
     onUpdate?: (content: string) => void,
+    signal?: AbortSignal,
   ): Promise<string> {
     let response = initialResponse;
     let iteration = 0;
 
     while (iteration < context.MAX_ITERATIONS) {
+      // Check if aborted at the start of each iteration
+      if (signal?.aborted) {
+        throw new Error("Chat was cancelled");
+      }
+
       iteration++;
       this.addClientLog(
         `Processing iteration ${iteration}/${context.MAX_ITERATIONS}`,
         "debug",
       );
 
-      const iterationResult = await this.processIteration(response, context);
+      const iterationResult = await this.processIteration(response, context, signal);
 
       this.sendIterationUpdate(iterationResult.content, onUpdate);
 
@@ -818,7 +841,7 @@ export class MCPJamClient extends Client<Request, Notification, Result> {
       }
 
       try {
-        response = await this.makeFollowUpApiCall(context);
+        response = await this.makeFollowUpApiCall(context, signal);
       } catch (error) {
         const errorMessage = `[API Error: ${error}]`;
         this.addClientLog(
@@ -842,12 +865,18 @@ export class MCPJamClient extends Client<Request, Notification, Result> {
   private async processIteration(
     response: Message,
     context: ReturnType<typeof this.initializeQueryContext>,
+    signal?: AbortSignal,
   ) {
     const iterationContent: string[] = [];
     const assistantContent: ContentBlock[] = [];
     let hasToolUse = false;
 
     for (const content of response.content) {
+      // Check if aborted during content processing
+      if (signal?.aborted) {
+        throw new Error("Chat was cancelled");
+      }
+
       if (content.type === "text") {
         this.handleTextContent(
           content,
@@ -863,6 +892,7 @@ export class MCPJamClient extends Client<Request, Notification, Result> {
           iterationContent,
           context,
           assistantContent,
+          signal,
         );
       }
     }
@@ -889,6 +919,7 @@ export class MCPJamClient extends Client<Request, Notification, Result> {
     iterationContent: string[],
     context: ReturnType<typeof this.initializeQueryContext>,
     assistantContent: ContentBlock[],
+    signal?: AbortSignal,
   ) {
     assistantContent.push(content);
 
@@ -902,6 +933,7 @@ export class MCPJamClient extends Client<Request, Notification, Result> {
         content,
         context,
         assistantContent,
+        signal,
       );
       this.addClientLog(`Tool execution successful: ${content.name}`, "debug");
     } catch (error) {
@@ -927,11 +959,22 @@ export class MCPJamClient extends Client<Request, Notification, Result> {
     content: ToolUseBlock,
     context: ReturnType<typeof this.initializeQueryContext>,
     assistantContent: ContentBlock[],
+    signal?: AbortSignal,
   ) {
+    // Check if aborted before tool execution
+    if (signal?.aborted) {
+      throw new Error("Chat was cancelled");
+    }
+
     const result = await this.callTool({
       name: content.name,
       arguments: content.input as { [x: string]: unknown } | undefined,
     });
+
+    // Check if aborted after tool execution
+    if (signal?.aborted) {
+      throw new Error("Chat was cancelled");
+    }
 
     this.addMessagesToContext(
       context,
@@ -991,9 +1034,15 @@ export class MCPJamClient extends Client<Request, Notification, Result> {
 
   private async makeFollowUpApiCall(
     context: ReturnType<typeof this.initializeQueryContext>,
+    signal?: AbortSignal,
   ): Promise<Message> {
     if (!this.aiProvider) {
       throw new Error("AI provider not initialized");
+    }
+    
+    // Check if aborted before making API call
+    if (signal?.aborted) {
+      throw new Error("Chat was cancelled");
     }
     
     this.addClientLog("Making follow-up API call to AI provider", "debug");
@@ -1008,6 +1057,11 @@ export class MCPJamClient extends Client<Request, Notification, Result> {
         input_schema: tool.input_schema
       }))
     });
+
+    // Check if aborted after API call
+    if (signal?.aborted) {
+      throw new Error("Chat was cancelled");
+    }
 
     // Convert provider response back to Anthropic Message format
     // This is a temporary adapter - for now we'll assume Anthropic format
