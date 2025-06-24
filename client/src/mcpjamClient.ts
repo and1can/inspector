@@ -769,7 +769,7 @@ export class MCPJamClient extends Client<Request, Notification, Result> {
       finalText: [] as string[],
       sanitizedTools: mappedTools(tools),
       model,
-      MAX_ITERATIONS: 5,
+      MAX_ITERATIONS: 50,
     };
   }
 
