@@ -328,7 +328,7 @@ const ChatTab: React.FC = () => {
 
   const processUserQuery = async (userMessage: string) => {
     if (
-      !mcpClient || mcpClient instanceof MCPJamClient
+      !mcpClient || !(mcpClient instanceof MCPJamClient)
     ) {
       throw new Error(
         "Chat functionality is not available. Please ensure you have a valid API key and the server is connected.",
