@@ -1,0 +1,2 @@
+2025-06-24T04:18:30.728Z [server] [error] Error POSTing to endpoint (HTTP 401): bad request: missing required Authorization header
+ { metadata: {"stack":"Error: Error POSTing to endpoint (HTTP 401): bad request: missing required Authorization header\n\n    at StreamableHTTPClientTransport.send (/Users/marcelo/mcpjam-inspector/node_modules/@modelcontextprotocol/sdk/src/client/streamableHttp.ts:423:15)\n    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)"} }
