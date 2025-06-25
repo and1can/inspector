@@ -71,6 +71,7 @@ export interface ExtendedMcpClient extends Client {
     tools: Tool[],
     onUpdate?: (content: string) => void,
     model?: string,
+    provider?: string,
   ) => Promise<string>;
   chatLoop: (tools: Tool[]) => Promise<void>;
   cleanup: () => Promise<void>;
@@ -717,21 +718,21 @@ export class MCPJamClient extends Client<Request, Notification, Result> {
     tools: Tool[],
     onUpdate?: (content: string) => void,
     model: string = "claude-3-5-sonnet-latest",
+    provider?: string,
   ): Promise<string> {
-    if (!this.aiProvider) {
-      const errorMessage = "AI provider not initialized";
-      this.addClientLog(errorMessage, "error");
-      throw new Error(errorMessage);
+    // Get the specified provider or fall back to default
+    const aiProvider = provider 
+      ? providerManager.getProvider(provider as "anthropic" | "openai" | "deepseek")
+      : providerManager.getDefaultProvider();
+      
+    if (!aiProvider) {
+      const providerName = provider || "default";
+      throw new Error(`No ${providerName} provider available. Please check your API key configuration.`);
     }
 
-    this.addClientLog(
-      `Processing query with ${tools.length} tools using model ${model}`,
-      "info",
-    );
     const context = this.initializeQueryContext(query, tools, model);
-    const response = await this.makeInitialApiCall(context);
-
-    return this.processIterations(response, context, onUpdate);
+    const currentResponse = await this.makeInitialApiCall(context, aiProvider);
+    return this.processIterations(currentResponse, context, aiProvider, onUpdate);
   }
 
   private initializeQueryContext(query: string, tools: Tool[], model: string) {
@@ -750,13 +751,10 @@ export class MCPJamClient extends Client<Request, Notification, Result> {
 
   private async makeInitialApiCall(
     context: ReturnType<typeof this.initializeQueryContext>,
+    aiProvider: AIProvider,
   ): Promise<Message> {
-    if (!this.aiProvider) {
-      throw new Error("AI provider not initialized");
-    }
-    
     this.addClientLog("Making initial API call to AI provider", "debug");
-    const response = await this.aiProvider.createMessage({
+    const response = await aiProvider.createMessage({
       model: context.model,
       max_tokens: 1000,
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -777,6 +775,7 @@ export class MCPJamClient extends Client<Request, Notification, Result> {
   private async processIterations(
     initialResponse: Message,
     context: ReturnType<typeof this.initializeQueryContext>,
+    aiProvider: AIProvider,
     onUpdate?: (content: string) => void,
   ): Promise<string> {
     let response = initialResponse;
@@ -799,7 +798,7 @@ export class MCPJamClient extends Client<Request, Notification, Result> {
       }
 
       try {
-        response = await this.makeFollowUpApiCall(context);
+        response = await this.makeFollowUpApiCall(context, aiProvider);
       } catch (error) {
         const errorMessage = `[API Error: ${error}]`;
         this.addClientLog(
@@ -972,13 +971,10 @@ export class MCPJamClient extends Client<Request, Notification, Result> {
 
   private async makeFollowUpApiCall(
     context: ReturnType<typeof this.initializeQueryContext>,
+    aiProvider: AIProvider,
   ): Promise<Message> {
-    if (!this.aiProvider) {
-      throw new Error("AI provider not initialized");
-    }
-    
     this.addClientLog("Making follow-up API call to AI provider", "debug");
-    const response = await this.aiProvider.createMessage({
+    const response = await aiProvider.createMessage({
       model: context.model,
       max_tokens: 1000,
       // eslint-disable-next-line @typescript-eslint/no-explicit-any

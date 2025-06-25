@@ -56,14 +56,43 @@ export class OpenAIProvider extends AIProvider {
     const openaiMessages = this.convertToOpenAIMessages(options.messages);
     const openaiTools = options.tools ? this.convertToOpenAITools(options.tools) : undefined;
 
-    const response = await this.openai.chat.completions.create({
-      model: options.model,
-      max_tokens: options.max_tokens,
-      messages: openaiMessages,
-      tools: openaiTools,
-    });
+    try {
+      const response = await this.openai.chat.completions.create({
+        model: options.model,
+        max_tokens: options.max_tokens,
+        messages: openaiMessages,
+        tools: openaiTools,
+      });
 
-    return this.convertFromOpenAIResponse(response);
+      return this.convertFromOpenAIResponse(response);
+    } catch (error: unknown) {
+      // Handle OpenAI-specific errors with better messaging
+      const openaiError = error as { status?: number; message?: string };
+      if (openaiError?.status === 429) {
+        throw new Error(
+          `OpenAI Rate Limit Exceeded: ${openaiError?.message || 'Too many requests. Please check your OpenAI plan and billing, or try again later.'}`
+        );
+      } else if (openaiError?.status === 401) {
+        throw new Error(
+          `OpenAI Authentication Error: Invalid API key. Please check your OpenAI API key in settings.`
+        );
+      } else if (openaiError?.status === 403) {
+        throw new Error(
+          `OpenAI Permission Error: ${openaiError?.message || 'Access denied. Please check your OpenAI account permissions.'}`
+        );
+      } else if (openaiError?.status === 400) {
+        throw new Error(
+          `OpenAI Request Error: ${openaiError?.message || 'Invalid request. Please check your model selection and parameters.'}`
+        );
+      } else if (openaiError?.status && openaiError.status >= 500) {
+        throw new Error(
+          `OpenAI Server Error: ${openaiError?.message || 'OpenAI service is currently unavailable. Please try again later.'}`
+        );
+      }
+      
+      // Re-throw the original error if it's not a recognized OpenAI error
+      throw error;
+    }
   }
 
   private convertToOpenAIMessages(messages: ProviderMessage[]): OpenAI.Chat.Completions.ChatCompletionMessageParam[] {
