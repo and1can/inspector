@@ -742,7 +742,7 @@ export class MCPJamClient extends Client<Request, Notification, Result> {
     const context = this.initializeQueryContext(query, tools, model);
     const response = await this.makeInitialApiCall(context, aiProvider, signal);
 
-    return this.processIterations(response, context, onUpdate, signal);
+    return this.processIterations(response, context, aiProvider, onUpdate, signal);
   }
 
   private initializeQueryContext(query: string, tools: Tool[], model: string) {
