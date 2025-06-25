@@ -206,8 +206,6 @@ export class MCPJamAgent {
       this.bearerToken, // bearerToken
       this.headerName, // headerName
       this.onStdErrNotification, // onStdErrNotification
-      this.claudeApiKey, // apiKey
-      "anthropic", // providerType
       this.onPendingRequest, // onPendingRequest
       this.onElicitationRequest, // onElicitationRequest
       this.getRoots, // getRoots
@@ -346,12 +344,7 @@ export class MCPJamAgent {
     this.headerName = headerName;
     this.claudeApiKey = claudeApiKey;
 
-    // Update existing clients
-    this.mcpClientsById.forEach((client) => {
-      if (claudeApiKey && client.updateApiKey) {
-        client.updateApiKey(claudeApiKey);
-      }
-    });
+    // Note: claudeApiKey is handled by the AI provider system, not individual clients
   }
 
   // Get aggregated connection status
