@@ -19,8 +19,7 @@ import {
 } from "@modelcontextprotocol/sdk/types.js";
 import {
   AIProvider,
-  SupportedProvider,
-  providerFactory,
+  providerManager,
 } from "@/lib/providers";
 import {
   MessageParam,
@@ -78,7 +77,6 @@ export interface ExtendedMcpClient extends Client {
 }
 
 export class MCPJamClient extends Client<Request, Notification, Result> {
-  aiProvider?: AIProvider;
   clientTransport: Transport | undefined;
   serverConfig: MCPJamServerConfig;
   headers: HeadersInit;
@@ -108,8 +106,6 @@ export class MCPJamClient extends Client<Request, Notification, Result> {
     bearerToken?: string,
     headerName?: string,
     onStdErrNotification?: (notification: StdErrNotification) => void,
-    apiKey?: string,
-    providerType: SupportedProvider = "anthropic",
     onPendingRequest?: (
       request: CreateMessageRequest,
       resolve: (result: CreateMessageResult) => void,
@@ -132,7 +128,7 @@ export class MCPJamClient extends Client<Request, Notification, Result> {
       },
     );
     
-    // Assign properties first
+    // Assign properties
     this.serverConfig = serverConfig;
     this.headers = {};
     this.mcpProxyServerUrl = new URL(
@@ -150,21 +146,13 @@ export class MCPJamClient extends Client<Request, Notification, Result> {
     this.getRoots = getRoots;
     this.addRequestHistory = addRequestHistory;
     this.addClientLog = addClientLog;
-    
-    // Initialize AI provider if API key is provided
-    if (apiKey) {
-      try {
-        this.aiProvider = providerFactory.createProvider(providerType, {
-          apiKey,
-          dangerouslyAllowBrowser: true,
-        });
-        this.addClientLog(`AI provider initialized: ${providerType}`, "info");
-      } catch (error) {
-        this.addClientLog(`Failed to initialize AI provider: ${error}`, "error");
-        // Don't throw here, just log the error
-      }
-    }
   }
+
+  // Get AI provider from ProviderManager
+  get aiProvider(): AIProvider | null {
+    return providerManager.getDefaultProvider();
+  }
+
   async connectStdio() {
     const serverUrl = new URL(
       `${await getMCPProxyAddressAsync(this.inspectorConfig)}/stdio`,
@@ -570,13 +558,6 @@ export class MCPJamClient extends Client<Request, Notification, Result> {
   getMCPProxyServerUrl() {
     return this.mcpProxyServerUrl;
   }
-
-  updateApiKey = (newApiKey: string) => {
-    if (this.aiProvider) {
-      this.aiProvider.updateApiKey(newApiKey);
-      this.addClientLog("AI provider API key updated", "info");
-    }
-  };
 
   async makeRequest<T extends z.ZodType>(
     request: ClientRequest,

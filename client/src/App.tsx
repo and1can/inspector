@@ -63,6 +63,7 @@ import {
   HttpServerDefinition,
 } from "./lib/serverTypes";
 import { ConnectionStatus } from "./lib/constants";
+import { providerManager } from "@/lib/providers";
 
 const App = () => {
   const serverState = useServerState();
@@ -85,6 +86,7 @@ const App = () => {
   const [isSidebarExpanded, setIsSidebarExpanded] = useState(true);
   const [showStarModal, setShowStarModal] = useState(false);
   const { addClientLog } = mcpOperations;
+
   // Handle hash changes for navigation
   useEffect(() => {
     const handleHashChange = () => {
@@ -212,7 +214,6 @@ const App = () => {
             configState.config,
             configState.bearerToken,
             configState.headerName,
-            configState.claudeApiKey,
             onStdErrNotification,
             onPendingRequest,
             getRootsCallback,
@@ -257,8 +258,8 @@ const App = () => {
       configState,
       onStdErrNotification,
       onPendingRequest,
-      onElicitationRequest,
       getRootsCallback,
+      onElicitationRequest,
       addClientLog,
     ],
   );
@@ -418,23 +419,10 @@ const App = () => {
     [connectionState.mcpAgent, serverState],
   );
 
-  // Update API key in agent when it changes
-  const updateApiKey = useCallback(
-    (newApiKey: string) => {
-      if (connectionState.mcpAgent) {
-        connectionState.mcpAgent.updateCredentials(
-          undefined,
-          undefined,
-          newApiKey,
-        );
-      }
-    },
-    [connectionState.mcpAgent],
-  );
-
+  // Simplified API key change handler for backward compatibility
   const handleApiKeyChange = (newApiKey: string) => {
-    configState.updateClaudeApiKey(newApiKey);
-    updateApiKey(newApiKey);
+    // Update the anthropic provider through ProviderManager
+    providerManager.setApiKey("anthropic", newApiKey);
   };
 
   const handleConnectServer = useCallback(
@@ -536,7 +524,6 @@ const App = () => {
             configState.config,
             configState.bearerToken,
             configState.headerName,
-            configState.claudeApiKey,
             onStdErrNotification,
             onPendingRequest,
             getRootsCallback,
@@ -558,11 +545,10 @@ const App = () => {
     configState.config,
     configState.bearerToken,
     configState.headerName,
-    configState.claudeApiKey,
     onStdErrNotification,
     onPendingRequest,
-    onElicitationRequest,
     getRootsCallback,
+    onElicitationRequest,
     addClientLog,
   ]);
 
