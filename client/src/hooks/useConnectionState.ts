@@ -29,7 +29,6 @@ export const useConnectionState = (
       config: InspectorConfig,
       bearerToken: string,
       headerName: string,
-      claudeApiKey: string,
       onStdErrNotification: (notification: StdErrNotification) => void,
       onPendingRequest: (
         request: CreateMessageRequest,
@@ -52,7 +51,6 @@ export const useConnectionState = (
         inspectorConfig: config,
         bearerToken,
         headerName,
-        claudeApiKey,
         onStdErrNotification,
         onPendingRequest,
         onElicitationRequest,
@@ -121,7 +119,6 @@ export const useConnectionState = (
       config: InspectorConfig,
       bearerToken: string,
       headerName: string,
-      claudeApiKey: string,
       onStdErrNotification: (notification: StdErrNotification) => void,
       onPendingRequest: (
         request: CreateMessageRequest,
@@ -143,7 +140,6 @@ export const useConnectionState = (
           inspectorConfig: config,
           bearerToken,
           headerName,
-          claudeApiKey,
           onStdErrNotification,
           onPendingRequest,
           onElicitationRequest,
