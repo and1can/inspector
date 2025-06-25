@@ -1,13 +1,17 @@
 import React, { useState, useEffect, useRef } from "react";
 import { useMcpClient } from "@/context/McpClientContext";
 import { Tool } from "@modelcontextprotocol/sdk/types.js";
-import { Send, User, Loader2, Key, ChevronDown } from "lucide-react";
+import {
+  Tool as MessageTool,
+} from "@anthropic-ai/sdk/resources/messages/messages.mjs";
+import { Send, User, Key, ChevronDown, Square } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { ToolCallMessage } from "./ToolCallMessage";
 import { parseToolCallContent } from "@/utils/toolCallHelpers";
 import { ProviderLogo } from "./ProviderLogo";
 import { providerManager, SupportedProvider } from "@/lib/providers";
 import { ProviderModel } from "@/lib/providers/types";
+import { MCPJamClient } from "@/mcpjamClient";
 
 interface Message {
   role: "user" | "assistant";
@@ -250,6 +254,7 @@ const ChatTab: React.FC = () => {
   const [selectedModel, setSelectedModel] = useState<string>("claude-3-5-sonnet-latest");
   const [showProviderSelector, setShowProviderSelector] = useState(false);
   const [showModelSelector, setShowModelSelector] = useState(false);
+  const [abortController, setAbortController] = useState<AbortController | null>(null);
 
   const chatEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
@@ -283,11 +288,9 @@ const ChatTab: React.FC = () => {
     setChat((prev) => [...prev, message]);
   };
 
-  const processUserQuery = async (userMessage: string) => {
+  const processUserQuery = async (userMessage: string, signal?: AbortSignal) => {
     if (
-      !mcpClient ||
-      !("processQuery" in mcpClient) ||
-      typeof mcpClient.processQuery !== "function"
+      !mcpClient || !(mcpClient instanceof MCPJamClient)
     ) {
       throw new Error(
         "Chat functionality is not available. Please ensure you have a valid API key and the server is connected.",
@@ -302,11 +305,12 @@ const ChatTab: React.FC = () => {
           onUpdate?: (content: string) => void,
           model?: string,
           provider?: string,
+          signal?: AbortSignal,
         ) => Promise<string>;
       }
     ).processQuery(
       userMessage,
-      tools,
+      tools as unknown as MessageTool[],
       (content: string) => {
         const assistantMessage = createMessage("assistant", content);
         addMessageToChat(assistantMessage);
@@ -329,13 +333,29 @@ const ChatTab: React.FC = () => {
     setInput("");
     setLoading(true);
 
+    // Create new AbortController for this request
+    const controller = new AbortController();
+    setAbortController(controller);
+
     try {
-      await processUserQuery(userMessage);
+      await processUserQuery(userMessage, controller.signal);
     } catch (e: unknown) {
       const errorMessage =
         e instanceof Error ? e.message : "Error sending message";
-      setError(errorMessage);
+      // Don't show error message if the request was cancelled
+      if (errorMessage !== "Chat was cancelled") {
+        setError(errorMessage);
+      }
     } finally {
+      setLoading(false);
+      setAbortController(null);
+    }
+  };
+
+  const handleStop = () => {
+    if (abortController) {
+      abortController.abort();
+      setAbortController(null);
       setLoading(false);
     }
   };
@@ -440,6 +460,15 @@ const ChatTab: React.FC = () => {
       document.removeEventListener("mousedown", handleClickOutside);
     };
   }, [showProviderSelector, showModelSelector]);
+
+  // Cleanup effect to abort any ongoing requests when component unmounts
+  useEffect(() => {
+    return () => {
+      if (abortController) {
+        abortController.abort();
+      }
+    };
+  }, [abortController]);
 
   return (
     <div className="flex flex-col h-full bg-white dark:bg-slate-950">
@@ -617,22 +646,31 @@ const ChatTab: React.FC = () => {
                   maxHeight: "128px",
                 }}
               />
-              <button
-                type="submit"
-                disabled={isSendDisabled}
-                className={cn(
-                  "flex-shrink-0 w-10 h-10 rounded-xl flex items-center justify-center transition-colors",
-                  isSendDisabled
-                    ? "bg-slate-100 dark:bg-slate-800 text-slate-400 cursor-not-allowed"
-                    : "bg-slate-900 dark:bg-slate-100 text-white dark:text-slate-900 hover:bg-slate-800 dark:hover:bg-slate-200",
-                )}
-              >
-                {loading ? (
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                ) : (
+              {loading ? (
+                <button
+                  type="button"
+                  onClick={handleStop}
+                  className={cn(
+                    "flex-shrink-0 w-10 h-10 rounded-xl flex items-center justify-center transition-colors",
+                    "bg-red-600 hover:bg-red-700 text-white",
+                  )}
+                >
+                  <Square className="w-4 h-4" />
+                </button>
+              ) : (
+                <button
+                  type="submit"
+                  disabled={isSendDisabled}
+                  className={cn(
+                    "flex-shrink-0 w-10 h-10 rounded-xl flex items-center justify-center transition-colors",
+                    isSendDisabled
+                      ? "bg-slate-100 dark:bg-slate-800 text-slate-400 cursor-not-allowed"
+                      : "bg-slate-900 dark:bg-slate-100 text-white dark:text-slate-900 hover:bg-slate-800 dark:hover:bg-slate-200",
+                  )}
+                >
                   <Send className="w-4 h-4" />
-                )}
-              </button>
+                </button>
+              )}
             </div>
 
             {/* Tips */}
