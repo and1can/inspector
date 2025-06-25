@@ -7,6 +7,7 @@ import {
   ProviderMessage,
   ProviderTool,
   ProviderResponseContent,
+  ProviderModel,
 } from "./types";
 
 export class OpenAIProvider extends AIProvider {
@@ -40,17 +41,36 @@ export class OpenAIProvider extends AIProvider {
     return "gpt-4o";
   }
 
-  getSupportedModels(): string[] {
+  getSupportedModels(): ProviderModel[] {
     return [
-      "gpt-4o",
-      "gpt-4o-mini",
-      "gpt-4-turbo",
-      "gpt-4",
-      "gpt-3.5-turbo",
-      "o1-preview",
-      "o1-mini",
+      {
+        id: "gpt-4o",
+        name: "GPT-4o",
+        description: "Most advanced GPT-4 model with enhanced capabilities"
+      },
+      {
+        id: "gpt-4o-mini",
+        name: "GPT-4o mini",
+        description: "Faster and more affordable GPT-4o model"
+      },
+      {
+        id: "gpt-4-turbo",
+        name: "GPT-4 Turbo",
+        description: "Advanced GPT-4 model with improved speed"
+      },
+      {
+        id: "gpt-4",
+        name: "GPT-4",
+        description: "Powerful GPT-4 model for complex tasks"
+      },
+      {
+        id: "gpt-3.5-turbo",
+        name: "GPT-3.5 Turbo",
+        description: "Fast and efficient model for most tasks"
+      }
     ];
   }
+  
 
   async createMessage(options: ProviderCreateOptions): Promise<ProviderResponse> {
     const openaiMessages = this.convertToOpenAIMessages(options.messages);

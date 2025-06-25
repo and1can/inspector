@@ -3,23 +3,16 @@ import { useMcpClient } from "@/context/McpClientContext";
 import { Tool } from "@modelcontextprotocol/sdk/types.js";
 import { Send, User, Loader2, Key, ChevronDown } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { ALL_MODELS } from "@/lib/constants";
 import { ToolCallMessage } from "./ToolCallMessage";
 import { parseToolCallContent } from "@/utils/toolCallHelpers";
 import { ProviderLogo } from "./ProviderLogo";
 import { providerManager, SupportedProvider } from "@/lib/providers";
+import { ProviderModel } from "@/lib/providers/types";
 
 interface Message {
   role: "user" | "assistant";
   content: string;
   timestamp: Date;
-}
-
-interface Model {
-  id: string;
-  name: string;
-  description: string;
-  provider: "anthropic" | "openai" | "deepseek";
 }
 
 // Helper functions
@@ -54,8 +47,16 @@ const getProviderDisplayName = (provider: SupportedProvider): string => {
   }
 };
 
-const getModelsForProvider = (provider: SupportedProvider): Model[] => {
-  return ALL_MODELS.filter(model => model.provider === provider);
+const getModelsForProvider = (provider: SupportedProvider): ProviderModel[] => {
+  try {
+    const providerInstance = providerManager.getProvider(provider);
+    if (providerInstance) {
+      return providerInstance.getSupportedModels();
+    }
+  } catch (error) {
+    console.warn(`Failed to get models for provider ${provider}:`, error);
+  }
+  return [];
 };
 
 const validateSendConditions = (
@@ -598,8 +599,8 @@ const ChatTab: React.FC = () => {
                   !hasAnyApiKey
                     ? "API key required..."
                     : loading
-                      ? "Claude is thinking..."
-                      : "Message Claude..."
+                      ? `${getProviderDisplayName(selectedProvider)} is thinking...`
+                      : `Message ${getProviderDisplayName(selectedProvider)}...`
                 }
                 disabled={isDisabled}
                 rows={1}
