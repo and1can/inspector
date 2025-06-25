@@ -317,6 +317,7 @@ const ChatTab: React.FC = () => {
       },
       selectedModel,
       selectedProvider,
+      signal,
     );
   };
 
