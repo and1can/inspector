@@ -19,8 +19,7 @@ import {
 } from "@modelcontextprotocol/sdk/types.js";
 import {
   AIProvider,
-  SupportedProvider,
-  providerFactory,
+  providerManager,
 } from "@/lib/providers";
 import {
   MessageParam,
@@ -72,13 +71,13 @@ export interface ExtendedMcpClient extends Client {
     tools: Tool[],
     onUpdate?: (content: string) => void,
     model?: string,
+    provider?: string,
   ) => Promise<string>;
   chatLoop: (tools: Tool[]) => Promise<void>;
   cleanup: () => Promise<void>;
 }
 
 export class MCPJamClient extends Client<Request, Notification, Result> {
-  aiProvider?: AIProvider;
   clientTransport: Transport | undefined;
   serverConfig: MCPJamServerConfig;
   headers: HeadersInit;
@@ -108,8 +107,6 @@ export class MCPJamClient extends Client<Request, Notification, Result> {
     bearerToken?: string,
     headerName?: string,
     onStdErrNotification?: (notification: StdErrNotification) => void,
-    apiKey?: string,
-    providerType: SupportedProvider = "anthropic",
     onPendingRequest?: (
       request: CreateMessageRequest,
       resolve: (result: CreateMessageResult) => void,
@@ -132,7 +129,7 @@ export class MCPJamClient extends Client<Request, Notification, Result> {
       },
     );
     
-    // Assign properties first
+    // Assign properties
     this.serverConfig = serverConfig;
     this.headers = {};
     this.mcpProxyServerUrl = new URL(
@@ -150,21 +147,13 @@ export class MCPJamClient extends Client<Request, Notification, Result> {
     this.getRoots = getRoots;
     this.addRequestHistory = addRequestHistory;
     this.addClientLog = addClientLog;
-    
-    // Initialize AI provider if API key is provided
-    if (apiKey) {
-      try {
-        this.aiProvider = providerFactory.createProvider(providerType, {
-          apiKey,
-          dangerouslyAllowBrowser: true,
-        });
-        this.addClientLog(`AI provider initialized: ${providerType}`, "info");
-      } catch (error) {
-        this.addClientLog(`Failed to initialize AI provider: ${error}`, "error");
-        // Don't throw here, just log the error
-      }
-    }
   }
+
+  // Get AI provider from ProviderManager
+  get aiProvider(): AIProvider | null {
+    return providerManager.getDefaultProvider();
+  }
+
   async connectStdio() {
     const serverUrl = new URL(
       `${await getMCPProxyAddressAsync(this.inspectorConfig)}/stdio`,
@@ -571,13 +560,6 @@ export class MCPJamClient extends Client<Request, Notification, Result> {
     return this.mcpProxyServerUrl;
   }
 
-  updateApiKey = (newApiKey: string) => {
-    if (this.aiProvider) {
-      this.aiProvider.updateApiKey(newApiKey);
-      this.addClientLog("AI provider API key updated", "info");
-    }
-  };
-
   async makeRequest<T extends z.ZodType>(
     request: ClientRequest,
     schema: T,
@@ -736,15 +718,19 @@ export class MCPJamClient extends Client<Request, Notification, Result> {
     tools: Tool[],
     onUpdate?: (content: string) => void,
     model: string = "claude-3-5-sonnet-latest",
+    provider?: string,
     signal?: AbortSignal,
   ): Promise<string> {
-    if (!this.aiProvider) {
-      const errorMessage = "AI provider not initialized";
-      this.addClientLog(errorMessage, "error");
-      throw new Error(errorMessage);
+    // Get the specified provider or fall back to default
+    const aiProvider = provider 
+      ? providerManager.getProvider(provider as "anthropic" | "openai" | "deepseek")
+      : providerManager.getDefaultProvider();
+      
+    if (!aiProvider) {
+      const providerName = provider || "default";
+      throw new Error(`No ${providerName} provider available. Please check your API key configuration.`);
     }
 
-    // Check if already aborted before starting
     if (signal?.aborted) {
       throw new Error("Chat was cancelled");
     }
@@ -754,9 +740,9 @@ export class MCPJamClient extends Client<Request, Notification, Result> {
       "info",
     );
     const context = this.initializeQueryContext(query, tools, model);
-    const response = await this.makeInitialApiCall(context, signal);
+    const response = await this.makeInitialApiCall(context, aiProvider, signal);
 
-    return this.processIterations(response, context, onUpdate, signal);
+    return this.processIterations(response, context, aiProvider, onUpdate, signal);
   }
 
   private initializeQueryContext(query: string, tools: Tool[], model: string) {
@@ -775,6 +761,7 @@ export class MCPJamClient extends Client<Request, Notification, Result> {
 
   private async makeInitialApiCall(
     context: ReturnType<typeof this.initializeQueryContext>,
+    aiProvider: AIProvider,
     signal?: AbortSignal,
   ): Promise<Message> {
     if (!this.aiProvider) {
@@ -787,7 +774,7 @@ export class MCPJamClient extends Client<Request, Notification, Result> {
     }
     
     this.addClientLog("Making initial API call to AI provider", "debug");
-    const response = await this.aiProvider.createMessage({
+    const response = await aiProvider.createMessage({
       model: context.model,
       max_tokens: 1000,
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -813,6 +800,7 @@ export class MCPJamClient extends Client<Request, Notification, Result> {
   private async processIterations(
     initialResponse: Message,
     context: ReturnType<typeof this.initializeQueryContext>,
+    aiProvider: AIProvider,
     onUpdate?: (content: string) => void,
     signal?: AbortSignal,
   ): Promise<string> {
@@ -841,7 +829,7 @@ export class MCPJamClient extends Client<Request, Notification, Result> {
       }
 
       try {
-        response = await this.makeFollowUpApiCall(context, signal);
+        response = await this.makeFollowUpApiCall(context, aiProvider, signal);
       } catch (error) {
         const errorMessage = `[API Error: ${error}]`;
         this.addClientLog(
@@ -1034,6 +1022,7 @@ export class MCPJamClient extends Client<Request, Notification, Result> {
 
   private async makeFollowUpApiCall(
     context: ReturnType<typeof this.initializeQueryContext>,
+    aiProvider: AIProvider,
     signal?: AbortSignal,
   ): Promise<Message> {
     if (!this.aiProvider) {
@@ -1044,9 +1033,8 @@ export class MCPJamClient extends Client<Request, Notification, Result> {
     if (signal?.aborted) {
       throw new Error("Chat was cancelled");
     }
-    
-    this.addClientLog("Making follow-up API call to AI provider", "debug");
-    const response = await this.aiProvider.createMessage({
+  this.addClientLog("Making follow-up API call to AI provider", "debug");
+    const response = await aiProvider.createMessage({
       model: context.model,
       max_tokens: 1000,
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
