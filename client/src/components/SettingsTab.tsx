@@ -19,6 +19,7 @@ interface ApiKeysState {
   anthropic: ApiKeyData;
   openai: ApiKeyData;
   deepseek: ApiKeyData;
+  ollama: ApiKeyData;
 }
 
 interface ProviderConfig {
@@ -46,6 +47,12 @@ const PROVIDERS: Record<SupportedProvider, ProviderConfig> = {
     displayName: "DeepSeek",
     placeholder: "Enter your DeepSeek API key",
     description: "Required for DeepSeek AI models (coming soon)"
+  },
+  ollama: {
+    name: "ollama",
+    displayName: "Ollama",
+    placeholder: "Enter Ollama host URL (optional, defaults to http://127.0.0.1:11434)",
+    description: "Local Ollama installation - requires Ollama to be running"
   }
 };
 
@@ -55,7 +62,8 @@ const SettingsTab: React.FC<SettingsTabProps> = ({
   const [apiKeys, setApiKeys] = useState<ApiKeysState>({
     anthropic: { key: "", isValid: false, showKey: false },
     openai: { key: "", isValid: false, showKey: false },
-    deepseek: { key: "", isValid: false, showKey: false }
+    deepseek: { key: "", isValid: false, showKey: false },
+    ollama: { key: "", isValid: false, showKey: false }
   });
   const [collapsedSections, setCollapsedSections] = useState<Record<string, boolean>>({});
   const { toast } = useToast();

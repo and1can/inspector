@@ -30,7 +30,7 @@ const createMessage = (
 });
 
 const getAnyApiKey = (): boolean => {
-  const providers: SupportedProvider[] = ["anthropic", "openai", "deepseek"];
+  const providers: SupportedProvider[] = ["anthropic", "openai", "deepseek", "ollama"];
   return providers.some(provider => providerManager.isProviderReady(provider));
 };
 
@@ -39,6 +39,7 @@ const getAvailableProviders = (): SupportedProvider[] => {
   if (providerManager.isProviderReady("anthropic")) providers.push("anthropic");
   if (providerManager.isProviderReady("openai")) providers.push("openai");
   if (providerManager.isProviderReady("deepseek")) providers.push("deepseek");
+  if (providerManager.isProviderReady("ollama")) providers.push("ollama");
   return providers;
 };
 
@@ -47,6 +48,7 @@ const getProviderDisplayName = (provider: SupportedProvider): string => {
     case "anthropic": return "Claude";
     case "openai": return "OpenAI";
     case "deepseek": return "DeepSeek";
+    case "ollama": return "Ollama";
     default: return provider;
   }
 };

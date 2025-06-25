@@ -16,7 +16,8 @@ export class ProviderManager {
   private storageKeys: StorageKeys = {
     anthropic: "claude-api-key",
     openai: "openai-api-key",
-    deepseek: "deepseek-api-key"
+    deepseek: "deepseek-api-key",
+    ollama: "ollama-host"
   };
 
   constructor() {
@@ -29,6 +30,7 @@ export class ProviderManager {
     this.providers.set("anthropic", { provider: null, isValid: false, apiKey: "" });
     this.providers.set("openai", { provider: null, isValid: false, apiKey: "" });
     this.providers.set("deepseek", { provider: null, isValid: false, apiKey: "" });
+    this.providers.set("ollama", { provider: null, isValid: false, apiKey: "" });
   }
 
   private loadApiKeysFromStorage() {
@@ -38,6 +40,9 @@ export class ProviderManager {
         const storedApiKey = localStorage.getItem(storageKey) || "";
         if (storedApiKey && this.validateApiKey(providerType, storedApiKey)) {
           this.setApiKey(providerType, storedApiKey);
+        } else if (providerType === "ollama") {
+          // Auto-initialize Ollama with default host if no custom host is set
+          this.setApiKey("ollama", "");
         }
       } catch (error) {
         console.warn(`Failed to load ${providerType} API key from localStorage:`, error);
@@ -55,6 +60,15 @@ export class ProviderManager {
       case "deepseek":
         // Add DeepSeek validation pattern when implemented
         return apiKey.length > 10; // Basic validation for now
+      case "ollama":
+        // Ollama doesn't require an API key, just check if it's a valid URL or empty
+        if (!apiKey) return true; // Empty is fine, will use default host
+        try {
+          new URL(apiKey);
+          return true;
+        } catch {
+          return false;
+        }
       default:
         return false;
     }
@@ -65,6 +79,7 @@ export class ProviderManager {
       const config: ProviderConfig = {
         apiKey,
         dangerouslyAllowBrowser: true,
+        baseURL: providerType === "ollama" ? apiKey || "http://127.0.0.1:11434" : undefined,
       };
       return providerFactory.createProvider(providerType, config);
     } catch (error) {
@@ -77,11 +92,11 @@ export class ProviderManager {
     const isValid = this.validateApiKey(providerType, apiKey);
     let provider: AIProvider | null = null;
 
-    if (isValid && apiKey) {
+    if (isValid) {
       provider = this.createProvider(providerType, apiKey);
       
-      // Save to localStorage if provider creation succeeded
-      if (provider) {
+      // Save to localStorage if provider creation succeeded and there's an actual key
+      if (provider && apiKey) {
         try {
           const storageKey = this.storageKeys[providerType];
           localStorage.setItem(storageKey, apiKey);
@@ -137,7 +152,7 @@ export class ProviderManager {
   // Get the first available provider (for backward compatibility)
   getDefaultProvider(): AIProvider | null {
     // Try Anthropic first, then others
-    const priority: SupportedProvider[] = ["anthropic", "openai", "deepseek"];
+    const priority: SupportedProvider[] = ["anthropic", "openai", "deepseek", "ollama"];
     
     for (const providerType of priority) {
       const provider = this.getProvider(providerType);
@@ -151,7 +166,7 @@ export class ProviderManager {
 
   // Get the provider type for the default provider
   getDefaultProviderType(): SupportedProvider | null {
-    const priority: SupportedProvider[] = ["anthropic", "openai", "deepseek"];
+    const priority: SupportedProvider[] = ["anthropic", "openai", "deepseek", "ollama"];
     
     for (const providerType of priority) {
       if (this.isProviderReady(providerType)) {

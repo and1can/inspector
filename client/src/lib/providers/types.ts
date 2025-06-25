@@ -74,7 +74,7 @@ export abstract class AIProvider {
   abstract getSupportedModels(): ProviderModel[];
 }
 
-export type SupportedProvider = "anthropic" | "openai" | "deepseek";
+export type SupportedProvider = "anthropic" | "openai" | "deepseek" | "ollama";
 
 export interface ProviderFactory {
   createProvider(type: SupportedProvider, config: ProviderConfig): AIProvider;
