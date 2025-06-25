@@ -63,7 +63,6 @@ import {
   HttpServerDefinition,
 } from "./lib/serverTypes";
 import { ConnectionStatus } from "./lib/constants";
-import { providerManager } from "@/lib/providers";
 
 const App = () => {
   const serverState = useServerState();
@@ -418,12 +417,6 @@ const App = () => {
     },
     [connectionState.mcpAgent, serverState],
   );
-
-  // Simplified API key change handler for backward compatibility
-  const handleApiKeyChange = (newApiKey: string) => {
-    // Update the anthropic provider through ProviderManager
-    providerManager.setApiKey("anthropic", newApiKey);
-  };
 
   const handleConnectServer = useCallback(
     async (serverName: string) => {
@@ -1024,7 +1017,7 @@ const App = () => {
             />
           );
         case "settings":
-          return <SettingsTab onApiKeyChange={handleApiKeyChange} />;
+          return <SettingsTab />;
         default:
           return null;
       }

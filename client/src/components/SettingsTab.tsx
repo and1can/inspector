@@ -6,7 +6,6 @@ import { useToast } from "@/lib/hooks/useToast";
 import { providerManager, SupportedProvider } from "@/lib/providers";
 
 interface SettingsTabProps {
-  onApiKeyChange: (apiKey: string) => void;
   disabled?: boolean;
 }
 
@@ -51,7 +50,6 @@ const PROVIDERS: Record<SupportedProvider, ProviderConfig> = {
 };
 
 const SettingsTab: React.FC<SettingsTabProps> = ({
-  onApiKeyChange,
   disabled = false,
 }) => {
   const [apiKeys, setApiKeys] = useState<ApiKeysState>({
@@ -84,11 +82,6 @@ const SettingsTab: React.FC<SettingsTabProps> = ({
     });
     
     setApiKeys(newApiKeys);
-    
-    // For backward compatibility, still call onApiKeyChange with Anthropic key
-    if (newApiKeys.anthropic.isValid) {
-      onApiKeyChange(newApiKeys.anthropic.key);
-    }
   }, []);
 
   const handleApiKeyChange = (providerName: SupportedProvider, value: string) => {
@@ -114,11 +107,6 @@ const SettingsTab: React.FC<SettingsTabProps> = ({
     } else {
       setCollapsedSections(prev => ({ ...prev, [providerName]: false }));
     }
-    
-    // For backward compatibility, call onApiKeyChange for Anthropic
-    if (providerName === "anthropic") {
-      onApiKeyChange(isValid ? value : "");
-    }
   };
 
   const clearApiKey = (providerName: SupportedProvider) => {
@@ -136,11 +124,6 @@ const SettingsTab: React.FC<SettingsTabProps> = ({
     }));
     
     setCollapsedSections(prev => ({ ...prev, [providerName]: false }));
-    
-    // For backward compatibility, call onApiKeyChange for Anthropic
-    if (providerName === "anthropic") {
-      onApiKeyChange("");
-    }
     
     toast({
       title: "API Key Cleared",
