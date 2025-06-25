@@ -1,226 +1,177 @@
 import { AIProvider, SupportedProvider, ProviderConfig } from "./types";
 import { providerFactory } from "./providerFactory";
 
-export interface StoredProviderConfig {
-  apiKey: string;
+interface ProviderInfo {
+  provider: AIProvider | null;
   isValid: boolean;
-  provider: SupportedProvider;
+  apiKey: string;
+}
+
+interface StorageKeys {
+  [key: string]: string;
 }
 
 export class ProviderManager {
-  private static instance: ProviderManager;
-  private providers: Map<SupportedProvider, AIProvider> = new Map();
-  private providerConfigs: Map<SupportedProvider, StoredProviderConfig> = new Map();
-  private defaultProvider: SupportedProvider = "anthropic";
+  private providers: Map<SupportedProvider, ProviderInfo> = new Map();
+  private storageKeys: StorageKeys = {
+    anthropic: "claude-api-key",
+    openai: "openai-api-key",
+    deepseek: "deepseek-api-key"
+  };
 
-  private constructor() {
-    // Load stored configurations on initialization
-    this.loadStoredConfigurations();
+  constructor() {
+    this.initializeProviders();
+    this.loadApiKeysFromStorage();
   }
 
-  static getInstance(): ProviderManager {
-    if (!ProviderManager.instance) {
-      ProviderManager.instance = new ProviderManager();
-    }
-    return ProviderManager.instance;
+  private initializeProviders() {
+    // Initialize with null providers
+    this.providers.set("anthropic", { provider: null, isValid: false, apiKey: "" });
+    this.providers.set("openai", { provider: null, isValid: false, apiKey: "" });
+    this.providers.set("deepseek", { provider: null, isValid: false, apiKey: "" });
   }
 
-  /**
-   * Load stored API keys from localStorage
-   */
-  private loadStoredConfigurations(): void {
-    const providerStorageKeys: Record<SupportedProvider, string> = {
-      anthropic: "claude-api-key",
-      openai: "openai-api-key",
-      deepseek: "deepseek-api-key",
-    };
-
-    Object.entries(providerStorageKeys).forEach(([provider, storageKey]) => {
+  private loadApiKeysFromStorage() {
+    this.providers.forEach((info, providerType) => {
       try {
+        const storageKey = this.storageKeys[providerType];
         const storedApiKey = localStorage.getItem(storageKey) || "";
-        if (storedApiKey) {
-          this.updateProvider(provider as SupportedProvider, storedApiKey);
+        if (storedApiKey && this.validateApiKey(providerType, storedApiKey)) {
+          this.setApiKey(providerType, storedApiKey);
         }
       } catch (error) {
-        console.warn(`Failed to load ${provider} API key from localStorage:`, error);
+        console.warn(`Failed to load ${providerType} API key from localStorage:`, error);
       }
     });
   }
 
-  /**
-   * Update a provider with a new API key
-   */
-  updateProvider(providerType: SupportedProvider, apiKey: string): boolean {
-    try {
-      // Validate API key format based on provider
-      const isValid = this.validateApiKey(providerType, apiKey);
-      
-      if (isValid && apiKey.trim() !== "") {
-        // Create or update the provider
-        const provider = providerFactory.createProvider(providerType, {
-          apiKey,
-          dangerouslyAllowBrowser: true,
-        });
-
-        this.providers.set(providerType, provider);
-        this.providerConfigs.set(providerType, {
-          apiKey,
-          isValid: true,
-          provider: providerType,
-        });
-
-        // Save to localStorage
-        this.saveToStorage(providerType, apiKey);
-        return true;
-      } else {
-        // Remove invalid provider
-        this.removeProvider(providerType);
-        return false;
-      }
-    } catch (error) {
-      console.error(`Failed to update ${providerType} provider:`, error);
-      this.removeProvider(providerType);
-      return false;
-    }
-  }
-
-  /**
-   * Remove a provider
-   */
-  removeProvider(providerType: SupportedProvider): void {
-    this.providers.delete(providerType);
-    this.providerConfigs.delete(providerType);
-    
-    // Remove from localStorage
-    const storageKey = this.getStorageKey(providerType);
-    try {
-      localStorage.removeItem(storageKey);
-    } catch (error) {
-      console.warn(`Failed to remove ${providerType} API key from localStorage:`, error);
-    }
-  }
-
-  /**
-   * Get a specific provider
-   */
-  getProvider(providerType: SupportedProvider): AIProvider | null {
-    return this.providers.get(providerType) || null;
-  }
-
-  /**
-   * Get the default provider (first available or anthropic)
-   */
-  getDefaultProvider(): AIProvider | null {
-    // Try to get the set default provider first
-    const defaultProvider = this.providers.get(this.defaultProvider);
-    if (defaultProvider) {
-      return defaultProvider;
-    }
-
-    // Fallback to first available provider
-    for (const provider of this.providers.values()) {
-      return provider;
-    }
-
-    return null;
-  }
-
-  /**
-   * Set the default provider type
-   */
-  setDefaultProvider(providerType: SupportedProvider): void {
-    if (this.providers.has(providerType)) {
-      this.defaultProvider = providerType;
-    }
-  }
-
-  /**
-   * Get all available providers
-   */
-  getAvailableProviders(): SupportedProvider[] {
-    return Array.from(this.providers.keys());
-  }
-
-  /**
-   * Check if any provider is available
-   */
-  hasAnyProvider(): boolean {
-    return this.providers.size > 0;
-  }
-
-  /**
-   * Get provider configuration
-   */
-  getProviderConfig(providerType: SupportedProvider): StoredProviderConfig | null {
-    return this.providerConfigs.get(providerType) || null;
-  }
-
-  /**
-   * Get all provider configurations
-   */
-  getAllProviderConfigs(): Record<SupportedProvider, StoredProviderConfig | null> {
-    return {
-      anthropic: this.getProviderConfig("anthropic"),
-      openai: this.getProviderConfig("openai"),
-      deepseek: this.getProviderConfig("deepseek"),
-    };
-  }
-
-  /**
-   * Validate API key format for specific provider
-   */
   private validateApiKey(providerType: SupportedProvider, apiKey: string): boolean {
-    if (!apiKey || apiKey.trim() === "") {
-      return false;
-    }
-
     switch (providerType) {
       case "anthropic":
         return /^sk-ant-api03-[A-Za-z0-9_-]+$/.test(apiKey) && apiKey.length > 20;
       case "openai":
-        return /^sk-[A-Za-z0-9_-]+$/.test(apiKey) && apiKey.length > 20;
+        // Basic validation - just check it starts with sk- and has reasonable length
+        return apiKey.startsWith("sk-") && apiKey.length > 20;
       case "deepseek":
-        // Add DeepSeek validation when implemented
-        return apiKey.length > 10;
+        // Add DeepSeek validation pattern when implemented
+        return apiKey.length > 10; // Basic validation for now
       default:
         return false;
     }
   }
 
-  /**
-   * Get storage key for provider
-   */
-  private getStorageKey(providerType: SupportedProvider): string {
-    const storageKeys: Record<SupportedProvider, string> = {
-      anthropic: "claude-api-key",
-      openai: "openai-api-key",
-      deepseek: "deepseek-api-key",
-    };
-    return storageKeys[providerType];
-  }
-
-  /**
-   * Save API key to localStorage
-   */
-  private saveToStorage(providerType: SupportedProvider, apiKey: string): void {
-    const storageKey = this.getStorageKey(providerType);
+  private createProvider(providerType: SupportedProvider, apiKey: string): AIProvider | null {
     try {
-      localStorage.setItem(storageKey, apiKey);
+      const config: ProviderConfig = {
+        apiKey,
+        dangerouslyAllowBrowser: true,
+      };
+      return providerFactory.createProvider(providerType, config);
     } catch (error) {
-      console.warn(`Failed to save ${providerType} API key to localStorage:`, error);
+      console.error(`Failed to create ${providerType} provider:`, error);
+      return null;
     }
   }
 
-  /**
-   * Clear all providers and their stored keys
-   */
-  clearAll(): void {
-    const providerTypes = Array.from(this.providers.keys());
-    providerTypes.forEach(providerType => {
-      this.removeProvider(providerType);
+  setApiKey(providerType: SupportedProvider, apiKey: string): boolean {
+    const isValid = this.validateApiKey(providerType, apiKey);
+    let provider: AIProvider | null = null;
+
+    if (isValid && apiKey) {
+      provider = this.createProvider(providerType, apiKey);
+      
+      // Save to localStorage if provider creation succeeded
+      if (provider) {
+        try {
+          const storageKey = this.storageKeys[providerType];
+          localStorage.setItem(storageKey, apiKey);
+        } catch (error) {
+          console.warn(`Failed to save ${providerType} API key to localStorage:`, error);
+        }
+      }
+    } else if (!apiKey) {
+      // Clear from localStorage if empty key
+      try {
+        const storageKey = this.storageKeys[providerType];
+        localStorage.removeItem(storageKey);
+      } catch (error) {
+        console.warn(`Failed to remove ${providerType} API key from localStorage:`, error);
+      }
+    }
+
+    this.providers.set(providerType, {
+      provider,
+      isValid: isValid && provider !== null,
+      apiKey
+    });
+
+    return isValid && provider !== null;
+  }
+
+  getProvider(providerType: SupportedProvider): AIProvider | null {
+    return this.providers.get(providerType)?.provider || null;
+  }
+
+  isProviderReady(providerType: SupportedProvider): boolean {
+    const info = this.providers.get(providerType);
+    return info?.isValid && info?.provider !== null || false;
+  }
+
+  getApiKey(providerType: SupportedProvider): string {
+    return this.providers.get(providerType)?.apiKey || "";
+  }
+
+  getAllProviderStatus(): Record<SupportedProvider, { isValid: boolean; hasApiKey: boolean }> {
+    const status: Record<string, { isValid: boolean; hasApiKey: boolean }> = {};
+    
+    this.providers.forEach((info, providerType) => {
+      status[providerType] = {
+        isValid: info.isValid,
+        hasApiKey: info.apiKey.length > 0
+      };
+    });
+
+    return status as Record<SupportedProvider, { isValid: boolean; hasApiKey: boolean }>;
+  }
+
+  // Get the first available provider (for backward compatibility)
+  getDefaultProvider(): AIProvider | null {
+    // Try Anthropic first, then others
+    const priority: SupportedProvider[] = ["anthropic", "openai", "deepseek"];
+    
+    for (const providerType of priority) {
+      const provider = this.getProvider(providerType);
+      if (provider && this.isProviderReady(providerType)) {
+        return provider;
+      }
+    }
+    
+    return null;
+  }
+
+  // Get the provider type for the default provider
+  getDefaultProviderType(): SupportedProvider | null {
+    const priority: SupportedProvider[] = ["anthropic", "openai", "deepseek"];
+    
+    for (const providerType of priority) {
+      if (this.isProviderReady(providerType)) {
+        return providerType;
+      }
+    }
+    
+    return null;
+  }
+
+  clearApiKey(providerType: SupportedProvider): void {
+    this.setApiKey(providerType, "");
+  }
+
+  clearAllApiKeys(): void {
+    this.providers.forEach((_, providerType) => {
+      this.clearApiKey(providerType);
     });
   }
 }
 
 // Export singleton instance
-export const providerManager = ProviderManager.getInstance();
+export const providerManager = new ProviderManager();

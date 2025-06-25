@@ -8,4 +8,4 @@ export * from "./anthropicProvider";
 export * from "./providerFactory";
 
 // Export ProviderManager
-export * from "./ProviderManager"; 
+export * from "./providerManager"; 

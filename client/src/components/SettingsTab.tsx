@@ -42,12 +42,6 @@ const PROVIDERS: Record<SupportedProvider, ProviderConfig> = {
     placeholder: "Enter your OpenAI API key (sk-...)",
     description: "Required for GPT models and OpenAI features"
   },
-  deepseek: {
-    name: "deepseek",
-    displayName: "DeepSeek",
-    placeholder: "Enter your DeepSeek API key",
-    description: "Required for DeepSeek AI models"
-  }
 };
 
 const SettingsTab: React.FC<SettingsTabProps> = ({
