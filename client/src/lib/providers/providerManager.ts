@@ -32,7 +32,7 @@ export class ProviderManager {
   }
 
   private loadApiKeysFromStorage() {
-    this.providers.forEach((info, providerType) => {
+    this.providers.forEach((_, providerType) => {
       try {
         const storageKey = this.storageKeys[providerType];
         const storedApiKey = localStorage.getItem(storageKey) || "";

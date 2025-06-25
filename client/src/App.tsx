@@ -257,8 +257,8 @@ const App = () => {
       configState,
       onStdErrNotification,
       onPendingRequest,
-      getRootsCallback,
       onElicitationRequest,
+      getRootsCallback,
       addClientLog,
     ],
   );
@@ -540,8 +540,8 @@ const App = () => {
     configState.headerName,
     onStdErrNotification,
     onPendingRequest,
-    getRootsCallback,
     onElicitationRequest,
+    getRootsCallback,
     addClientLog,
   ]);
 
