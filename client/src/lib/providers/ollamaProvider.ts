@@ -44,8 +44,32 @@ interface OllamaResponse {
   };
 }
 
+// Add interface for Ollama tags/models response
+interface OllamaModel {
+  name: string;
+  model: string;
+  modified_at: string;
+  size: number;
+  digest: string;
+  details?: {
+    parent_model?: string;
+    format?: string;
+    family?: string;
+    families?: string[];
+    parameter_size?: string;
+    quantization_level?: string;
+  };
+}
+
+interface OllamaTagsResponse {
+  models: OllamaModel[];
+}
+
 export class OllamaProvider extends AIProvider {
   private ollama: Ollama;
+  private cachedModels: ProviderModel[] | null = null;
+  private lastFetchTime: number = 0;
+  private readonly cacheTimeout = 30000; // 30 seconds cache
 
   constructor(config: ProviderConfig) {
     super(config);
@@ -58,6 +82,8 @@ export class OllamaProvider extends AIProvider {
     // Ollama doesn't use API keys in the traditional sense
     // but we keep this for consistency with the interface
     this.config.apiKey = apiKey;
+    // Clear cache when config changes
+    this.cachedModels = null;
   }
 
   validateConfig(): boolean {
@@ -74,59 +100,161 @@ export class OllamaProvider extends AIProvider {
     return "llama3.1";
   }
 
-  getSupportedModels(): ProviderModel[] {
+  // New method to fetch locally available models
+  private async fetchLocalModels(): Promise<ProviderModel[]> {
+    try {
+      const host = this.config.baseURL || "http://127.0.0.1:11434";
+      const response = await fetch(`${host}/api/tags`);
+      
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      }
+      
+      const data: OllamaTagsResponse = await response.json();
+      
+      return data.models.map((model: OllamaModel): ProviderModel => {
+        // Extract model name and format it nicely
+        const modelName = model.name;
+        const displayName = this.formatModelDisplayName(modelName);
+        const description = this.generateModelDescription(model);
+        
+        return {
+          id: modelName,
+          name: displayName,
+          description: description
+        };
+      });
+    } catch (error) {
+      console.warn('Failed to fetch local Ollama models:', error);
+      // Return fallback static models if fetch fails
+      return this.getStaticModels();
+    }
+  }
+
+  // Helper method to format model names for display
+  private formatModelDisplayName(modelName: string): string {
+    // Remove common suffixes and format the name nicely
+    const cleanName = modelName
+      .replace(/:latest$/, '')
+      .replace(/[-_]/g, ' ')
+      .split(' ')
+      .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+      .join(' ');
+    
+    return cleanName;
+  }
+
+  // Helper method to generate model descriptions
+  private generateModelDescription(model: OllamaModel): string {
+    const sizeGB = (model.size / (1024 * 1024 * 1024)).toFixed(1);
+    
+    let description = `Size: ${sizeGB}GB`;
+    
+    if (model.details?.parameter_size) {
+      description += ` • ${model.details.parameter_size}`;
+    }
+    
+    if (model.details?.family) {
+      description += ` • ${model.details.family}`;
+    }
+    
+    if (model.details?.quantization_level) {
+      description += ` • ${model.details.quantization_level}`;
+    }
+    
+    return description;
+  }
+
+  // Fallback static models (kept as backup)
+  private getStaticModels(): ProviderModel[] {
     return [
       {
         id: "llama3.1",
         name: "Llama 3.1",
-        description: "Meta's Llama 3.1 model"
+        description: "Meta's Llama 3.1 model (if available locally)"
       },
       {
         id: "llama3.1:8b",
         name: "Llama 3.1 8B",
-        description: "Llama 3.1 8 billion parameter model"
+        description: "Llama 3.1 8 billion parameter model (if available locally)"
       },
       {
         id: "llama3.1:70b",
         name: "Llama 3.1 70B",
-        description: "Llama 3.1 70 billion parameter model"
+        description: "Llama 3.1 70 billion parameter model (if available locally)"
       },
       {
         id: "llama3.2",
         name: "Llama 3.2",
-        description: "Meta's Llama 3.2 model"
+        description: "Meta's Llama 3.2 model (if available locally)"
       },
       {
         id: "llama3.2:3b",
         name: "Llama 3.2 3B",
-        description: "Llama 3.2 3 billion parameter model"
+        description: "Llama 3.2 3 billion parameter model (if available locally)"
       },
       {
         id: "qwen2.5",
         name: "Qwen 2.5",
-        description: "Alibaba's Qwen 2.5 model"
+        description: "Alibaba's Qwen 2.5 model (if available locally)"
       },
       {
         id: "mistral",
         name: "Mistral",
-        description: "Mistral 7B model"
+        description: "Mistral 7B model (if available locally)"
       },
       {
         id: "codellama",
         name: "Code Llama",
-        description: "Code generation model based on Llama"
+        description: "Code generation model based on Llama (if available locally)"
       },
       {
         id: "phi3",
         name: "Phi-3",
-        description: "Microsoft's Phi-3 model"
+        description: "Microsoft's Phi-3 model (if available locally)"
       },
       {
         id: "gemma2",
         name: "Gemma 2",
-        description: "Google's Gemma 2 model"
+        description: "Google's Gemma 2 model (if available locally)"
       }
     ];
+  }
+
+  getSupportedModels(): ProviderModel[] {
+    // Return cached models if still valid
+    const now = Date.now();
+    if (this.cachedModels && (now - this.lastFetchTime) < this.cacheTimeout) {
+      return this.cachedModels;
+    }
+
+    // If no cache, return static models and trigger async fetch
+    if (!this.cachedModels) {
+      // Trigger async fetch in background
+      this.fetchLocalModels().then(models => {
+        this.cachedModels = models;
+        this.lastFetchTime = Date.now();
+      }).catch(error => {
+        console.warn('Background model fetch failed:', error);
+      });
+      
+      // Return static models for immediate use
+      return this.getStaticModels();
+    }
+
+    return this.cachedModels;
+  }
+
+  // New public method to refresh the model cache
+  async refreshModels(): Promise<ProviderModel[]> {
+    this.cachedModels = null;
+    this.lastFetchTime = 0;
+    
+    const models = await this.fetchLocalModels();
+    this.cachedModels = models;
+    this.lastFetchTime = Date.now();
+    
+    return models;
   }
 
   async createMessage(options: ProviderCreateOptions): Promise<ProviderResponse> {

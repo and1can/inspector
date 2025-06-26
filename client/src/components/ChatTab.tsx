@@ -4,7 +4,7 @@ import { Tool } from "@modelcontextprotocol/sdk/types.js";
 import {
   Tool as MessageTool,
 } from "@anthropic-ai/sdk/resources/messages/messages.mjs";
-import { Send, User, Key, ChevronDown, Square } from "lucide-react";
+import { Send, User, Key, ChevronDown, Square, RefreshCw } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { ToolCallMessage } from "./ToolCallMessage";
 import { parseToolCallContent } from "@/utils/toolCallHelpers";
@@ -256,6 +256,7 @@ const ChatTab: React.FC = () => {
   const [showProviderSelector, setShowProviderSelector] = useState(false);
   const [showModelSelector, setShowModelSelector] = useState(false);
   const [abortController, setAbortController] = useState<AbortController | null>(null);
+  const [refreshingModels, setRefreshingModels] = useState(false);
 
   const chatEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
@@ -399,6 +400,29 @@ const ChatTab: React.FC = () => {
 
   const toggleModelSelector = () => {
     setShowModelSelector(!showModelSelector);
+  };
+
+  const handleRefreshModels = async () => {
+    if (selectedProvider !== "ollama" || refreshingModels) return;
+    
+    setRefreshingModels(true);
+    try {
+      const provider = providerManager.getProvider("ollama");
+      if (provider && "refreshModels" in provider && typeof provider.refreshModels === "function") {
+        await provider.refreshModels();
+        // Force a re-render by getting fresh models
+        const freshModels = getModelsForProvider(selectedProvider);
+        // If current model is not in the refreshed list, select the first available
+        if (freshModels.length > 0 && !freshModels.find(m => m.id === selectedModel)) {
+          setSelectedModel(freshModels[0].id);
+        }
+      }
+    } catch (error) {
+      console.warn("Failed to refresh Ollama models:", error);
+      setError("Failed to refresh models. Please ensure Ollama is running.");
+    } finally {
+      setRefreshingModels(false);
+    }
   };
 
   // Initialize with first available provider and model
@@ -570,6 +594,24 @@ const ChatTab: React.FC = () => {
                     </div>
                   )}
                 </div>
+
+                {/* Refresh Models Button (only for Ollama) */}
+                {selectedProvider === "ollama" && (
+                  <button
+                    onClick={handleRefreshModels}
+                    disabled={loading || refreshingModels}
+                    className={cn(
+                      "flex items-center gap-2 px-3 py-1.5 text-sm bg-slate-50 dark:bg-slate-800/50 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors border border-slate-200 dark:border-slate-700",
+                      (loading || refreshingModels) && "opacity-50 cursor-not-allowed"
+                    )}
+                    title="Refresh available models"
+                  >
+                    <RefreshCw className={cn("w-3 h-3 text-slate-400", refreshingModels && "animate-spin")} />
+                    <span className="text-slate-700 dark:text-slate-200 font-medium">
+                      {refreshingModels ? "Refreshing..." : "Refresh"}
+                    </span>
+                  </button>
+                )}
               </div>
             )}
           </div>

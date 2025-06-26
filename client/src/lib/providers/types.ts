@@ -72,6 +72,9 @@ export abstract class AIProvider {
   abstract getProviderName(): string;
   abstract getDefaultModel(): string;
   abstract getSupportedModels(): ProviderModel[];
+  
+  // Optional method for providers that can refresh their model list dynamically
+  async refreshModels?(): Promise<ProviderModel[]>;
 }
 
 export type SupportedProvider = "anthropic" | "openai" | "deepseek" | "ollama";
