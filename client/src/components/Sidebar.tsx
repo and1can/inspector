@@ -17,6 +17,7 @@ import {
   Edit2,
   ChevronLeft,
   ChevronRight,
+  Bot,
   MessageCircle,
 } from "lucide-react";
 import useTheme from "../lib/hooks/useTheme";
@@ -190,7 +191,7 @@ const Sidebar: React.FC<SidebarProps> = ({
       <div className="p-3 border-b border-border/50">
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-2">
-            <MessageCircle className="w-4 h-4 text-muted-foreground" />
+            <Bot className="w-4 h-4 text-muted-foreground" />
             <h3 className="text-sm font-medium text-foreground">Global Chat</h3>
             {connectedServers.length > 0 && (
               <span className="text-xs text-muted-foreground bg-muted px-1.5 py-0.5 rounded">
