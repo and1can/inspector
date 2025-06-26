@@ -52,7 +52,7 @@ const PROVIDERS: Record<SupportedProvider, ProviderConfig> = {
     name: "ollama",
     displayName: "Ollama",
     placeholder: "Enter Ollama host URL (optional, defaults to http://127.0.0.1:11434)",
-    description: "Local Ollama installation - requires Ollama to be running"
+    description: "Local Ollama installation - requires Ollama to be running. 📥 Download from https://ollama.com/download • 🔧 Pull tool-calling models from https://ollama.com/search?c=tools • 🔄 Models appear dynamically in chat"
   }
 };
 
