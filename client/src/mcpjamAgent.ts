@@ -17,7 +17,7 @@ import {
 import { ConnectionStatus } from "./lib/constants";
 import { ClientLogLevels } from "./hooks/helpers/types";
 import { ElicitationResponse } from "./components/ElicitationModal";
-import { ChatLoopProvider, ChatLoop, mappedTools } from "./lib/chatLoop";
+import { ChatLoopProvider, ChatLoop, mappedTools, QueryProcessor, ToolCaller } from "./lib/chatLoop";
 import { Tool as AnthropicTool } from "@anthropic-ai/sdk/resources/messages/messages.mjs";
 
 export interface MCPClientOptions {
@@ -50,7 +50,7 @@ export interface ServerConnectionInfo {
   capabilities: ServerCapabilities | null;
 }
 
-export class MCPJamAgent implements ChatLoopProvider {
+export class MCPJamAgent implements ChatLoopProvider, ToolCaller {
   private mcpClientsById = new Map<string, MCPJamClient>();
   private serverConfigs: Record<string, MCPJamServerConfig>;
   private inspectorConfig: InspectorConfig;
@@ -69,6 +69,7 @@ export class MCPJamAgent implements ChatLoopProvider {
   private getRoots?: () => unknown[];
   private addRequestHistory: (request: object, response?: object) => void;
   public addClientLog: (message: string, level: ClientLogLevels) => void;
+  private queryProcessor: QueryProcessor;
 
   constructor(options: MCPClientOptions) {
     this.serverConfigs = options.servers;
@@ -82,6 +83,7 @@ export class MCPJamAgent implements ChatLoopProvider {
     this.getRoots = options.getRoots;
     this.addRequestHistory = options.addRequestHistory;
     this.addClientLog = options.addClientLog;
+    this.queryProcessor = new QueryProcessor(this);
   }
 
   // Add or update a server configuration
@@ -389,6 +391,22 @@ export class MCPJamAgent implements ChatLoopProvider {
     return null;
   }
 
+  // Implementation of ToolCaller interface
+  async callTool(params: { name: string; arguments?: { [x: string]: unknown } }): Promise<unknown> {
+    // Find which server has this tool
+    const allServerTools = await this.getAllTools();
+    
+    for (const serverTools of allServerTools) {
+      const tool = serverTools.tools.find(t => t.name === params.name);
+      if (tool) {
+        // Call the tool on the specific server
+        return await this.callToolOnServer(serverTools.serverName, params.name, params.arguments || {});
+      }
+    }
+    
+    throw new Error(`Tool ${params.name} not found on any connected server`);
+  }
+
   async processQuery(
     query: string,
     tools: AnthropicTool[],
@@ -397,31 +415,7 @@ export class MCPJamAgent implements ChatLoopProvider {
     provider?: string,
     signal?: AbortSignal,
   ): Promise<string> {
-    // Find the first connected client to delegate processing to
-    // In a more sophisticated implementation, you might want to 
-    // choose the client based on tool availability or load balancing
-    const connectedClient = Array.from(this.mcpClientsById.values()).find(
-      client => client.connectionStatus === "connected"
-    );
-
-    if (!connectedClient) {
-      throw new Error("No connected MCP clients available");
-    }
-
-    this.addClientLog(
-      `Processing query with ${tools.length} tools via agent`,
-      "info",
-    );
-
-    // Use the connected client's processQuery method
-    return await connectedClient.processQuery(
-      query,
-      tools,
-      onUpdate,
-      model,
-      provider,
-      signal,
-    );
+    return this.queryProcessor.processQuery(query, tools, onUpdate, model, provider, signal);
   }
 
   async chatLoop(tools?: AnthropicTool[]) {
