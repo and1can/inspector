@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import { Tool } from "@modelcontextprotocol/sdk/types.js";
 import { Tool as AnthropicTool } from "@anthropic-ai/sdk/resources/messages/messages.mjs";
-import { Send, User, Key, ChevronDown, Square, RefreshCw, Bot } from "lucide-react";
+import { Send, User, Key, ChevronDown, Square, RefreshCw } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { ToolCallMessage } from "./ToolCallMessage";
 import { parseToolCallContent } from "@/utils/toolCallHelpers";
@@ -375,42 +375,28 @@ const GlobalChatTab: React.FC<GlobalChatTabProps> = ({ mcpAgent }) => {
   // Helper functions for component logic
   const fetchTools = async () => {
     if (!mcpAgent) {
-      console.log("No mcpAgent available");
       return;
     }
     
     try {
-      console.log("Fetching tools from all servers...");
-      
       // First, check connection status
       const connectionInfo = mcpAgent.getAllConnectionInfo();
-      console.log("Connection info:", connectionInfo);
       
       const connectedServers = connectionInfo.filter(
         (conn) => conn.connectionStatus === "connected"
       );
-      console.log(`Found ${connectedServers.length} connected servers out of ${connectionInfo.length} total`);
       
       if (connectedServers.length === 0) {
-        console.log("No connected servers found, setting tools to empty array");
         setTools([]);
         return;
       }
       
       const allServerTools = await mcpAgent.getAllTools();
-      console.log("Raw server tools response:", allServerTools);
-      
-      // Also try to get tools only from connected servers
-      const connectedServerNames = connectedServers.map(conn => conn.name);
-      console.log("Connected server names:", connectedServerNames);
       
       const allTools = allServerTools.flatMap(serverTools => {
-        const isConnected = connectedServerNames.includes(serverTools.serverName);
-        console.log(`Server ${serverTools.serverName} (connected: ${isConnected}) has ${serverTools.tools.length} tools:`, serverTools.tools.map(t => t.name));
         return serverTools.tools;
       });
       
-      console.log(`Total tools found: ${allTools.length}`, allTools.map(t => t.name));
       setTools(allTools || []);
     } catch (e: unknown) {
       const errorMessage =
@@ -440,8 +426,6 @@ const GlobalChatTab: React.FC<GlobalChatTabProps> = ({ mcpAgent }) => {
       description: tool.description || "",
       input_schema: tool.inputSchema || { type: "object", properties: {} },
     }));
-
-    console.log("xcxc convertedTools", convertedTools);
 
     let fullResponse = "";
     let currentAssistantMessage: Message | null = null;
