@@ -25,7 +25,7 @@ interface ApiKeyData {
 interface ApiKeysState {
   anthropic: ApiKeyData;
   openai: ApiKeyData;
-  deepseek: ApiKeyData;
+  ollama: ApiKeyData;
 }
 
 interface ProviderConfig {
@@ -48,19 +48,19 @@ const PROVIDERS: Record<SupportedProvider, ProviderConfig> = {
     placeholder: "Enter your OpenAI API key (sk-...)",
     description: "Required for GPT models and OpenAI features",
   },
-  // deepseek: {
-  //   name: "deepseek",
-  //   displayName: "DeepSeek",
-  //   placeholder: "Enter your DeepSeek API key",
-  //   description: "Required for DeepSeek AI models (coming soon)"
-  // }
+  ollama: {
+    name: "ollama",
+    displayName: "Ollama",
+    placeholder: "Enter Ollama host URL (optional, defaults to http://127.0.0.1:11434)",
+    description: "Local Ollama installation - requires Ollama to be running. 📥 Download from https://ollama.com/download • 🔧 Pull tool-calling models from https://ollama.com/search?c=tools • 🔄 Models appear dynamically in chat"
+  }
 };
 
 const SettingsTab: React.FC<SettingsTabProps> = ({ disabled = false }) => {
   const [apiKeys, setApiKeys] = useState<ApiKeysState>({
     anthropic: { key: "", isValid: false, showKey: false },
     openai: { key: "", isValid: false, showKey: false },
-    deepseek: { key: "", isValid: false, showKey: false },
+    ollama: { key: "", isValid: false, showKey: false },
   });
   const [collapsedSections, setCollapsedSections] = useState<
     Record<string, boolean>

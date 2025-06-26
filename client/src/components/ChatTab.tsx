@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from "react";
 import { useMcpClient } from "@/context/McpClientContext";
 import { Tool } from "@modelcontextprotocol/sdk/types.js";
 import { Tool as MessageTool } from "@anthropic-ai/sdk/resources/messages/messages.mjs";
-import { Send, User, Key, ChevronDown, Square } from "lucide-react";
+import { Send, User, Key, ChevronDown, Square, RefreshCw } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { ToolCallMessage } from "./ToolCallMessage";
 import { parseToolCallContent } from "@/utils/toolCallHelpers";
@@ -28,27 +28,24 @@ const createMessage = (
 });
 
 const getAnyApiKey = (): boolean => {
-  const providers: SupportedProvider[] = ["anthropic", "openai"];
-  return providers.some((provider) =>
-    providerManager.isProviderReady(provider),
-  );
+  const providers: SupportedProvider[] = ["anthropic", "openai", "ollama"];
+  return providers.some(provider => providerManager.isProviderReady(provider));
 };
 
 const getAvailableProviders = (): SupportedProvider[] => {
   const providers: SupportedProvider[] = [];
   if (providerManager.isProviderReady("anthropic")) providers.push("anthropic");
   if (providerManager.isProviderReady("openai")) providers.push("openai");
+  if (providerManager.isProviderReady("ollama")) providers.push("ollama");
   return providers;
 };
 
 const getProviderDisplayName = (provider: SupportedProvider): string => {
   switch (provider) {
-    case "anthropic":
-      return "Claude";
-    case "openai":
-      return "OpenAI";
-    default:
-      return provider;
+    case "anthropic": return "Claude";
+    case "openai": return "OpenAI";
+    case "ollama": return "Ollama";
+    default: return provider;
   }
 };
 
@@ -199,6 +196,69 @@ const ApiKeyRequiredState: React.FC = () => (
   </div>
 );
 
+const OllamaSetupInstructions: React.FC = () => (
+  <div className="flex items-center justify-center h-full p-8">
+    <div className="text-center max-w-md space-y-6">
+      <div className="w-12 h-12 mx-auto rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center">
+        <ProviderLogo
+          className="text-slate-600 dark:text-slate-300"
+          size={20}
+          provider="ollama"
+        />
+      </div>
+      <div className="space-y-4">
+        <h3 className="text-lg font-medium text-slate-900 dark:text-slate-100">
+          Get Started with Ollama
+        </h3>
+        <div className="space-y-3 text-sm text-slate-600 dark:text-slate-400">
+          <div className="p-3 bg-slate-50 dark:bg-slate-800/50 rounded-lg border border-slate-200 dark:border-slate-700">
+            <p className="font-medium text-slate-700 dark:text-slate-300 mb-1">
+              📥 Step 1: Download Ollama
+            </p>
+            <p>
+              Visit{" "}
+              <a 
+                href="https://ollama.com/download" 
+                target="_blank" 
+                rel="noopener noreferrer"
+                className="text-blue-600 dark:text-blue-400 hover:underline"
+              >
+                ollama.com/download
+              </a>{" "}
+              to install Ollama on your system
+            </p>
+          </div>
+          <div className="p-3 bg-slate-50 dark:bg-slate-800/50 rounded-lg border border-slate-200 dark:border-slate-700">
+            <p className="font-medium text-slate-700 dark:text-slate-300 mb-1">
+              🔧 Step 2: Pull Tool-Calling Models
+            </p>
+            <p>
+              Browse{" "}
+              <a 
+                href="https://ollama.com/search?c=tools" 
+                target="_blank" 
+                rel="noopener noreferrer"
+                className="text-blue-600 dark:text-blue-400 hover:underline"
+              >
+                tool-calling models
+              </a>{" "}
+              and run: <code className="bg-slate-200 dark:bg-slate-700 px-1 py-0.5 rounded text-xs">ollama pull model-name</code>
+            </p>
+          </div>
+          <div className="p-3 bg-slate-50 dark:bg-slate-800/50 rounded-lg border border-slate-200 dark:border-slate-700">
+            <p className="font-medium text-slate-700 dark:text-slate-300 mb-1">
+              🔄 Step 3: Refresh Models
+            </p>
+            <p>
+              Your downloaded models will appear automatically, or click the refresh button above
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+);
+
 const EmptyChatsState: React.FC<{
   onSuggestionClick: (suggestion: string) => void;
   selectedProvider: SupportedProvider;
@@ -227,6 +287,28 @@ const EmptyChatsState: React.FC<{
           <p className="text-sm text-slate-500 dark:text-slate-400">
             Ask me anything - I'm here to help!
           </p>
+          {selectedProvider === "ollama" && (
+            <p className="text-xs text-slate-400 dark:text-slate-500 mt-2">
+              💡 New to Ollama? Download from{" "}
+              <a 
+                href="https://ollama.com/download" 
+                target="_blank" 
+                rel="noopener noreferrer"
+                className="text-blue-500 hover:underline"
+              >
+                ollama.com/download
+              </a>{" "}
+              and pull{" "}
+              <a 
+                href="https://ollama.com/search?c=tools" 
+                target="_blank" 
+                rel="noopener noreferrer"
+                className="text-blue-500 hover:underline"
+              >
+                tool-calling models
+              </a>
+            </p>
+          )}
         </div>
         <div className="grid grid-cols-1 gap-2 pt-2">
           {suggestions.map((suggestion) => (
@@ -258,8 +340,8 @@ const ChatTab: React.FC = () => {
   );
   const [showProviderSelector, setShowProviderSelector] = useState(false);
   const [showModelSelector, setShowModelSelector] = useState(false);
-  const [abortController, setAbortController] =
-    useState<AbortController | null>(null);
+  const [abortController, setAbortController] = useState<AbortController | null>(null);
+  const [refreshingModels, setRefreshingModels] = useState(false);
 
   const chatEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
@@ -404,6 +486,29 @@ const ChatTab: React.FC = () => {
 
   const toggleModelSelector = () => {
     setShowModelSelector(!showModelSelector);
+  };
+
+  const handleRefreshModels = async () => {
+    if (selectedProvider !== "ollama" || refreshingModels) return;
+    
+    setRefreshingModels(true);
+    try {
+      const provider = providerManager.getProvider("ollama");
+      if (provider && "refreshModels" in provider && typeof provider.refreshModels === "function") {
+        await provider.refreshModels();
+        // Force a re-render by getting fresh models
+        const freshModels = getModelsForProvider(selectedProvider);
+        // If current model is not in the refreshed list, select the first available
+        if (freshModels.length > 0 && !freshModels.find(m => m.id === selectedModel)) {
+          setSelectedModel(freshModels[0].id);
+        }
+      }
+    } catch (error) {
+      console.warn("Failed to refresh Ollama models:", error);
+      setError("Failed to refresh models. Please ensure Ollama is running.");
+    } finally {
+      setRefreshingModels(false);
+    }
   };
 
   // Initialize with first available provider and model
@@ -578,6 +683,24 @@ const ChatTab: React.FC = () => {
                     </div>
                   )}
                 </div>
+
+                {/* Refresh Models Button (only for Ollama) */}
+                {selectedProvider === "ollama" && (
+                  <button
+                    onClick={handleRefreshModels}
+                    disabled={loading || refreshingModels}
+                    className={cn(
+                      "flex items-center gap-2 px-3 py-1.5 text-sm bg-slate-50 dark:bg-slate-800/50 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors border border-slate-200 dark:border-slate-700",
+                      (loading || refreshingModels) && "opacity-50 cursor-not-allowed"
+                    )}
+                    title={availableModels.length === 0 ? "Pull models first from ollama.com/search?c=tools" : "Refresh available models"}
+                  >
+                    <RefreshCw className={cn("w-3 h-3 text-slate-400", refreshingModels && "animate-spin")} />
+                    <span className="text-slate-700 dark:text-slate-200 font-medium">
+                      {refreshingModels ? "Refreshing..." : availableModels.length === 0 ? "No Models" : "Refresh"}
+                    </span>
+                  </button>
+                )}
               </div>
             )}
           </div>
@@ -588,6 +711,8 @@ const ChatTab: React.FC = () => {
       <div className="flex-1 overflow-y-auto">
         {!hasAnyApiKey ? (
           <ApiKeyRequiredState />
+        ) : selectedProvider === "ollama" && availableModels.length === 0 ? (
+          <OllamaSetupInstructions />
         ) : chat.length === 0 ? (
           <EmptyChatsState
             onSuggestionClick={setInput}

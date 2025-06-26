@@ -13,6 +13,8 @@ const getProviderLogo = (provider: SupportedProvider): string => {
       return "/claude_logo.png";
     case "openai":
       return "/openai_logo.png";
+    case "ollama":
+      return "/ollama_logo.png";
     default:
       return "/claude_logo.png"; // fallback
   }
@@ -24,6 +26,8 @@ const getProviderAlt = (provider: SupportedProvider): string => {
       return "Claude Logo";
     case "openai":
       return "OpenAI Logo";
+    case "ollama":
+      return "Ollama Logo";
     default:
       return "AI Provider Logo";
   }
