@@ -17,6 +17,8 @@ import {
 import { ConnectionStatus } from "./lib/constants";
 import { ClientLogLevels } from "./hooks/helpers/types";
 import { ElicitationResponse } from "./components/ElicitationModal";
+import { ChatLoopProvider, ChatLoop, mappedTools } from "./lib/chatLoop";
+import { Tool as AnthropicTool } from "@anthropic-ai/sdk/resources/messages/messages.mjs";
 
 export interface MCPClientOptions {
   id?: string;
@@ -48,7 +50,7 @@ export interface ServerConnectionInfo {
   capabilities: ServerCapabilities | null;
 }
 
-export class MCPJamAgent {
+export class MCPJamAgent implements ChatLoopProvider {
   private mcpClientsById = new Map<string, MCPJamClient>();
   private serverConfigs: Record<string, MCPJamServerConfig>;
   private inspectorConfig: InspectorConfig;
@@ -66,7 +68,7 @@ export class MCPJamAgent {
   ) => void;
   private getRoots?: () => unknown[];
   private addRequestHistory: (request: object, response?: object) => void;
-  private addClientLog: (message: string, level: ClientLogLevels) => void;
+  public addClientLog: (message: string, level: ClientLogLevels) => void;
 
   constructor(options: MCPClientOptions) {
     this.serverConfigs = options.servers;
@@ -385,5 +387,54 @@ export class MCPJamAgent {
       }
     }
     return null;
+  }
+
+  async processQuery(
+    query: string,
+    tools: AnthropicTool[],
+    onUpdate?: (content: string) => void,
+    model: string = "claude-3-5-sonnet-latest",
+    provider?: string,
+    signal?: AbortSignal,
+  ): Promise<string> {
+    // Find the first connected client to delegate processing to
+    // In a more sophisticated implementation, you might want to 
+    // choose the client based on tool availability or load balancing
+    const connectedClient = Array.from(this.mcpClientsById.values()).find(
+      client => client.connectionStatus === "connected"
+    );
+
+    if (!connectedClient) {
+      throw new Error("No connected MCP clients available");
+    }
+
+    this.addClientLog(
+      `Processing query with ${tools.length} tools via agent`,
+      "info",
+    );
+
+    // Use the connected client's processQuery method
+    return await connectedClient.processQuery(
+      query,
+      tools,
+      onUpdate,
+      model,
+      provider,
+      signal,
+    );
+  }
+
+  async chatLoop(tools?: AnthropicTool[]) {
+    // If no tools provided, get all tools from all servers
+    if (!tools) {
+      const allServerTools = await this.getAllTools();
+      const allTools = allServerTools.flatMap(serverTools => 
+        mappedTools(serverTools.tools)
+      );
+      tools = allTools;
+    }
+
+    const chatLoop = new ChatLoop(this);
+    return await chatLoop.start(tools);
   }
 }

@@ -30,7 +30,6 @@ import {
   TextBlock,
   ToolUseBlock,
 } from "@anthropic-ai/sdk/resources/messages/messages.mjs";
-import readline from "readline/promises";
 import packageJson from "../package.json";
 import {
   getMCPProxyAddress,
@@ -61,8 +60,8 @@ import {
 } from "./lib/notificationTypes";
 import { auth } from "@modelcontextprotocol/sdk/client/auth.js";
 import { HttpServerDefinition, MCPJamServerConfig } from "@/lib/serverTypes";
-import { mappedTools } from "@/utils/mcpjamClientHelpers";
 import { ClientLogLevels } from "./hooks/helpers/types";
+import { ChatLoopProvider, ChatLoop } from "./lib/chatLoop";
 
 // Add interface for extended MCP client with AI provider
 export interface ExtendedMcpClient extends Client {
@@ -78,7 +77,7 @@ export interface ExtendedMcpClient extends Client {
   cleanup: () => Promise<void>;
 }
 
-export class MCPJamClient extends Client<Request, Notification, Result> {
+export class MCPJamClient extends Client<Request, Notification, Result> implements ChatLoopProvider {
   clientTransport: Transport | undefined;
   serverConfig: MCPJamServerConfig;
   headers: HeadersInit;
@@ -762,7 +761,11 @@ export class MCPJamClient extends Client<Request, Notification, Result> {
     return {
       messages: [{ role: "user" as const, content: query }] as MessageParam[],
       finalText: [] as string[],
-      sanitizedTools: mappedTools(tools),
+      sanitizedTools: tools.map((tool) => ({
+        name: tool.name,
+        description: tool.description,
+        input_schema: tool.input_schema,
+      })),
       model,
       MAX_ITERATIONS: 50,
     };
@@ -1099,33 +1102,8 @@ export class MCPJamClient extends Client<Request, Notification, Result> {
   }
 
   async chatLoop(tools: Tool[]) {
-    this.addClientLog("Starting interactive chat loop", "info");
-    const rl = readline.createInterface({
-      input: process.stdin,
-      output: process.stdout,
-    });
-
-    try {
-      console.log("\nMCP Client Started!");
-      console.log("Type your queries or 'quit' to exit.");
-
-      while (true) {
-        const message = await rl.question("\nQuery: ");
-        if (message.toLowerCase() === "quit") {
-          this.addClientLog("Chat loop terminated by user", "info");
-          break;
-        }
-        this.addClientLog(
-          `Processing user query: ${message.substring(0, 50)}${message.length > 50 ? "..." : ""}`,
-          "debug",
-        );
-        const response = await this.processQuery(message, tools);
-        console.log("\n" + response);
-      }
-    } finally {
-      rl.close();
-      this.addClientLog("Chat loop interface closed", "debug");
-    }
+    const chatLoop = new ChatLoop(this);
+    return await chatLoop.start(tools);
   }
 
   async cleanup() {
