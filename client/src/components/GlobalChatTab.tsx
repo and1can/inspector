@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from "react";
 import { Tool } from "@modelcontextprotocol/sdk/types.js";
+import { Tool as AnthropicTool } from "@anthropic-ai/sdk/resources/messages/messages.mjs";
 import { Send, User, Key, ChevronDown, Square, RefreshCw } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { ToolCallMessage } from "./ToolCallMessage";
@@ -399,22 +400,72 @@ const GlobalChatTab: React.FC<GlobalChatTabProps> = ({ mcpAgent }) => {
       );
     }
 
-    // Use the agent's chatLoop method which gets tools from all connected servers
-    // Note: The chatLoop method handles its own interaction loop, but we need to integrate it with our chat UI
-    // For now, we'll add a simple response to indicate the functionality needs to be integrated
-    const response = `I received your message: "${userMessage}". Global chat with all connected tools is being set up. This would normally use the agent's chatLoop method with ${tools.length} available tools from ${connectedServersCount} connected servers.`;
-    
-    // Simulate processing time with cancellation support
-    await new Promise<void>((resolve, reject) => {
-      const timeoutId = setTimeout(resolve, 1000);
-      signal?.addEventListener('abort', () => {
-        clearTimeout(timeoutId);
-        reject(new Error('Chat was cancelled'));
-      });
-    });
-    
-    const assistantMessage = createMessage("assistant", response);
-    addMessageToChat(assistantMessage);
+    // Convert MCP tools to Anthropic tools format for the agent
+    const convertedTools: AnthropicTool[] = tools.map((tool: Tool) => ({
+      name: tool.name,
+      description: tool.description || "",
+      input_schema: tool.inputSchema || { type: "object", properties: {} },
+    }));
+
+    let fullResponse = "";
+    let currentAssistantMessage: Message | null = null;
+
+    // Create a streaming response handler
+    const onUpdate = (content: string) => {
+      fullResponse = content;
+      
+      if (currentAssistantMessage) {
+        // Update existing message
+        setChat((prev) => 
+          prev.map((msg) => 
+            msg === currentAssistantMessage 
+              ? { ...msg, content: content }
+              : msg
+          )
+        );
+      } else {
+        // Create new assistant message
+        currentAssistantMessage = createMessage("assistant", content);
+        addMessageToChat(currentAssistantMessage);
+      }
+    };
+
+    try {
+      // Use the agent's processQuery method which handles everything including tool calls
+      const response = await mcpAgent.processQuery(
+        userMessage,
+        convertedTools,
+        onUpdate,
+        selectedModel,
+        selectedProvider,
+        signal
+      );
+
+      return response;
+      
+    } catch (error) {
+      // If there was an error and we have a partial message, update it with error info
+      if (currentAssistantMessage && signal?.aborted) {
+        setChat((prev) => 
+          prev.map((msg) => 
+            msg === currentAssistantMessage 
+              ? { ...msg, content: fullResponse + "\n\n*[Response cancelled]*" }
+              : msg
+          )
+        );
+      } else if (currentAssistantMessage) {
+        const errorMessage = error instanceof Error ? error.message : String(error);
+        setChat((prev) => 
+          prev.map((msg) => 
+            msg === currentAssistantMessage 
+              ? { ...msg, content: fullResponse + `\n\n*[Error: ${errorMessage}]*` }
+              : msg
+          )
+        );
+      }
+      
+      throw error;
+    }
   };
 
   const handleSend = async (e: React.FormEvent) => {
