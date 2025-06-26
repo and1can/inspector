@@ -1,35 +1,17 @@
 import React from "react";
 import Chat from "./Chat";
 import { MCPJamAgent } from "@/mcpjamAgent";
-import { providerManager } from "@/lib/providers";
+import { createChatConfig } from "@/lib/utils";
 
 interface GlobalChatTabProps {
   mcpAgent: MCPJamAgent | null;
 }
 
 const GlobalChatTab: React.FC<GlobalChatTabProps> = ({ mcpAgent }) => {
-  function getProviderDisplayName(): string {
-    const defaultProvider = providerManager.getDefaultProvider();
-    if (defaultProvider) {
-      const providerName = defaultProvider.constructor.name.toLowerCase();
-      if (providerName.includes("anthropic")) return "Claude";
-      if (providerName.includes("openai")) return "OpenAI";
-      if (providerName.includes("ollama")) return "Ollama";
-    }
-    return "AI";
-  }
-
-  const config = {
-    mode: "global" as const,
-    title: `Global Chat - ${getProviderDisplayName()}`,
+  const config = createChatConfig("global", {
     subtitle: "Chat with access to tools from all connected servers",
-    suggestions: [
-      "Hello! How can you help me?",
-      "What tools do you have access to?",
-      "Help me write some code",
-      "Explain a concept to me",
-    ],
-  };
+    additionalSuggestions: ["What tools do you have access to?"],
+  });
 
   const getToolsCount = async (): Promise<number> => {
     if (!mcpAgent) return 0;
