@@ -203,19 +203,32 @@ export class OllamaProvider extends AIProvider {
         const toolResults = message.content.filter(item => item.type === "tool_result");
 
         if (toolResults.length > 0) {
-          // For tool results, we might need to format them differently for Ollama
-          const textContent = message.content.find(item => item.type === "text");
-          let content = textContent?.text || "";
-          
-          // Append tool results to the content
+          // Ollama expects tool results as separate messages with role "tool"
+          // This matches the working example format
           for (const result_item of toolResults) {
-            content += `\n\nTool Result (${result_item.tool_use_id}): ${result_item.content}`;
+            let content = result_item.content || "";
+            
+            // Handle case where content is an array of content blocks
+            if (Array.isArray(content)) {
+              // Extract text from content blocks
+              const textBlocks = content.filter(block => block.type === "text");
+              content = textBlocks.map(block => block.text || "").join("\n");
+            }
+            
+            result.push({
+              role: "tool",
+              content: content,
+            });
           }
-
-          result.push({
-            role: "user",
-            content: content,
-          });
+          
+          // If there's also text content, add it as a user message
+          const textContent = message.content.find(item => item.type === "text");
+          if (textContent && textContent.text) {
+            result.push({
+              role: "user",
+              content: textContent.text,
+            });
+          }
         } else {
           // Regular user message
           const textContent = message.content.find(item => item.type === "text");
