@@ -20,17 +20,10 @@ import {
 import {
   AIProvider,
   providerManager,
-  SupportedProvider,
 } from "@/lib/providers";
 import {
-  MessageParam,
   Tool,
-  Message,
-  ContentBlock,
-  TextBlock,
-  ToolUseBlock,
 } from "@anthropic-ai/sdk/resources/messages/messages.mjs";
-import readline from "readline/promises";
 import packageJson from "../package.json";
 import {
   getMCPProxyAddress,
@@ -61,8 +54,8 @@ import {
 } from "./lib/notificationTypes";
 import { auth } from "@modelcontextprotocol/sdk/client/auth.js";
 import { HttpServerDefinition, MCPJamServerConfig } from "@/lib/serverTypes";
-import { mappedTools } from "@/utils/mcpjamClientHelpers";
 import { ClientLogLevels } from "./hooks/helpers/types";
+import { ChatLoopProvider, ChatLoop, QueryProcessor, ToolCaller } from "./lib/chatLoop";
 
 // Add interface for extended MCP client with AI provider
 export interface ExtendedMcpClient extends Client {
@@ -78,7 +71,7 @@ export interface ExtendedMcpClient extends Client {
   cleanup: () => Promise<void>;
 }
 
-export class MCPJamClient extends Client<Request, Notification, Result> {
+export class MCPJamClient extends Client<Request, Notification, Result> implements ChatLoopProvider, ToolCaller {
   clientTransport: Transport | undefined;
   serverConfig: MCPJamServerConfig;
   headers: HeadersInit;
@@ -100,6 +93,8 @@ export class MCPJamClient extends Client<Request, Notification, Result> {
   getRoots?: () => unknown[];
   addRequestHistory: (request: object, response?: object) => void;
   addClientLog: (message: string, level: ClientLogLevels) => void;
+  private queryProcessor: QueryProcessor;
+
   constructor(
     serverConfig: MCPJamServerConfig,
     inspectorConfig: InspectorConfig,
@@ -148,6 +143,7 @@ export class MCPJamClient extends Client<Request, Notification, Result> {
     this.getRoots = getRoots;
     this.addRequestHistory = addRequestHistory;
     this.addClientLog = addClientLog;
+    this.queryProcessor = new QueryProcessor(this);
   }
 
   // Get AI provider from ProviderManager
@@ -722,410 +718,12 @@ export class MCPJamClient extends Client<Request, Notification, Result> {
     provider?: string,
     signal?: AbortSignal,
   ): Promise<string> {
-    // Get the specified provider or fall back to default
-    const aiProvider = provider
-      ? providerManager.getProvider(provider as SupportedProvider)
-      : providerManager.getDefaultProvider();
-
-    if (!aiProvider) {
-      const providerName = provider || "default";
-      throw new Error(
-        `No ${providerName} provider available. Please check your API key configuration.`,
-      );
-    }
-
-    if (signal?.aborted) {
-      throw new Error("Chat was cancelled");
-    }
-
-    this.addClientLog(
-      `Processing query with ${tools.length} tools using model ${model}`,
-      "info",
-    );
-    const context = this.initializeQueryContext(query, tools, model);
-    const response = await this.makeInitialApiCall(context, aiProvider, signal);
-
-    return this.processIterations(
-      response,
-      context,
-      aiProvider,
-      onUpdate,
-      signal,
-    );
-  }
-
-  private initializeQueryContext(query: string, tools: Tool[], model: string) {
-    this.addClientLog(
-      `Initializing query context with ${tools.length} tools`,
-      "debug",
-    );
-    return {
-      messages: [{ role: "user" as const, content: query }] as MessageParam[],
-      finalText: [] as string[],
-      sanitizedTools: mappedTools(tools),
-      model,
-      MAX_ITERATIONS: 50,
-    };
-  }
-
-  private async makeInitialApiCall(
-    context: ReturnType<typeof this.initializeQueryContext>,
-    aiProvider: AIProvider,
-    signal?: AbortSignal,
-  ): Promise<Message> {
-    if (!this.aiProvider) {
-      throw new Error("AI provider not initialized");
-    }
-
-    // Check if aborted before making API call
-    if (signal?.aborted) {
-      throw new Error("Chat was cancelled");
-    }
-
-    this.addClientLog("Making initial API call to AI provider", "debug");
-    const response = await aiProvider.createMessage({
-      model: context.model,
-      max_tokens: 1000,
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      messages: context.messages as any,
-      tools: context.sanitizedTools.map((tool) => ({
-        name: tool.name,
-        description: tool.description,
-        input_schema: tool.input_schema,
-      })),
-    });
-
-    // Check if aborted after API call
-    if (signal?.aborted) {
-      throw new Error("Chat was cancelled");
-    }
-
-    // Convert provider response back to Anthropic Message format
-    // This is a temporary adapter - for now we'll assume Anthropic format
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    return response as any;
-  }
-
-  private async processIterations(
-    initialResponse: Message,
-    context: ReturnType<typeof this.initializeQueryContext>,
-    aiProvider: AIProvider,
-    onUpdate?: (content: string) => void,
-    signal?: AbortSignal,
-  ): Promise<string> {
-    let response = initialResponse;
-    let iteration = 0;
-
-    while (iteration < context.MAX_ITERATIONS) {
-      // Check if aborted at the start of each iteration
-      if (signal?.aborted) {
-        throw new Error("Chat was cancelled");
-      }
-
-      iteration++;
-      this.addClientLog(
-        `Processing iteration ${iteration}/${context.MAX_ITERATIONS}`,
-        "debug",
-      );
-
-      const iterationResult = await this.processIteration(
-        response,
-        context,
-        signal,
-      );
-
-      this.sendIterationUpdate(iterationResult.content, onUpdate);
-
-      if (!iterationResult.hasToolUse) {
-        this.addClientLog("No tool use detected, ending iterations", "debug");
-        break;
-      }
-
-      try {
-        response = await this.makeFollowUpApiCall(context, aiProvider, signal);
-      } catch (error) {
-        const errorMessage = `[API Error: ${error}]`;
-        this.addClientLog(
-          `API error in iteration ${iteration}: ${error}`,
-          "error",
-        );
-        context.finalText.push(errorMessage);
-        this.sendIterationUpdate(errorMessage, onUpdate);
-        break;
-      }
-    }
-
-    this.handleMaxIterationsWarning(iteration, context, onUpdate);
-    this.addClientLog(
-      `Query processing completed in ${iteration} iterations`,
-      "info",
-    );
-    return context.finalText.join("\n");
-  }
-
-  private async processIteration(
-    response: Message,
-    context: ReturnType<typeof this.initializeQueryContext>,
-    signal?: AbortSignal,
-  ) {
-    const iterationContent: string[] = [];
-    const assistantContent: ContentBlock[] = [];
-    let hasToolUse = false;
-
-    for (const content of response.content) {
-      // Check if aborted during content processing
-      if (signal?.aborted) {
-        throw new Error("Chat was cancelled");
-      }
-
-      if (content.type === "text") {
-        this.handleTextContent(
-          content,
-          iterationContent,
-          context.finalText,
-          assistantContent,
-        );
-      } else if (content.type === "tool_use") {
-        hasToolUse = true;
-        this.addClientLog(`Tool use detected: ${content.name}`, "debug");
-        await this.handleToolUse(
-          content,
-          iterationContent,
-          context,
-          assistantContent,
-          signal,
-        );
-      }
-    }
-
-    return {
-      content: iterationContent,
-      hasToolUse,
-    };
-  }
-
-  private handleTextContent(
-    content: TextBlock,
-    iterationContent: string[],
-    finalText: string[],
-    assistantContent: ContentBlock[],
-  ) {
-    iterationContent.push(content.text);
-    finalText.push(content.text);
-    assistantContent.push(content);
-  }
-
-  private async handleToolUse(
-    content: ToolUseBlock,
-    iterationContent: string[],
-    context: ReturnType<typeof this.initializeQueryContext>,
-    assistantContent: ContentBlock[],
-    signal?: AbortSignal,
-  ) {
-    assistantContent.push(content);
-
-    const toolMessage = this.createToolMessage(content.name, content.input);
-    iterationContent.push(toolMessage);
-    context.finalText.push(toolMessage);
-
-    try {
-      this.addClientLog(`Executing tool: ${content.name}`, "debug");
-      await this.executeToolAndUpdateMessages(
-        content,
-        context,
-        assistantContent,
-        signal,
-      );
-      this.addClientLog(`Tool execution successful: ${content.name}`, "debug");
-    } catch (error) {
-      this.addClientLog(
-        `Tool execution failed: ${content.name} - ${error}`,
-        "error",
-      );
-      this.handleToolError(
-        error,
-        content,
-        iterationContent,
-        context,
-        assistantContent,
-      );
-    }
-  }
-
-  private createToolMessage(toolName: string, toolArgs: unknown): string {
-    return `[Calling tool ${toolName} with args ${JSON.stringify(toolArgs)}]`;
-  }
-
-  private async executeToolAndUpdateMessages(
-    content: ToolUseBlock,
-    context: ReturnType<typeof this.initializeQueryContext>,
-    assistantContent: ContentBlock[],
-    signal?: AbortSignal,
-  ) {
-    // Check if aborted before tool execution
-    if (signal?.aborted) {
-      throw new Error("Chat was cancelled");
-    }
-
-    const result = await this.callTool({
-      name: content.name,
-      arguments: content.input as { [x: string]: unknown } | undefined,
-    });
-
-    // Check if aborted after tool execution
-    if (signal?.aborted) {
-      throw new Error("Chat was cancelled");
-    }
-
-    this.addMessagesToContext(
-      context,
-      assistantContent,
-      content.id,
-      result.content as string,
-    );
-  }
-
-  private handleToolError(
-    error: unknown,
-    content: ToolUseBlock,
-    iterationContent: string[],
-    context: ReturnType<typeof this.initializeQueryContext>,
-    assistantContent: ContentBlock[],
-  ) {
-    console.error(`Tool ${content.name} failed:`, error);
-    const errorMessage = `[Tool ${content.name} failed: ${error}]`;
-    iterationContent.push(errorMessage);
-    context.finalText.push(errorMessage);
-
-    this.addMessagesToContext(
-      context,
-      assistantContent,
-      content.id,
-      `Error: ${error}`,
-      true,
-    );
-  }
-
-  private addMessagesToContext(
-    context: ReturnType<typeof this.initializeQueryContext>,
-    assistantContent: ContentBlock[],
-    toolUseId: string,
-    resultContent: string,
-    isError = false,
-  ) {
-    if (assistantContent.length > 0) {
-      context.messages.push({
-        role: "assistant",
-        content: assistantContent,
-      });
-    }
-
-    context.messages.push({
-      role: "user",
-      content: [
-        {
-          type: "tool_result",
-          tool_use_id: toolUseId,
-          content: resultContent,
-          ...(isError && { is_error: true }),
-        },
-      ],
-    });
-  }
-
-  private async makeFollowUpApiCall(
-    context: ReturnType<typeof this.initializeQueryContext>,
-    aiProvider: AIProvider,
-    signal?: AbortSignal,
-  ): Promise<Message> {
-    if (!this.aiProvider) {
-      throw new Error("AI provider not initialized");
-    }
-
-    // Check if aborted before making API call
-    if (signal?.aborted) {
-      throw new Error("Chat was cancelled");
-    }
-    this.addClientLog("Making follow-up API call to AI provider", "debug");
-    const response = await aiProvider.createMessage({
-      model: context.model,
-      max_tokens: 1000,
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      messages: context.messages as any,
-      tools: context.sanitizedTools.map((tool) => ({
-        name: tool.name,
-        description: tool.description,
-        input_schema: tool.input_schema,
-      })),
-    });
-
-    // Check if aborted after API call
-    if (signal?.aborted) {
-      throw new Error("Chat was cancelled");
-    }
-
-    // Convert provider response back to Anthropic Message format
-    // This is a temporary adapter - for now we'll assume Anthropic format
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    return response as any;
-  }
-
-  private sendIterationUpdate(
-    content: string | string[],
-    onUpdate?: (content: string) => void,
-  ) {
-    if (!onUpdate) return;
-
-    const message = Array.isArray(content) ? content.join("\n") : content;
-    if (message.length > 0) {
-      onUpdate(message);
-    }
-  }
-
-  private handleMaxIterationsWarning(
-    iteration: number,
-    context: ReturnType<typeof this.initializeQueryContext>,
-    onUpdate?: (content: string) => void,
-  ) {
-    if (iteration >= context.MAX_ITERATIONS) {
-      const warningMessage = `[Warning: Reached maximum iterations (${context.MAX_ITERATIONS}). Stopping to prevent excessive API usage.]`;
-      this.addClientLog(
-        `Maximum iterations reached (${context.MAX_ITERATIONS})`,
-        "warn",
-      );
-      context.finalText.push(warningMessage);
-      this.sendIterationUpdate(warningMessage, onUpdate);
-    }
+    return this.queryProcessor.processQuery(query, tools, onUpdate, model, provider, signal);
   }
 
   async chatLoop(tools: Tool[]) {
-    this.addClientLog("Starting interactive chat loop", "info");
-    const rl = readline.createInterface({
-      input: process.stdin,
-      output: process.stdout,
-    });
-
-    try {
-      console.log("\nMCP Client Started!");
-      console.log("Type your queries or 'quit' to exit.");
-
-      while (true) {
-        const message = await rl.question("\nQuery: ");
-        if (message.toLowerCase() === "quit") {
-          this.addClientLog("Chat loop terminated by user", "info");
-          break;
-        }
-        this.addClientLog(
-          `Processing user query: ${message.substring(0, 50)}${message.length > 50 ? "..." : ""}`,
-          "debug",
-        );
-        const response = await this.processQuery(message, tools);
-        console.log("\n" + response);
-      }
-    } finally {
-      rl.close();
-      this.addClientLog("Chat loop interface closed", "debug");
-    }
+    const chatLoop = new ChatLoop(this);
+    return await chatLoop.start(tools);
   }
 
   async cleanup() {

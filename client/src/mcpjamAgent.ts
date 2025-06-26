@@ -17,6 +17,8 @@ import {
 import { ConnectionStatus } from "./lib/constants";
 import { ClientLogLevels } from "./hooks/helpers/types";
 import { ElicitationResponse } from "./components/ElicitationModal";
+import { ChatLoopProvider, ChatLoop, mappedTools, QueryProcessor, ToolCaller } from "./lib/chatLoop";
+import { Tool as AnthropicTool } from "@anthropic-ai/sdk/resources/messages/messages.mjs";
 
 export interface MCPClientOptions {
   id?: string;
@@ -48,7 +50,7 @@ export interface ServerConnectionInfo {
   capabilities: ServerCapabilities | null;
 }
 
-export class MCPJamAgent {
+export class MCPJamAgent implements ChatLoopProvider, ToolCaller {
   private mcpClientsById = new Map<string, MCPJamClient>();
   private serverConfigs: Record<string, MCPJamServerConfig>;
   private inspectorConfig: InspectorConfig;
@@ -66,7 +68,8 @@ export class MCPJamAgent {
   ) => void;
   private getRoots?: () => unknown[];
   private addRequestHistory: (request: object, response?: object) => void;
-  private addClientLog: (message: string, level: ClientLogLevels) => void;
+  public addClientLog: (message: string, level: ClientLogLevels) => void;
+  private queryProcessor: QueryProcessor;
 
   constructor(options: MCPClientOptions) {
     this.serverConfigs = options.servers;
@@ -80,6 +83,7 @@ export class MCPJamAgent {
     this.getRoots = options.getRoots;
     this.addRequestHistory = options.addRequestHistory;
     this.addClientLog = options.addClientLog;
+    this.queryProcessor = new QueryProcessor(this);
   }
 
   // Add or update a server configuration
@@ -227,20 +231,25 @@ export class MCPJamAgent {
   // Aggregate operations across all servers
   async getAllTools(): Promise<{ serverName: string; tools: Tool[] }[]> {
     const allServerTools: { serverName: string; tools: Tool[] }[] = [];
-    for (const [serverName, serverConfig] of Object.entries(
-      this.serverConfigs,
-    )) {
+    
+    // Only query tools from connected servers
+    const connectionInfo = this.getAllConnectionInfo();
+    const connectedServers = connectionInfo.filter(
+      (conn) => conn.connectionStatus === "connected"
+    );
+    
+    for (const serverInfo of connectedServers) {
       try {
-        const client = await this.getOrCreateClient(serverName, serverConfig);
+        const client = await this.getConnectedClientForServer(serverInfo.name);
         const toolsResponse = await client.tools();
         allServerTools.push({
-          serverName,
+          serverName: serverInfo.name,
           tools: toolsResponse.tools,
         });
       } catch (error) {
-        console.error(`Failed to get tools from server ${serverName}:`, error);
+        console.error(`Failed to get tools from server ${serverInfo.name}:`, error);
         allServerTools.push({
-          serverName,
+          serverName: serverInfo.name,
           tools: [],
         });
       }
@@ -385,5 +394,46 @@ export class MCPJamAgent {
       }
     }
     return null;
+  }
+
+  // Implementation of ToolCaller interface
+  async callTool(params: { name: string; arguments?: { [x: string]: unknown } }): Promise<unknown> {
+    // Find which server has this tool
+    const allServerTools = await this.getAllTools();
+    
+    for (const serverTools of allServerTools) {
+      const tool = serverTools.tools.find(t => t.name === params.name);
+      if (tool) {
+        // Call the tool on the specific server
+        return await this.callToolOnServer(serverTools.serverName, params.name, params.arguments || {});
+      }
+    }
+    
+    throw new Error(`Tool ${params.name} not found on any connected server`);
+  }
+
+  async processQuery(
+    query: string,
+    tools: AnthropicTool[],
+    onUpdate?: (content: string) => void,
+    model: string = "claude-3-5-sonnet-latest",
+    provider?: string,
+    signal?: AbortSignal,
+  ): Promise<string> {
+    return this.queryProcessor.processQuery(query, tools, onUpdate, model, provider, signal);
+  }
+
+  async chatLoop(tools?: AnthropicTool[]) {
+    // If no tools provided, get all tools from all servers
+    if (!tools) {
+      const allServerTools = await this.getAllTools();
+      const allTools = allServerTools.flatMap(serverTools => 
+        mappedTools(serverTools.tools)
+      );
+      tools = allTools;
+    }
+
+    const chatLoop = new ChatLoop(this);
+    return await chatLoop.start(tools);
   }
 }
