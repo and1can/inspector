@@ -30,6 +30,7 @@ import RootsTab from "./components/RootsTab";
 import SamplingTab from "./components/SamplingTab";
 import ToolsTab from "./components/ToolsTab";
 import ChatTab from "./components/ChatTab";
+import GlobalChatTab from "./components/GlobalChatTab";
 import Sidebar from "./components/Sidebar";
 import Tabs from "./components/Tabs";
 import SettingsTab from "./components/SettingsTab";
@@ -84,6 +85,7 @@ const App = () => {
   });
   const [isSidebarExpanded, setIsSidebarExpanded] = useState(true);
   const [showStarModal, setShowStarModal] = useState(false);
+  const [isGlobalChatOpen, setIsGlobalChatOpen] = useState(false);
   const { addClientLog } = mcpOperations;
 
   // Handle hash changes for navigation
@@ -114,6 +116,26 @@ const App = () => {
 
     return () => clearTimeout(timer);
   }, []);
+
+  // Handle escape key for global chat modal
+  useEffect(() => {
+    const handleEscape = (event: KeyboardEvent) => {
+      if (event.key === "Escape" && isGlobalChatOpen) {
+        setIsGlobalChatOpen(false);
+      }
+    };
+
+    if (isGlobalChatOpen) {
+      document.addEventListener("keydown", handleEscape);
+      // Prevent background scrolling
+      document.body.style.overflow = "hidden";
+    }
+
+    return () => {
+      document.removeEventListener("keydown", handleEscape);
+      document.body.style.overflow = "unset";
+    };
+  }, [isGlobalChatOpen]);
 
   const handleCloseStarModal = () => {
     setShowStarModal(false);
@@ -1051,6 +1073,7 @@ const App = () => {
           updateTrigger={connectionState.sidebarUpdateTrigger}
           isExpanded={isSidebarExpanded}
           onToggleExpanded={() => setIsSidebarExpanded(!isSidebarExpanded)}
+          onOpenChat={() => setIsGlobalChatOpen(true)}
         />
 
         {/* Main Content Area - Right Side */}
@@ -1082,6 +1105,22 @@ const App = () => {
           request={mcpOperations.pendingElicitationRequest}
           onClose={mcpOperations.handleCloseElicitationModal}
         />
+        {isGlobalChatOpen && (
+          <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4">
+            <div className="w-full max-w-4xl h-[80vh] bg-white dark:bg-slate-900 rounded-xl shadow-2xl flex flex-col relative">
+              <button
+                onClick={() => setIsGlobalChatOpen(false)}
+                className="absolute top-4 right-4 z-10 p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full transition-colors"
+                aria-label="Close Global Chat"
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+              <GlobalChatTab mcpAgent={connectionState.mcpAgent} />
+            </div>
+          </div>
+        )}
       </div>
 
       {/* GitHub Star Modal */}

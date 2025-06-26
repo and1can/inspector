@@ -17,6 +17,7 @@ import {
   Edit2,
   ChevronLeft,
   ChevronRight,
+  MessageCircle,
 } from "lucide-react";
 import useTheme from "../lib/hooks/useTheme";
 import { version } from "../../../package.json";
@@ -36,6 +37,7 @@ interface SidebarProps {
   onDisconnectServer: (serverName: string) => Promise<void>;
   onCreateClient: () => void;
   onEditClient: (serverName: string) => void;
+  onOpenChat: () => void;
   updateTrigger: number;
   isExpanded: boolean;
   onToggleExpanded: () => void;
@@ -50,6 +52,7 @@ const Sidebar: React.FC<SidebarProps> = ({
   onDisconnectServer,
   onCreateClient,
   onEditClient,
+  onOpenChat,
   updateTrigger,
   isExpanded,
   onToggleExpanded,
@@ -154,6 +157,57 @@ const Sidebar: React.FC<SidebarProps> = ({
       </div>
     </div>
   );
+
+  // Component: Chat section with global chat button
+  const renderChatSection = () => {
+    const connectedServers = serverConnections.filter(
+      (conn) => conn.connectionStatus === "connected"
+    );
+    
+    return (
+      <div className="p-3 border-b border-border/50">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center space-x-2">
+            <MessageCircle className="w-4 h-4 text-muted-foreground" />
+            <h3 className="text-sm font-medium text-foreground">Global Chat</h3>
+            {connectedServers.length > 0 && (
+              <span className="text-xs text-muted-foreground bg-muted px-1.5 py-0.5 rounded">
+                {connectedServers.length} tools available
+              </span>
+            )}
+          </div>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                onClick={onOpenChat}
+                size="sm"
+                variant="ghost"
+                className="h-7 w-7 p-0 hover:bg-primary/20 hover:text-primary"
+                disabled={connectedServers.length === 0}
+                title={
+                  connectedServers.length === 0
+                    ? "Connect at least one server to start chatting"
+                    : "Start global chat with all connected tools"
+                }
+              >
+                <MessageCircle className="w-4 h-4" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>
+              {connectedServers.length === 0
+                ? "Connect at least one server to start chatting"
+                : "Start global chat with all connected tools"}
+            </TooltipContent>
+          </Tooltip>
+        </div>
+        {connectedServers.length === 0 && (
+          <p className="text-xs text-muted-foreground mt-2 opacity-70">
+            Connect servers to enable global chat
+          </p>
+        )}
+      </div>
+    );
+  };
 
   // Component: Connections header with count and add button
   const renderConnectionsHeader = () => (
@@ -401,6 +455,7 @@ const Sidebar: React.FC<SidebarProps> = ({
     return (
       <>
         {renderHeader()}
+        {renderChatSection()}
         {renderConnectionsHeader()}
         <div className="flex-1 overflow-hidden flex flex-col">
           <div className="flex-1 flex flex-col min-h-0">
@@ -421,8 +476,32 @@ const Sidebar: React.FC<SidebarProps> = ({
   };
 
   const renderCollapsedContent = () => {
+    const connectedServers = serverConnections.filter(
+      (conn) => conn.connectionStatus === "connected"
+    );
+
     return (
       <div className="flex-1 flex flex-col items-center pt-4 space-y-4">
+        {/* Global Chat Button in Collapsed State */}
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button
+              onClick={onOpenChat}
+              size="sm"
+              variant="ghost"
+              className="w-8 h-8 p-0 rounded-full hover:bg-primary/20 hover:text-primary"
+              disabled={connectedServers.length === 0}
+            >
+              <MessageCircle className="w-4 h-4" />
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent side="right">
+            {connectedServers.length === 0
+              ? "Connect servers to enable global chat"
+              : `Global chat with ${connectedServers.length} connected tools`}
+          </TooltipContent>
+        </Tooltip>
+
         <div className="flex flex-col space-y-2">
           {serverConnections.slice(0, 5).map((connection) => (
             <Tooltip key={connection.name}>
