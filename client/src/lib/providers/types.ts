@@ -67,15 +67,19 @@ export abstract class AIProvider {
   }
 
   abstract updateApiKey(apiKey: string): void;
-  abstract createMessage(options: ProviderCreateOptions): Promise<ProviderResponse>;
+  abstract createMessage(
+    options: ProviderCreateOptions,
+  ): Promise<ProviderResponse>;
   abstract validateConfig(): boolean;
   abstract getProviderName(): string;
   abstract getDefaultModel(): string;
   abstract getSupportedModels(): ProviderModel[];
 }
 
-export type SupportedProvider = "anthropic" | "openai" | "deepseek";
+export type SupportedProvider = "anthropic" | "openai";
+// TODO: Add deepseek support
+// export type SupportedProvider = "anthropic" | "openai" | "deepseek";
 
 export interface ProviderFactory {
   createProvider(type: SupportedProvider, config: ProviderConfig): AIProvider;
-} 
+}

@@ -16,7 +16,7 @@ export class ProviderManager {
   private storageKeys: StorageKeys = {
     anthropic: "claude-api-key",
     openai: "openai-api-key",
-    deepseek: "deepseek-api-key"
+    deepseek: "deepseek-api-key",
   };
 
   constructor() {
@@ -26,9 +26,16 @@ export class ProviderManager {
 
   private initializeProviders() {
     // Initialize with null providers
-    this.providers.set("anthropic", { provider: null, isValid: false, apiKey: "" });
-    this.providers.set("openai", { provider: null, isValid: false, apiKey: "" });
-    this.providers.set("deepseek", { provider: null, isValid: false, apiKey: "" });
+    this.providers.set("anthropic", {
+      provider: null,
+      isValid: false,
+      apiKey: "",
+    });
+    this.providers.set("openai", {
+      provider: null,
+      isValid: false,
+      apiKey: "",
+    });
   }
 
   private loadApiKeysFromStorage() {
@@ -40,27 +47,35 @@ export class ProviderManager {
           this.setApiKey(providerType, storedApiKey);
         }
       } catch (error) {
-        console.warn(`Failed to load ${providerType} API key from localStorage:`, error);
+        console.warn(
+          `Failed to load ${providerType} API key from localStorage:`,
+          error,
+        );
       }
     });
   }
 
-  private validateApiKey(providerType: SupportedProvider, apiKey: string): boolean {
+  private validateApiKey(
+    providerType: SupportedProvider,
+    apiKey: string,
+  ): boolean {
     switch (providerType) {
       case "anthropic":
-        return /^sk-ant-api03-[A-Za-z0-9_-]+$/.test(apiKey) && apiKey.length > 20;
+        return (
+          /^sk-ant-api03-[A-Za-z0-9_-]+$/.test(apiKey) && apiKey.length > 20
+        );
       case "openai":
         // Basic validation - just check it starts with sk- and has reasonable length
         return apiKey.startsWith("sk-") && apiKey.length > 20;
-      case "deepseek":
-        // Add DeepSeek validation pattern when implemented
-        return apiKey.length > 10; // Basic validation for now
       default:
         return false;
     }
   }
 
-  private createProvider(providerType: SupportedProvider, apiKey: string): AIProvider | null {
+  private createProvider(
+    providerType: SupportedProvider,
+    apiKey: string,
+  ): AIProvider | null {
     try {
       const config: ProviderConfig = {
         apiKey,
@@ -79,14 +94,17 @@ export class ProviderManager {
 
     if (isValid && apiKey) {
       provider = this.createProvider(providerType, apiKey);
-      
+
       // Save to localStorage if provider creation succeeded
       if (provider) {
         try {
           const storageKey = this.storageKeys[providerType];
           localStorage.setItem(storageKey, apiKey);
         } catch (error) {
-          console.warn(`Failed to save ${providerType} API key to localStorage:`, error);
+          console.warn(
+            `Failed to save ${providerType} API key to localStorage:`,
+            error,
+          );
         }
       }
     } else if (!apiKey) {
@@ -95,14 +113,17 @@ export class ProviderManager {
         const storageKey = this.storageKeys[providerType];
         localStorage.removeItem(storageKey);
       } catch (error) {
-        console.warn(`Failed to remove ${providerType} API key from localStorage:`, error);
+        console.warn(
+          `Failed to remove ${providerType} API key from localStorage:`,
+          error,
+        );
       }
     }
 
     this.providers.set(providerType, {
       provider,
       isValid: isValid && provider !== null,
-      apiKey
+      apiKey,
     });
 
     return isValid && provider !== null;
@@ -114,51 +135,57 @@ export class ProviderManager {
 
   isProviderReady(providerType: SupportedProvider): boolean {
     const info = this.providers.get(providerType);
-    return info?.isValid && info?.provider !== null || false;
+    return (info?.isValid && info?.provider !== null) || false;
   }
 
   getApiKey(providerType: SupportedProvider): string {
     return this.providers.get(providerType)?.apiKey || "";
   }
 
-  getAllProviderStatus(): Record<SupportedProvider, { isValid: boolean; hasApiKey: boolean }> {
+  getAllProviderStatus(): Record<
+    SupportedProvider,
+    { isValid: boolean; hasApiKey: boolean }
+  > {
     const status: Record<string, { isValid: boolean; hasApiKey: boolean }> = {};
-    
+
     this.providers.forEach((info, providerType) => {
       status[providerType] = {
         isValid: info.isValid,
-        hasApiKey: info.apiKey.length > 0
+        hasApiKey: info.apiKey.length > 0,
       };
     });
 
-    return status as Record<SupportedProvider, { isValid: boolean; hasApiKey: boolean }>;
+    return status as Record<
+      SupportedProvider,
+      { isValid: boolean; hasApiKey: boolean }
+    >;
   }
 
   // Get the first available provider (for backward compatibility)
   getDefaultProvider(): AIProvider | null {
     // Try Anthropic first, then others
-    const priority: SupportedProvider[] = ["anthropic", "openai", "deepseek"];
-    
+    const priority: SupportedProvider[] = ["anthropic", "openai"];
+
     for (const providerType of priority) {
       const provider = this.getProvider(providerType);
       if (provider && this.isProviderReady(providerType)) {
         return provider;
       }
     }
-    
+
     return null;
   }
 
   // Get the provider type for the default provider
   getDefaultProviderType(): SupportedProvider | null {
-    const priority: SupportedProvider[] = ["anthropic", "openai", "deepseek"];
-    
+    const priority: SupportedProvider[] = ["anthropic", "openai"];
+
     for (const providerType of priority) {
       if (this.isProviderReady(providerType)) {
         return providerType;
       }
     }
-    
+
     return null;
   }
 

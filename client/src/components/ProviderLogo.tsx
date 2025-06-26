@@ -13,8 +13,6 @@ const getProviderLogo = (provider: SupportedProvider): string => {
       return "/claude_logo.png";
     case "openai":
       return "/openai_logo.png";
-    case "deepseek":
-      return "/deepseek_logo.png";
     default:
       return "/claude_logo.png"; // fallback
   }
@@ -26,8 +24,6 @@ const getProviderAlt = (provider: SupportedProvider): string => {
       return "Claude Logo";
     case "openai":
       return "OpenAI Logo";
-    case "deepseek":
-      return "DeepSeek Logo";
     default:
       return "AI Provider Logo";
   }
@@ -55,6 +51,8 @@ export const ProviderLogo: React.FC<ProviderLogoProps> = ({
 };
 
 // Keep backward compatibility - export ClaudeLogo for existing usage
-export const ClaudeLogo: React.FC<Omit<ProviderLogoProps, 'provider'> & { className?: string; size?: number }> = (props) => {
+export const ClaudeLogo: React.FC<
+  Omit<ProviderLogoProps, "provider"> & { className?: string; size?: number }
+> = (props) => {
   return <ProviderLogo provider="anthropic" {...props} />;
 };
