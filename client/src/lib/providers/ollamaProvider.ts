@@ -8,6 +8,7 @@ import {
   ProviderTool,
   ProviderResponseContent,
   ProviderModel,
+  isHostUrlConfig,
 } from "./types";
 
 // Ollama-specific types
@@ -73,15 +74,25 @@ export class OllamaProvider extends AIProvider {
 
   constructor(config: ProviderConfig) {
     super(config);
+
+    if (!isHostUrlConfig(config)) {
+      throw new Error("OllamaProvider requires a HostUrlProviderConfig");
+    }
+
     this.ollama = new Ollama({
-      host: config.baseURL || "http://127.0.0.1:11434",
+      host: config.hostUrl || "http://127.0.0.1:11434",
     });
   }
 
-  updateApiKey(apiKey: string): void {
-    // Ollama doesn't use API keys in the traditional sense
-    // but we keep this for consistency with the interface
-    this.config.apiKey = apiKey;
+  updateApiKey(hostUrl: string): void {
+    // For Ollama, this updates the host URL
+    if (isHostUrlConfig(this.config)) {
+      this.config.hostUrl = hostUrl;
+      // Recreate the Ollama instance with the new host
+      this.ollama = new Ollama({
+        host: hostUrl || "http://127.0.0.1:11434",
+      });
+    }
     // Clear cache when config changes
     this.cachedModels = null;
   }
@@ -103,29 +114,32 @@ export class OllamaProvider extends AIProvider {
   // New method to fetch locally available models
   private async fetchLocalModels(): Promise<ProviderModel[]> {
     try {
-      const host = this.config.baseURL || "http://127.0.0.1:11434";
+      const host = isHostUrlConfig(this.config)
+        ? this.config.hostUrl || "http://127.0.0.1:11434"
+        : "http://127.0.0.1:11434";
+
       const response = await fetch(`${host}/api/tags`);
-      
+
       if (!response.ok) {
         throw new Error(`HTTP ${response.status}: ${response.statusText}`);
       }
-      
+
       const data: OllamaTagsResponse = await response.json();
-      
+
       return data.models.map((model: OllamaModel): ProviderModel => {
         // Extract model name and format it nicely
         const modelName = model.name;
         const displayName = this.formatModelDisplayName(modelName);
         const description = this.generateModelDescription(model);
-        
+
         return {
           id: modelName,
           name: displayName,
-          description: description
+          description: description,
         };
       });
     } catch (error) {
-      console.warn('Failed to fetch local Ollama models:', error);
+      console.warn("Failed to fetch local Ollama models:", error);
       // Return fallback static models if fetch fails
       return this.getStaticModels();
     }
@@ -135,33 +149,33 @@ export class OllamaProvider extends AIProvider {
   private formatModelDisplayName(modelName: string): string {
     // Remove common suffixes and format the name nicely
     const cleanName = modelName
-      .replace(/:latest$/, '')
-      .replace(/[-_]/g, ' ')
-      .split(' ')
-      .map(word => word.charAt(0).toUpperCase() + word.slice(1))
-      .join(' ');
-    
+      .replace(/:latest$/, "")
+      .replace(/[-_]/g, " ")
+      .split(" ")
+      .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+      .join(" ");
+
     return cleanName;
   }
 
   // Helper method to generate model descriptions
   private generateModelDescription(model: OllamaModel): string {
     const sizeGB = (model.size / (1024 * 1024 * 1024)).toFixed(1);
-    
+
     let description = `Size: ${sizeGB}GB`;
-    
+
     if (model.details?.parameter_size) {
       description += ` • ${model.details.parameter_size}`;
     }
-    
+
     if (model.details?.family) {
       description += ` • ${model.details.family}`;
     }
-    
+
     if (model.details?.quantization_level) {
       description += ` • ${model.details.quantization_level}`;
     }
-    
+
     return description;
   }
 
@@ -171,73 +185,79 @@ export class OllamaProvider extends AIProvider {
       {
         id: "llama3.1",
         name: "Llama 3.1",
-        description: "Meta's Llama 3.1 model (if available locally)"
+        description: "Meta's Llama 3.1 model (if available locally)",
       },
       {
         id: "llama3.1:8b",
         name: "Llama 3.1 8B",
-        description: "Llama 3.1 8 billion parameter model (if available locally)"
+        description:
+          "Llama 3.1 8 billion parameter model (if available locally)",
       },
       {
         id: "llama3.1:70b",
         name: "Llama 3.1 70B",
-        description: "Llama 3.1 70 billion parameter model (if available locally)"
+        description:
+          "Llama 3.1 70 billion parameter model (if available locally)",
       },
       {
         id: "llama3.2",
         name: "Llama 3.2",
-        description: "Meta's Llama 3.2 model (if available locally)"
+        description: "Meta's Llama 3.2 model (if available locally)",
       },
       {
         id: "llama3.2:3b",
         name: "Llama 3.2 3B",
-        description: "Llama 3.2 3 billion parameter model (if available locally)"
+        description:
+          "Llama 3.2 3 billion parameter model (if available locally)",
       },
       {
         id: "qwen2.5",
         name: "Qwen 2.5",
-        description: "Alibaba's Qwen 2.5 model (if available locally)"
+        description: "Alibaba's Qwen 2.5 model (if available locally)",
       },
       {
         id: "mistral",
         name: "Mistral",
-        description: "Mistral 7B model (if available locally)"
+        description: "Mistral 7B model (if available locally)",
       },
       {
         id: "codellama",
         name: "Code Llama",
-        description: "Code generation model based on Llama (if available locally)"
+        description:
+          "Code generation model based on Llama (if available locally)",
       },
       {
         id: "phi3",
         name: "Phi-3",
-        description: "Microsoft's Phi-3 model (if available locally)"
+        description: "Microsoft's Phi-3 model (if available locally)",
       },
       {
         id: "gemma2",
         name: "Gemma 2",
-        description: "Google's Gemma 2 model (if available locally)"
-      }
+        description: "Google's Gemma 2 model (if available locally)",
+      },
     ];
   }
 
   getSupportedModels(): ProviderModel[] {
     // Return cached models if still valid
     const now = Date.now();
-    if (this.cachedModels && (now - this.lastFetchTime) < this.cacheTimeout) {
+    if (this.cachedModels && now - this.lastFetchTime < this.cacheTimeout) {
       return this.cachedModels;
     }
 
     // If no cache, return static models and trigger async fetch
     if (!this.cachedModels) {
       // Trigger async fetch in background
-      this.fetchLocalModels().then(models => {
-        this.cachedModels = models;
-        this.lastFetchTime = Date.now();
-      }).catch(error => {
-        console.warn('Background model fetch failed:', error);
-      });
-      
+      this.fetchLocalModels()
+        .then((models) => {
+          this.cachedModels = models;
+          this.lastFetchTime = Date.now();
+        })
+        .catch((error) => {
+          console.warn("Background model fetch failed:", error);
+        });
+
       // Return static models for immediate use
       return this.getStaticModels();
     }
@@ -249,52 +269,60 @@ export class OllamaProvider extends AIProvider {
   async refreshModels(): Promise<ProviderModel[]> {
     this.cachedModels = null;
     this.lastFetchTime = 0;
-    
+
     const models = await this.fetchLocalModels();
     this.cachedModels = models;
     this.lastFetchTime = Date.now();
-    
+
     return models;
   }
 
-  async createMessage(options: ProviderCreateOptions): Promise<ProviderResponse> {
+  async createMessage(
+    options: ProviderCreateOptions,
+  ): Promise<ProviderResponse> {
     const ollamaMessages = this.convertToOllamaMessages(options.messages);
-    const ollamaTools = options.tools ? this.convertToOllamaTools(options.tools) : undefined;
+    const ollamaTools = options.tools
+      ? this.convertToOllamaTools(options.tools)
+      : undefined;
 
     try {
-      const response = await this.ollama.chat({
+      const response = (await this.ollama.chat({
         model: options.model,
         messages: ollamaMessages,
         tools: ollamaTools,
         options: {
           num_predict: options.max_tokens,
         },
-      }) as OllamaResponse;
+      })) as OllamaResponse;
 
       return this.convertFromOllamaResponse(response, options.model);
     } catch (error: unknown) {
       const ollamaError = error as { message?: string; name?: string };
-      
+
       if (ollamaError?.message?.includes("connection")) {
         throw new Error(
-          `Ollama Connection Error: Unable to connect to Ollama server. Please ensure Ollama is running and accessible at the configured host.`
+          `Ollama Connection Error: Unable to connect to Ollama server. Please ensure Ollama is running and accessible at the configured host.`,
         );
       } else if (ollamaError?.message?.includes("model")) {
         throw new Error(
-          `Ollama Model Error: ${ollamaError?.message || 'Model not found. Please ensure the model is downloaded and available.'}`
+          `Ollama Model Error: ${ollamaError?.message || "Model not found. Please ensure the model is downloaded and available."}`,
         );
       } else if (ollamaError?.message?.includes("timeout")) {
         throw new Error(
-          `Ollama Timeout Error: Request timed out. The model might be loading or the request is taking too long.`
+          `Ollama Timeout Error: Request timed out. The model might be loading or the request is taking too long.`,
         );
       }
-      
+
       // Re-throw the original error if it's not a recognized Ollama error
-      throw new Error(`Ollama Error: ${ollamaError?.message || 'An unknown error occurred'}`);
+      throw new Error(
+        `Ollama Error: ${ollamaError?.message || "An unknown error occurred"}`,
+      );
     }
   }
 
-  private convertToOllamaMessages(messages: ProviderMessage[]): OllamaMessage[] {
+  private convertToOllamaMessages(
+    messages: ProviderMessage[],
+  ): OllamaMessage[] {
     const result: OllamaMessage[] = [];
 
     for (const message of messages) {
@@ -308,8 +336,12 @@ export class OllamaProvider extends AIProvider {
 
       // Handle complex content with tool calls/results
       if (message.role === "assistant") {
-        const textContent = message.content.find(item => item.type === "text");
-        const toolCalls = message.content.filter(item => item.type === "tool_use");
+        const textContent = message.content.find(
+          (item) => item.type === "text",
+        );
+        const toolCalls = message.content.filter(
+          (item) => item.type === "tool_use",
+        );
 
         const ollamaMessage: OllamaMessage = {
           role: "assistant",
@@ -317,7 +349,7 @@ export class OllamaProvider extends AIProvider {
         };
 
         if (toolCalls.length > 0) {
-          ollamaMessage.tool_calls = toolCalls.map(toolCall => ({
+          ollamaMessage.tool_calls = toolCalls.map((toolCall) => ({
             function: {
               name: toolCall.name || "",
               arguments: toolCall.input || {},
@@ -328,29 +360,35 @@ export class OllamaProvider extends AIProvider {
         result.push(ollamaMessage);
       } else {
         // Handle user messages with tool results
-        const toolResults = message.content.filter(item => item.type === "tool_result");
+        const toolResults = message.content.filter(
+          (item) => item.type === "tool_result",
+        );
 
         if (toolResults.length > 0) {
           // Ollama expects tool results as separate messages with role "tool"
           // This matches the working example format
           for (const result_item of toolResults) {
             let content = result_item.content || "";
-            
+
             // Handle case where content is an array of content blocks
             if (Array.isArray(content)) {
               // Extract text from content blocks
-              const textBlocks = content.filter(block => block.type === "text");
-              content = textBlocks.map(block => block.text || "").join("\n");
+              const textBlocks = content.filter(
+                (block) => block.type === "text",
+              );
+              content = textBlocks.map((block) => block.text || "").join("\n");
             }
-            
+
             result.push({
               role: "tool",
               content: content,
             });
           }
-          
+
           // If there's also text content, add it as a user message
-          const textContent = message.content.find(item => item.type === "text");
+          const textContent = message.content.find(
+            (item) => item.type === "text",
+          );
           if (textContent && textContent.text) {
             result.push({
               role: "user",
@@ -359,7 +397,9 @@ export class OllamaProvider extends AIProvider {
           }
         } else {
           // Regular user message
-          const textContent = message.content.find(item => item.type === "text");
+          const textContent = message.content.find(
+            (item) => item.type === "text",
+          );
           result.push({
             role: "user",
             content: textContent?.text || "",
@@ -372,17 +412,22 @@ export class OllamaProvider extends AIProvider {
   }
 
   private convertToOllamaTools(tools: ProviderTool[]): OllamaTool[] {
-    return tools.map((tool): OllamaTool => ({
-      type: "function",
-      function: {
-        name: tool.name,
-        description: tool.description,
-        parameters: tool.input_schema,
-      },
-    }));
+    return tools.map(
+      (tool): OllamaTool => ({
+        type: "function",
+        function: {
+          name: tool.name,
+          description: tool.description,
+          parameters: tool.input_schema,
+        },
+      }),
+    );
   }
 
-  private convertFromOllamaResponse(response: OllamaResponse, model: string): ProviderResponse {
+  private convertFromOllamaResponse(
+    response: OllamaResponse,
+    model: string,
+  ): ProviderResponse {
     const content: ProviderResponseContent[] = [];
 
     // Add text content if present
@@ -410,10 +455,12 @@ export class OllamaProvider extends AIProvider {
     return {
       content,
       model: model,
-      usage: response.usage ? {
-        input_tokens: response.usage.prompt_tokens || 0,
-        output_tokens: response.usage.completion_tokens || 0,
-      } : undefined,
+      usage: response.usage
+        ? {
+            input_tokens: response.usage.prompt_tokens || 0,
+            output_tokens: response.usage.completion_tokens || 0,
+          }
+        : undefined,
     };
   }
-} 
+}

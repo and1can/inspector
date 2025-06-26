@@ -4,16 +4,16 @@ export interface SettingsTabProps {
   disabled?: boolean;
 }
 
-export interface ApiKeyData {
-  key: string;
+export interface ProviderData {
+  key: string; // For API keys (Anthropic, OpenAI) or host URL (Ollama)
   isValid: boolean;
   showKey: boolean;
 }
 
-export interface ApiKeysState {
-  anthropic: ApiKeyData;
-  openai: ApiKeyData;
-  ollama: ApiKeyData;
+export interface ProvidersState {
+  anthropic: ProviderData;
+  openai: ProviderData;
+  ollama: ProviderData;
 }
 
 export interface ProviderConfig {

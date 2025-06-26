@@ -10,12 +10,12 @@ import {
   AlertCircle,
 } from "lucide-react";
 import { SupportedProvider } from "@/lib/providers";
-import { ApiKeyData, ProviderConfig } from "@/components/settings/types";
+import { ProviderData, ProviderConfig } from "@/components/settings/types";
 
 interface ProviderSectionProps {
   providerName: SupportedProvider;
   config: ProviderConfig;
-  keyData: ApiKeyData;
+  keyData: ProviderData;
   isCollapsed: boolean;
   disabled?: boolean;
   onApiKeyChange: (providerName: SupportedProvider, value: string) => void;

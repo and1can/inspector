@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import { useToast } from "@/lib/hooks/useToast";
 import { providerManager, SupportedProvider } from "@/lib/providers";
 import {
-  ApiKeysState,
+  ProvidersState,
   ProviderConfig,
   SettingsTabProps,
 } from "@/components/settings/types";
@@ -32,7 +32,7 @@ const PROVIDERS: Record<SupportedProvider, ProviderConfig> = {
 };
 
 const SettingsTab: React.FC<SettingsTabProps> = ({ disabled = false }) => {
-  const [apiKeys, setApiKeys] = useState<ApiKeysState>({
+  const [apiKeys, setApiKeys] = useState<ProvidersState>({
     anthropic: { key: "", isValid: false, showKey: false },
     openai: { key: "", isValid: false, showKey: false },
     ollama: { key: "", isValid: false, showKey: false },
@@ -150,10 +150,10 @@ const SettingsTab: React.FC<SettingsTabProps> = ({ disabled = false }) => {
             key={providerName}
             providerName={providerName as SupportedProvider}
             config={config}
-            keyData={apiKeys[providerName as keyof ApiKeysState]}
+            keyData={apiKeys[providerName as SupportedProvider]}
             isCollapsed={
               collapsedSections[providerName] &&
-              apiKeys[providerName as keyof ApiKeysState].isValid
+              apiKeys[providerName as SupportedProvider].isValid
             }
             disabled={disabled}
             onApiKeyChange={handleApiKeyChange}
