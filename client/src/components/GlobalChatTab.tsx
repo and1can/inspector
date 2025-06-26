@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import { Tool } from "@modelcontextprotocol/sdk/types.js";
 import { Tool as AnthropicTool } from "@anthropic-ai/sdk/resources/messages/messages.mjs";
-import { Send, User, Key, ChevronDown, Square, RefreshCw } from "lucide-react";
+import { Send, User, Key, ChevronDown, Square, RefreshCw, Bot } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { ToolCallMessage } from "./ToolCallMessage";
 import { parseToolCallContent } from "@/utils/toolCallHelpers";

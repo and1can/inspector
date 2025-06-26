@@ -58,11 +58,33 @@ const Sidebar: React.FC<SidebarProps> = ({
   onToggleExpanded,
 }) => {
   const [theme, setTheme] = useTheme();
+  const [totalToolsCount, setTotalToolsCount] = React.useState(0);
 
   // Get server connections directly from the agent
   const serverConnections = React.useMemo(() => {
     return mcpAgent ? mcpAgent.getAllConnectionInfo() : [];
   }, [mcpAgent, updateTrigger]);
+
+  // Fetch total tools count when connections change
+  React.useEffect(() => {
+    const fetchToolsCount = async () => {
+      if (!mcpAgent) {
+        setTotalToolsCount(0);
+        return;
+      }
+      
+      try {
+        const allServerTools = await mcpAgent.getAllTools();
+        const totalTools = allServerTools.reduce((sum, serverTools) => sum + serverTools.tools.length, 0);
+        setTotalToolsCount(totalTools);
+      } catch (error) {
+        console.error("Failed to fetch tools count for sidebar:", error);
+        setTotalToolsCount(0);
+      }
+    };
+
+    fetchToolsCount();
+  }, [mcpAgent, updateTrigger, serverConnections]);
 
   // Helper function to get logo source based on theme
   const getLogoSrc = () => {
@@ -172,7 +194,7 @@ const Sidebar: React.FC<SidebarProps> = ({
             <h3 className="text-sm font-medium text-foreground">Global Chat</h3>
             {connectedServers.length > 0 && (
               <span className="text-xs text-muted-foreground bg-muted px-1.5 py-0.5 rounded">
-                {connectedServers.length} tools available
+                {totalToolsCount} tools available
               </span>
             )}
           </div>
