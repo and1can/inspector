@@ -67,7 +67,9 @@ export abstract class AIProvider {
   }
 
   abstract updateApiKey(apiKey: string): void;
-  abstract createMessage(options: ProviderCreateOptions): Promise<ProviderResponse>;
+  abstract createMessage(
+    options: ProviderCreateOptions,
+  ): Promise<ProviderResponse>;
   abstract validateConfig(): boolean;
   abstract getProviderName(): string;
   abstract getDefaultModel(): string;
@@ -77,8 +79,8 @@ export abstract class AIProvider {
   async refreshModels?(): Promise<ProviderModel[]>;
 }
 
-export type SupportedProvider = "anthropic" | "openai" | "deepseek" | "ollama";
+export type SupportedProvider = "anthropic" | "openai" | "ollama";
 
 export interface ProviderFactory {
   createProvider(type: SupportedProvider, config: ProviderConfig): AIProvider;
-} 
+}

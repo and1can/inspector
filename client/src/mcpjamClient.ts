@@ -20,6 +20,7 @@ import {
 import {
   AIProvider,
   providerManager,
+  SupportedProvider,
 } from "@/lib/providers";
 import {
   MessageParam,
@@ -128,7 +129,7 @@ export class MCPJamClient extends Client<Request, Notification, Result> {
         },
       },
     );
-    
+
     // Assign properties
     this.serverConfig = serverConfig;
     this.headers = {};
@@ -722,13 +723,15 @@ export class MCPJamClient extends Client<Request, Notification, Result> {
     signal?: AbortSignal,
   ): Promise<string> {
     // Get the specified provider or fall back to default
-    const aiProvider = provider 
-      ? providerManager.getProvider(provider as "anthropic" | "openai" | "deepseek")
+    const aiProvider = provider
+      ? providerManager.getProvider(provider as SupportedProvider)
       : providerManager.getDefaultProvider();
-      
+
     if (!aiProvider) {
       const providerName = provider || "default";
-      throw new Error(`No ${providerName} provider available. Please check your API key configuration.`);
+      throw new Error(
+        `No ${providerName} provider available. Please check your API key configuration.`,
+      );
     }
 
     if (signal?.aborted) {
@@ -742,7 +745,13 @@ export class MCPJamClient extends Client<Request, Notification, Result> {
     const context = this.initializeQueryContext(query, tools, model);
     const response = await this.makeInitialApiCall(context, aiProvider, signal);
 
-    return this.processIterations(response, context, aiProvider, onUpdate, signal);
+    return this.processIterations(
+      response,
+      context,
+      aiProvider,
+      onUpdate,
+      signal,
+    );
   }
 
   private initializeQueryContext(query: string, tools: Tool[], model: string) {
@@ -767,23 +776,23 @@ export class MCPJamClient extends Client<Request, Notification, Result> {
     if (!this.aiProvider) {
       throw new Error("AI provider not initialized");
     }
-    
+
     // Check if aborted before making API call
     if (signal?.aborted) {
       throw new Error("Chat was cancelled");
     }
-    
+
     this.addClientLog("Making initial API call to AI provider", "debug");
     const response = await aiProvider.createMessage({
       model: context.model,
       max_tokens: 1000,
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       messages: context.messages as any,
-      tools: context.sanitizedTools.map(tool => ({
+      tools: context.sanitizedTools.map((tool) => ({
         name: tool.name,
         description: tool.description,
-        input_schema: tool.input_schema
-      }))
+        input_schema: tool.input_schema,
+      })),
     });
 
     // Check if aborted after API call
@@ -819,7 +828,11 @@ export class MCPJamClient extends Client<Request, Notification, Result> {
         "debug",
       );
 
-      const iterationResult = await this.processIteration(response, context, signal);
+      const iterationResult = await this.processIteration(
+        response,
+        context,
+        signal,
+      );
 
       this.sendIterationUpdate(iterationResult.content, onUpdate);
 
@@ -1028,22 +1041,22 @@ export class MCPJamClient extends Client<Request, Notification, Result> {
     if (!this.aiProvider) {
       throw new Error("AI provider not initialized");
     }
-    
+
     // Check if aborted before making API call
     if (signal?.aborted) {
       throw new Error("Chat was cancelled");
     }
-  this.addClientLog("Making follow-up API call to AI provider", "debug");
+    this.addClientLog("Making follow-up API call to AI provider", "debug");
     const response = await aiProvider.createMessage({
       model: context.model,
       max_tokens: 1000,
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       messages: context.messages as any,
-      tools: context.sanitizedTools.map(tool => ({
+      tools: context.sanitizedTools.map((tool) => ({
         name: tool.name,
         description: tool.description,
-        input_schema: tool.input_schema
-      }))
+        input_schema: tool.input_schema,
+      })),
     });
 
     // Check if aborted after API call

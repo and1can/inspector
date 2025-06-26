@@ -1,9 +1,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import { useMcpClient } from "@/context/McpClientContext";
 import { Tool } from "@modelcontextprotocol/sdk/types.js";
-import {
-  Tool as MessageTool,
-} from "@anthropic-ai/sdk/resources/messages/messages.mjs";
+import { Tool as MessageTool } from "@anthropic-ai/sdk/resources/messages/messages.mjs";
 import { Send, User, Key, ChevronDown, Square, RefreshCw } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { ToolCallMessage } from "./ToolCallMessage";
@@ -46,7 +44,6 @@ const getProviderDisplayName = (provider: SupportedProvider): string => {
   switch (provider) {
     case "anthropic": return "Claude";
     case "openai": return "OpenAI";
-    case "deepseek": return "DeepSeek";
     case "ollama": return "Ollama";
     default: return provider;
   }
@@ -108,8 +105,8 @@ const LoadingDots: React.FC = () => (
 );
 
 // Message bubble component
-const MessageBubble: React.FC<{ 
-  message: Message; 
+const MessageBubble: React.FC<{
+  message: Message;
   selectedProvider: SupportedProvider;
 }> = ({ message, selectedProvider }) => {
   const isUser = message.role === "user";
@@ -336,8 +333,11 @@ const ChatTab: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [tools, setTools] = useState<Tool[]>([]);
-  const [selectedProvider, setSelectedProvider] = useState<SupportedProvider>("anthropic");
-  const [selectedModel, setSelectedModel] = useState<string>("claude-3-5-sonnet-latest");
+  const [selectedProvider, setSelectedProvider] =
+    useState<SupportedProvider>("anthropic");
+  const [selectedModel, setSelectedModel] = useState<string>(
+    "claude-3-5-sonnet-latest",
+  );
   const [showProviderSelector, setShowProviderSelector] = useState(false);
   const [showModelSelector, setShowModelSelector] = useState(false);
   const [abortController, setAbortController] = useState<AbortController | null>(null);
@@ -375,10 +375,11 @@ const ChatTab: React.FC = () => {
     setChat((prev) => [...prev, message]);
   };
 
-  const processUserQuery = async (userMessage: string, signal?: AbortSignal) => {
-    if (
-      !mcpClient || !(mcpClient instanceof MCPJamClient)
-    ) {
+  const processUserQuery = async (
+    userMessage: string,
+    signal?: AbortSignal,
+  ) => {
+    if (!mcpClient || !(mcpClient instanceof MCPJamClient)) {
       throw new Error(
         "Chat functionality is not available. Please ensure you have a valid API key and the server is connected.",
       );
@@ -466,7 +467,7 @@ const ChatTab: React.FC = () => {
   const handleProviderSelect = (provider: SupportedProvider) => {
     setSelectedProvider(provider);
     setShowProviderSelector(false);
-    
+
     // Update model to first available model for this provider
     const models = getModelsForProvider(provider);
     if (models.length > 0) {
@@ -515,7 +516,7 @@ const ChatTab: React.FC = () => {
     if (availableProviders.length > 0) {
       const firstProvider = availableProviders[0];
       setSelectedProvider(firstProvider);
-      
+
       const models = getModelsForProvider(firstProvider);
       if (models.length > 0) {
         setSelectedModel(models[0].id);
@@ -600,7 +601,7 @@ const ChatTab: React.FC = () => {
                   {getProviderDisplayName(selectedProvider)}
                 </h1>
                 <p className="text-xs text-slate-500 dark:text-slate-400">
-                  {hasAnyApiKey ? "Ready to help" : "API key required"}
+                  {hasAnyApiKey ? undefined : "API key required"}
                 </p>
               </div>
             </div>
@@ -629,7 +630,8 @@ const ChatTab: React.FC = () => {
                             onClick={() => handleProviderSelect(provider)}
                             className={cn(
                               "w-full px-4 py-2 text-left hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors",
-                              selectedProvider === provider && "bg-slate-50 dark:bg-slate-800",
+                              selectedProvider === provider &&
+                                "bg-slate-50 dark:bg-slate-800",
                             )}
                           >
                             <div className="text-sm font-medium text-slate-900 dark:text-slate-100">
@@ -650,7 +652,8 @@ const ChatTab: React.FC = () => {
                     disabled={loading}
                   >
                     <span className="text-slate-700 dark:text-slate-200 font-medium">
-                      {availableModels.find(m => m.id === selectedModel)?.name || selectedModel}
+                      {availableModels.find((m) => m.id === selectedModel)
+                        ?.name || selectedModel}
                     </span>
                     <ChevronDown className="w-3 h-3 text-slate-400" />
                   </button>
@@ -664,7 +667,8 @@ const ChatTab: React.FC = () => {
                             onClick={() => handleModelSelect(model.id)}
                             className={cn(
                               "w-full px-4 py-3 text-left hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors",
-                              selectedModel === model.id && "bg-slate-50 dark:bg-slate-800",
+                              selectedModel === model.id &&
+                                "bg-slate-50 dark:bg-slate-800",
                             )}
                           >
                             <div className="text-sm font-medium text-slate-900 dark:text-slate-100">
@@ -710,11 +714,18 @@ const ChatTab: React.FC = () => {
         ) : selectedProvider === "ollama" && availableModels.length === 0 ? (
           <OllamaSetupInstructions />
         ) : chat.length === 0 ? (
-          <EmptyChatsState onSuggestionClick={setInput} selectedProvider={selectedProvider} />
+          <EmptyChatsState
+            onSuggestionClick={setInput}
+            selectedProvider={selectedProvider}
+          />
         ) : (
           <div className="py-2">
             {chat.map((message, idx) => (
-              <MessageBubble key={idx} message={message} selectedProvider={selectedProvider} />
+              <MessageBubble
+                key={idx}
+                message={message}
+                selectedProvider={selectedProvider}
+              />
             ))}
             {loading && (
               <div className="flex gap-3 px-6 py-4">
