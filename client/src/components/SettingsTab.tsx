@@ -25,7 +25,6 @@ interface ApiKeyData {
 interface ApiKeysState {
   anthropic: ApiKeyData;
   openai: ApiKeyData;
-  deepseek: ApiKeyData;
   ollama: ApiKeyData;
 }
 
