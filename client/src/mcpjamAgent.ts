@@ -231,20 +231,25 @@ export class MCPJamAgent implements ChatLoopProvider, ToolCaller {
   // Aggregate operations across all servers
   async getAllTools(): Promise<{ serverName: string; tools: Tool[] }[]> {
     const allServerTools: { serverName: string; tools: Tool[] }[] = [];
-    for (const [serverName, serverConfig] of Object.entries(
-      this.serverConfigs,
-    )) {
+    
+    // Only query tools from connected servers
+    const connectionInfo = this.getAllConnectionInfo();
+    const connectedServers = connectionInfo.filter(
+      (conn) => conn.connectionStatus === "connected"
+    );
+    
+    for (const serverInfo of connectedServers) {
       try {
-        const client = await this.getOrCreateClient(serverName, serverConfig);
+        const client = await this.getConnectedClientForServer(serverInfo.name);
         const toolsResponse = await client.tools();
         allServerTools.push({
-          serverName,
+          serverName: serverInfo.name,
           tools: toolsResponse.tools,
         });
       } catch (error) {
-        console.error(`Failed to get tools from server ${serverName}:`, error);
+        console.error(`Failed to get tools from server ${serverInfo.name}:`, error);
         allServerTools.push({
-          serverName,
+          serverName: serverInfo.name,
           tools: [],
         });
       }

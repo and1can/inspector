@@ -374,14 +374,48 @@ const GlobalChatTab: React.FC<GlobalChatTabProps> = ({ mcpAgent }) => {
 
   // Helper functions for component logic
   const fetchTools = async () => {
-    if (!mcpAgent) return;
+    if (!mcpAgent) {
+      console.log("No mcpAgent available");
+      return;
+    }
+    
     try {
+      console.log("Fetching tools from all servers...");
+      
+      // First, check connection status
+      const connectionInfo = mcpAgent.getAllConnectionInfo();
+      console.log("Connection info:", connectionInfo);
+      
+      const connectedServers = connectionInfo.filter(
+        (conn) => conn.connectionStatus === "connected"
+      );
+      console.log(`Found ${connectedServers.length} connected servers out of ${connectionInfo.length} total`);
+      
+      if (connectedServers.length === 0) {
+        console.log("No connected servers found, setting tools to empty array");
+        setTools([]);
+        return;
+      }
+      
       const allServerTools = await mcpAgent.getAllTools();
-      const allTools = allServerTools.flatMap(serverTools => serverTools.tools);
+      console.log("Raw server tools response:", allServerTools);
+      
+      // Also try to get tools only from connected servers
+      const connectedServerNames = connectedServers.map(conn => conn.name);
+      console.log("Connected server names:", connectedServerNames);
+      
+      const allTools = allServerTools.flatMap(serverTools => {
+        const isConnected = connectedServerNames.includes(serverTools.serverName);
+        console.log(`Server ${serverTools.serverName} (connected: ${isConnected}) has ${serverTools.tools.length} tools:`, serverTools.tools.map(t => t.name));
+        return serverTools.tools;
+      });
+      
+      console.log(`Total tools found: ${allTools.length}`, allTools.map(t => t.name));
       setTools(allTools || []);
     } catch (e: unknown) {
       const errorMessage =
         e instanceof Error ? e.message : "Failed to fetch tools";
+      console.error("Error fetching tools:", e);
       setError(errorMessage);
     }
   };
@@ -406,6 +440,8 @@ const GlobalChatTab: React.FC<GlobalChatTabProps> = ({ mcpAgent }) => {
       description: tool.description || "",
       input_schema: tool.inputSchema || { type: "object", properties: {} },
     }));
+
+    console.log("xcxc convertedTools", convertedTools);
 
     let fullResponse = "";
     let currentAssistantMessage: Message | null = null;
@@ -596,6 +632,24 @@ const GlobalChatTab: React.FC<GlobalChatTabProps> = ({ mcpAgent }) => {
       mounted = false;
     };
   }, [mcpAgent]);
+
+  // Refetch tools when connection status might have changed
+  useEffect(() => {
+    if (!mcpAgent) return;
+    
+    const interval = setInterval(() => {
+      fetchTools();
+    }, 2000); // Check every 2 seconds
+    
+    return () => clearInterval(interval);
+  }, [mcpAgent]);
+
+  // Also refetch tools when the connected servers count changes
+  useEffect(() => {
+    if (mcpAgent && connectedServersCount > 0) {
+      fetchTools();
+    }
+  }, [connectedServersCount, mcpAgent]);
 
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
