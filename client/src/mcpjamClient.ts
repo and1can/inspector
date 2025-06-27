@@ -20,6 +20,7 @@ import {
 import {
   AIProvider,
   providerManager,
+  SupportedProvider,
 } from "@/lib/providers";
 import {
   Tool,
@@ -715,7 +716,7 @@ export class MCPJamClient extends Client<Request, Notification, Result> implemen
     tools: Tool[],
     onUpdate?: (content: string) => void,
     model: string = "claude-3-5-sonnet-latest",
-    provider?: string,
+    provider?: SupportedProvider,
     signal?: AbortSignal,
   ): Promise<string> {
     return this.queryProcessor.processQuery(query, tools, onUpdate, model, provider, signal);

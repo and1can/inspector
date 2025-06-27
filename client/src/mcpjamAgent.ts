@@ -19,6 +19,7 @@ import { ClientLogLevels } from "./hooks/helpers/types";
 import { ElicitationResponse } from "./components/ElicitationModal";
 import { ChatLoopProvider, ChatLoop, mappedTools, QueryProcessor, ToolCaller } from "./lib/chatLoop";
 import { Tool as AnthropicTool } from "@anthropic-ai/sdk/resources/messages/messages.mjs";
+import { SupportedProvider } from "./lib/providers";
 
 export interface MCPClientOptions {
   id?: string;
@@ -473,7 +474,7 @@ export class MCPJamAgent implements ChatLoopProvider, ToolCaller {
     tools: AnthropicTool[],
     onUpdate?: (content: string) => void,
     model: string = "claude-3-5-sonnet-latest",
-    provider?: string,
+    provider?: SupportedProvider,
     signal?: AbortSignal,
   ): Promise<string> {
     return this.queryProcessor.processQuery(query, tools, onUpdate, model, provider, signal);
