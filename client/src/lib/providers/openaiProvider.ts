@@ -177,14 +177,46 @@ export class OpenAIProvider extends AIProvider {
   }
 
   private convertToOpenAITools(tools: ProviderTool[]): OpenAI.Chat.Completions.ChatCompletionTool[] {
-    return tools.map((tool): OpenAI.Chat.Completions.ChatCompletionTool => ({
-      type: "function",
-      function: {
-        name: tool.name,
-        description: tool.description,
-        parameters: tool.input_schema,
-      },
-    }));
+    return tools.map((tool): OpenAI.Chat.Completions.ChatCompletionTool => {
+      // Ensure the input schema is properly structured for OpenAI
+      let parameters = tool.input_schema;
+      
+      // If no input schema provided, create a basic object schema
+      if (!parameters || typeof parameters !== 'object') {
+        parameters = {
+          type: "object",
+          properties: {},
+          required: []
+        };
+      } else {
+        // Deep copy to avoid modifying original
+        parameters = JSON.parse(JSON.stringify(parameters));
+        
+        // Ensure required OpenAI schema structure
+        if (!parameters.type) {
+          parameters.type = "object";
+        }
+        
+        // For object types, ensure properties exist
+        if (parameters.type === "object" && !parameters.properties) {
+          parameters.properties = {};
+        }
+        
+        // Ensure required is an array if it exists
+        if (parameters.required && !Array.isArray(parameters.required)) {
+          parameters.required = [];
+        }
+      }
+      
+      return {
+        type: "function",
+        function: {
+          name: tool.name,
+          description: tool.description || "",
+          parameters: parameters,
+        },
+      };
+    });
   }
 
   private convertFromOpenAIResponse(response: OpenAI.Chat.Completions.ChatCompletion): ProviderResponse {
