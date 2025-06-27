@@ -33,7 +33,7 @@ import ChatTab from "./components/ChatTab";
 import GlobalChatTab from "./components/GlobalChatTab";
 import Sidebar from "./components/Sidebar";
 import Tabs from "./components/Tabs";
-import SettingsTab from "./components/SettingsTab";
+import SettingsTab from "./components/settings/SettingsTab";
 import ClientFormSection from "./components/ClientFormSection";
 import StarGitHubModal from "./components/StarGitHubModal";
 

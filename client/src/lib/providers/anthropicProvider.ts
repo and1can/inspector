@@ -16,6 +16,7 @@ import {
   ProviderTool,
   ProviderResponseContent,
   ProviderModel,
+  isApiKeyConfig,
 } from "./types";
 
 export class AnthropicProvider extends AIProvider {
@@ -23,6 +24,11 @@ export class AnthropicProvider extends AIProvider {
 
   constructor(config: ProviderConfig) {
     super(config);
+
+    if (!isApiKeyConfig(config)) {
+      throw new Error("AnthropicProvider requires an ApiKeyProviderConfig");
+    }
+
     this.anthropic = new Anthropic({
       apiKey: config.apiKey,
       dangerouslyAllowBrowser: config.dangerouslyAllowBrowser ?? true,
@@ -30,14 +36,19 @@ export class AnthropicProvider extends AIProvider {
   }
 
   updateApiKey(apiKey: string): void {
-    this.config.apiKey = apiKey;
-    this.anthropic = new Anthropic({
-      apiKey: apiKey,
-      dangerouslyAllowBrowser: this.config.dangerouslyAllowBrowser ?? true,
-    });
+    if (isApiKeyConfig(this.config)) {
+      this.config.apiKey = apiKey;
+      this.anthropic = new Anthropic({
+        apiKey: apiKey,
+        dangerouslyAllowBrowser: this.config.dangerouslyAllowBrowser ?? true,
+      });
+    }
   }
 
   validateConfig(): boolean {
+    if (!isApiKeyConfig(this.config)) {
+      return false;
+    }
     return Boolean(this.config.apiKey && this.config.apiKey.length > 0);
   }
 
@@ -54,44 +65,48 @@ export class AnthropicProvider extends AIProvider {
       {
         id: "claude-3-5-sonnet-latest",
         name: "Claude Sonnet 3.5",
-        description: "High level of intelligence and capability"
+        description: "High level of intelligence and capability",
       },
       {
         id: "claude-3-5-sonnet-20241022",
         name: "Claude Sonnet 3.5 (Oct 2024)",
-        description: "Specific version with enhanced capabilities"
+        description: "Specific version with enhanced capabilities",
       },
       {
         id: "claude-3-5-haiku-latest",
         name: "Claude Haiku 3.5",
-        description: "Fastest model - intelligence at blazing speeds"
+        description: "Fastest model - intelligence at blazing speeds",
       },
       {
         id: "claude-3-5-haiku-20241022",
         name: "Claude Haiku 3.5 (Oct 2024)",
-        description: "Latest fast model with enhanced speed"
+        description: "Latest fast model with enhanced speed",
       },
       {
         id: "claude-3-opus-latest",
         name: "Claude Opus 3",
-        description: "Top-level intelligence, fluency, and understanding"
+        description: "Top-level intelligence, fluency, and understanding",
       },
       {
         id: "claude-3-opus-20240229",
         name: "Claude Opus 3 (Feb 2024)",
-        description: "Powerful model for complex reasoning tasks"
+        description: "Powerful model for complex reasoning tasks",
       },
       {
         id: "claude-3-sonnet-20240229",
         name: "Claude Sonnet 3 (Feb 2024)",
-        description: "Balanced performance and speed"
-      }
+        description: "Balanced performance and speed",
+      },
     ];
   }
 
-  async createMessage(options: ProviderCreateOptions): Promise<ProviderResponse> {
+  async createMessage(
+    options: ProviderCreateOptions,
+  ): Promise<ProviderResponse> {
     const anthropicMessages = this.convertToAnthropicMessages(options.messages);
-    const anthropicTools = options.tools ? this.convertToAnthropicTools(options.tools) : undefined;
+    const anthropicTools = options.tools
+      ? this.convertToAnthropicTools(options.tools)
+      : undefined;
 
     const response = await this.anthropic.messages.create({
       model: options.model,
@@ -103,7 +118,9 @@ export class AnthropicProvider extends AIProvider {
     return this.convertFromAnthropicResponse(response);
   }
 
-  private convertToAnthropicMessages(messages: ProviderMessage[]): MessageParam[] {
+  private convertToAnthropicMessages(
+    messages: ProviderMessage[],
+  ): MessageParam[] {
     return messages.map((message): MessageParam => {
       if (typeof message.content === "string") {
         return {
@@ -146,41 +163,47 @@ export class AnthropicProvider extends AIProvider {
   }
 
   private convertToAnthropicTools(tools: ProviderTool[]): Tool[] {
-    return tools.map((tool): Tool => ({
-      name: tool.name,
-      description: tool.description,
-      input_schema: {
-        type: "object",
-        ...tool.input_schema,
-      },
-    }));
+    return tools.map(
+      (tool): Tool => ({
+        name: tool.name,
+        description: tool.description,
+        input_schema: {
+          type: "object",
+          ...tool.input_schema,
+        },
+      }),
+    );
   }
 
   private convertFromAnthropicResponse(response: Message): ProviderResponse {
-    const content: ProviderResponseContent[] = response.content.map((item: ContentBlock) => {
-      if (item.type === "text") {
-        return {
-          type: "text",
-          text: item.text,
-        };
-      } else if (item.type === "tool_use") {
-        return {
-          type: "tool_use",
-          id: item.id,
-          name: item.name,
-          input: item.input as Record<string, unknown>,
-        };
-      }
-      throw new Error(`Unsupported response content type`);
-    });
+    const content: ProviderResponseContent[] = response.content.map(
+      (item: ContentBlock) => {
+        if (item.type === "text") {
+          return {
+            type: "text",
+            text: item.text,
+          };
+        } else if (item.type === "tool_use") {
+          return {
+            type: "tool_use",
+            id: item.id,
+            name: item.name,
+            input: item.input as Record<string, unknown>,
+          };
+        }
+        throw new Error(`Unsupported response content type`);
+      },
+    );
 
     return {
       content,
       model: response.model,
-      usage: response.usage ? {
-        input_tokens: response.usage.input_tokens,
-        output_tokens: response.usage.output_tokens,
-      } : undefined,
+      usage: response.usage
+        ? {
+            input_tokens: response.usage.input_tokens,
+            output_tokens: response.usage.output_tokens,
+          }
+        : undefined,
     };
   }
-} 
+}

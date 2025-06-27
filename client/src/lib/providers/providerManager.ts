@@ -1,10 +1,17 @@
-import { AIProvider, SupportedProvider, ProviderConfig } from "./types";
+import {
+  AIProvider,
+  SupportedProvider,
+  ProviderConfig,
+  ApiKeyProviderConfig,
+  HostUrlProviderConfig,
+} from "./types";
 import { providerFactory } from "./providerFactory";
 
 interface ProviderInfo {
   provider: AIProvider | null;
   isValid: boolean;
-  apiKey: string;
+  apiKey: string; // Keep as apiKey for backward compatibility in the interface
+  hostUrl?: string; // Add hostUrl for Ollama
 }
 
 interface StorageKeys {
@@ -16,7 +23,7 @@ export class ProviderManager {
   private storageKeys: StorageKeys = {
     anthropic: "claude-api-key",
     openai: "openai-api-key",
-    ollama: "ollama-host"
+    ollama: "ollama-host",
   };
 
   constructor() {
@@ -26,25 +33,38 @@ export class ProviderManager {
 
   private initializeProviders() {
     // Initialize with null providers
-    this.providers.set("anthropic", { provider: null, isValid: false, apiKey: "" });
-    this.providers.set("openai", { provider: null, isValid: false, apiKey: "" });
-    this.providers.set("ollama", { provider: null, isValid: false, apiKey: "" });
+    this.providers.set("anthropic", {
+      provider: null,
+      isValid: false,
+      apiKey: "",
+    });
+    this.providers.set("openai", {
+      provider: null,
+      isValid: false,
+      apiKey: "",
+    });
+    this.providers.set("ollama", {
+      provider: null,
+      isValid: false,
+      apiKey: "",
+      hostUrl: "",
+    });
   }
 
   private loadApiKeysFromStorage() {
     this.providers.forEach((_, providerType) => {
       try {
         const storageKey = this.storageKeys[providerType];
-        const storedApiKey = localStorage.getItem(storageKey) || "";
-        if (storedApiKey && this.validateApiKey(providerType, storedApiKey)) {
-          this.setApiKey(providerType, storedApiKey);
+        const storedValue = localStorage.getItem(storageKey) || "";
+        if (storedValue && this.validateApiKey(providerType, storedValue)) {
+          this.setApiKey(providerType, storedValue);
         } else if (providerType === "ollama") {
           // Auto-initialize Ollama with default host if no custom host is set
           this.setApiKey("ollama", "");
         }
       } catch (error) {
         console.warn(
-          `Failed to load ${providerType} API key from localStorage:`,
+          `Failed to load ${providerType} configuration from localStorage:`,
           error,
         );
       }
@@ -53,21 +73,19 @@ export class ProviderManager {
 
   private validateApiKey(
     providerType: SupportedProvider,
-    apiKey: string,
+    value: string,
   ): boolean {
     switch (providerType) {
       case "anthropic":
-        return (
-          /^sk-ant-api03-[A-Za-z0-9_-]+$/.test(apiKey) && apiKey.length > 20
-        );
+        return /^sk-ant-api03-[A-Za-z0-9_-]+$/.test(value) && value.length > 20;
       case "openai":
         // Basic validation - just check it starts with sk- and has reasonable length
-        return apiKey.startsWith("sk-") && apiKey.length > 20;
+        return value.startsWith("sk-") && value.length > 20;
       case "ollama":
         // Ollama doesn't require an API key, just check if it's a valid URL or empty
-        if (!apiKey) return true; // Empty is fine, will use default host
+        if (!value) return true; // Empty is fine, will use default host
         try {
-          new URL(apiKey);
+          new URL(value);
           return true;
         } catch {
           return false;
@@ -79,14 +97,23 @@ export class ProviderManager {
 
   private createProvider(
     providerType: SupportedProvider,
-    apiKey: string,
+    value: string,
   ): AIProvider | null {
     try {
-      const config: ProviderConfig = {
-        apiKey,
-        dangerouslyAllowBrowser: true,
-        baseURL: providerType === "ollama" ? apiKey || "http://127.0.0.1:11434" : undefined,
-      };
+      let config: ProviderConfig;
+
+      if (providerType === "ollama") {
+        config = {
+          hostUrl: value || "http://127.0.0.1:11434",
+          dangerouslyAllowBrowser: true,
+        } as HostUrlProviderConfig;
+      } else {
+        config = {
+          apiKey: value,
+          dangerouslyAllowBrowser: true,
+        } as ApiKeyProviderConfig;
+      }
+
       return providerFactory.createProvider(providerType, config);
     } catch (error) {
       console.error(`Failed to create ${providerType} provider:`, error);
@@ -94,43 +121,47 @@ export class ProviderManager {
     }
   }
 
-  setApiKey(providerType: SupportedProvider, apiKey: string): boolean {
-    const isValid = this.validateApiKey(providerType, apiKey);
+  setApiKey(providerType: SupportedProvider, value: string): boolean {
+    const isValid = this.validateApiKey(providerType, value);
     let provider: AIProvider | null = null;
 
     if (isValid) {
-      provider = this.createProvider(providerType, apiKey);
-      
-      // Save to localStorage if provider creation succeeded and there's an actual key
-      if (provider && apiKey) {
+      provider = this.createProvider(providerType, value);
+
+      // Save to localStorage if provider creation succeeded and there's an actual value
+      if (provider && value) {
         try {
           const storageKey = this.storageKeys[providerType];
-          localStorage.setItem(storageKey, apiKey);
+          localStorage.setItem(storageKey, value);
         } catch (error) {
           console.warn(
-            `Failed to save ${providerType} API key to localStorage:`,
+            `Failed to save ${providerType} configuration to localStorage:`,
             error,
           );
         }
       }
-    } else if (!apiKey) {
-      // Clear from localStorage if empty key
+    } else if (!value) {
+      // Clear from localStorage if empty value
       try {
         const storageKey = this.storageKeys[providerType];
         localStorage.removeItem(storageKey);
       } catch (error) {
         console.warn(
-          `Failed to remove ${providerType} API key from localStorage:`,
+          `Failed to remove ${providerType} configuration from localStorage:`,
           error,
         );
       }
     }
 
-    this.providers.set(providerType, {
+    // Update provider info with appropriate fields
+    const providerInfo: ProviderInfo = {
       provider,
       isValid: isValid && provider !== null,
-      apiKey,
-    });
+      apiKey: providerType === "ollama" ? "" : value, // Keep apiKey empty for Ollama
+      hostUrl: providerType === "ollama" ? value : undefined, // Set hostUrl for Ollama
+    };
+
+    this.providers.set(providerType, providerInfo);
 
     return isValid && provider !== null;
   }
@@ -145,7 +176,16 @@ export class ProviderManager {
   }
 
   getApiKey(providerType: SupportedProvider): string {
-    return this.providers.get(providerType)?.apiKey || "";
+    const info = this.providers.get(providerType);
+    if (providerType === "ollama") {
+      return info?.hostUrl || "";
+    }
+    return info?.apiKey || "";
+  }
+
+  // New method specifically for getting Ollama host URL
+  getOllamaHostUrl(): string {
+    return this.providers.get("ollama")?.hostUrl || "";
   }
 
   getAllProviderStatus(): Record<
@@ -155,9 +195,14 @@ export class ProviderManager {
     const status: Record<string, { isValid: boolean; hasApiKey: boolean }> = {};
 
     this.providers.forEach((info, providerType) => {
+      const hasValue =
+        providerType === "ollama"
+          ? (info.hostUrl?.length || 0) > 0
+          : (info.apiKey?.length || 0) > 0;
+
       status[providerType] = {
         isValid: info.isValid,
-        hasApiKey: info.apiKey.length > 0,
+        hasApiKey: hasValue,
       };
     });
 
@@ -171,7 +216,7 @@ export class ProviderManager {
   getDefaultProvider(): AIProvider | null {
     // Try Anthropic first, then others
     const priority: SupportedProvider[] = ["anthropic", "openai", "ollama"];
-    
+
     for (const providerType of priority) {
       const provider = this.getProvider(providerType);
       if (provider && this.isProviderReady(providerType)) {
@@ -185,7 +230,7 @@ export class ProviderManager {
   // Get the provider type for the default provider
   getDefaultProviderType(): SupportedProvider | null {
     const priority: SupportedProvider[] = ["anthropic", "openai", "ollama"];
-    
+
     for (const providerType of priority) {
       if (this.isProviderReady(providerType)) {
         return providerType;
