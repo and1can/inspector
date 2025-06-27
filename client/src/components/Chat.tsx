@@ -37,8 +37,9 @@ interface ChatProps {
   provider: ChatProvider | null;
   config: ChatConfig;
   // Optional functions for getting additional info
-  getToolsCount?: () => Promise<number>;
   getServersCount?: () => number;
+  // Optional trigger to refetch tools when connections change
+  updateTrigger?: number;
 }
 
 // Helper functions
@@ -351,7 +352,7 @@ const EmptyChatsState: React.FC<{
   );
 };
 
-const Chat: React.FC<ChatProps> = ({ provider, config, getToolsCount, getServersCount }) => {
+const Chat: React.FC<ChatProps> = ({ provider, config, getServersCount, updateTrigger }) => {
   const [input, setInput] = useState("");
   const [chat, setChat] = useState<Message[]>([]);
   const [loading, setLoading] = useState(false);
@@ -397,9 +398,7 @@ const Chat: React.FC<ChatProps> = ({ provider, config, getToolsCount, getServers
         const allServerTools = await agent.getAllTools();
         const allTools = allServerTools.flatMap(serverTools => serverTools.tools);
         setTools(allTools);
-        if (getToolsCount) {
-          setToolsCount(await getToolsCount());
-        }
+        setToolsCount(allTools.length);
       } else if (config.mode === "single" && "listTools" in provider) {
         // For single mode (MCPJamClient)
         const response = await (provider as MCPJamClient).listTools();
@@ -625,7 +624,7 @@ const Chat: React.FC<ChatProps> = ({ provider, config, getToolsCount, getServers
     return () => {
       mounted = false;
     };
-  }, [provider]);
+  }, [provider, updateTrigger]);
 
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: "smooth" });

@@ -286,7 +286,6 @@ export class MCPJamAgent implements ChatLoopProvider, ToolCaller {
       const client = await this.getConnectedClientForServer(serverName);
       const toolsResponse = await client.tools();
       this.toolsCache.set(serverName, toolsResponse.tools);
-      this.addClientLog(`Cached ${toolsResponse.tools.length} tools for server ${serverName}`, "debug");
     } catch (error) {
       console.error(`Failed to cache tools for server ${serverName}:`, error);
       this.toolsCache.set(serverName, []);
