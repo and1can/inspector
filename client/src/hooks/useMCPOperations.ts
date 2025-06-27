@@ -262,7 +262,7 @@ export const useMCPOperations = () => {
         addClientLog(`Read resource ${uri} from ${selectedServerName}`, "info");
         addRequestHistory(
           { method: "resources/read", server: selectedServerName, uri },
-          result,
+          result as CompatibilityCallToolResult,
           operationTimestamp,
           latency,
         );
@@ -280,7 +280,7 @@ export const useMCPOperations = () => {
             addClientLog(`Read resource ${uri} from ${serverName}`, "info");
             addRequestHistory(
               { method: "resources/read", server: serverName, uri },
-              result,
+              result as CompatibilityCallToolResult,
               operationTimestamp,
               latency,
             );
@@ -425,7 +425,7 @@ export const useMCPOperations = () => {
         addClientLog(`Got prompt ${name} from ${selectedServerName}`, "info");
         addRequestHistory(
           { method: "prompts/get", server: selectedServerName, name, args },
-          result,
+          result as CompatibilityCallToolResult,
           operationTimestamp,
           latency,
         );
@@ -444,7 +444,7 @@ export const useMCPOperations = () => {
             addClientLog(`Got prompt ${name} from ${serverName}`, "info");
             addRequestHistory(
               { method: "prompts/get", server: serverName, name, args },
-              result,
+              result as CompatibilityCallToolResult,
               operationTimestamp,
               latency,
             );
@@ -530,11 +530,11 @@ export const useMCPOperations = () => {
           addClientLog(`Called tool ${name} on ${selectedServerName}`, "info");
           addRequestHistory(
             { method: "tools/call", server: selectedServerName, name, params },
-            result,
+            result as CompatibilityCallToolResult,
             operationTimestamp,
             latency,
           );
-          setToolResult(result);
+          setToolResult(result as CompatibilityCallToolResult);
         } else {
           const allTools = await mcpAgent.getAllTools();
           for (const { serverName, tools } of allTools) {
@@ -549,11 +549,11 @@ export const useMCPOperations = () => {
               addClientLog(`Called tool ${name} on ${serverName}`, "info");
               addRequestHistory(
                 { method: "tools/call", server: serverName, name, params },
-                result,
+                result as CompatibilityCallToolResult,
                 operationTimestamp,
                 latency,
               );
-              setToolResult(result);
+              setToolResult(result as CompatibilityCallToolResult);
               return;
             }
           }

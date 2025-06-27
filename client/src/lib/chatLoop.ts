@@ -5,11 +5,11 @@ import { ClientLogLevels } from "../hooks/helpers/types";
 import {
   AIProvider,
   providerManager,
+  ProviderResponse,
   SupportedProvider,
 } from "@/lib/providers";
 import {
   MessageParam,
-  Message,
   ContentBlock,
   TextBlock,
   ToolUseBlock,
@@ -30,6 +30,10 @@ export interface ChatLoopProvider {
 export interface ToolCaller {
   callTool(params: { name: string; arguments?: { [x: string]: unknown } }): Promise<unknown>;
   addClientLog(message: string, level: ClientLogLevels): void;
+}
+
+export interface ToolCallApprover {
+  requestToolCallApproval(name: string, input: unknown, id: string): Promise<boolean>;
 }
 
 // Helper function to recursively sanitize schema objects
@@ -116,9 +120,11 @@ export const mappedTools = (tools: MCPTool[]): AnthropicTool[] => {
 
 export class QueryProcessor {
   private toolCaller: ToolCaller;
+  private toolCallApprover?: ToolCallApprover;
 
-  constructor(toolCaller: ToolCaller) {
+  constructor(toolCaller: ToolCaller, toolCallApprover?: ToolCallApprover) {
     this.toolCaller = toolCaller;
+    this.toolCallApprover = toolCallApprover;
   }
 
   async processQuery(
@@ -183,7 +189,7 @@ export class QueryProcessor {
     context: ReturnType<typeof this.initializeQueryContext>,
     aiProvider: AIProvider,
     signal?: AbortSignal,
-  ): Promise<Message> {
+  ): Promise<ProviderResponse> {
     // Check if aborted before making API call
     if (signal?.aborted) {
       throw new Error("Chat was cancelled");
@@ -210,11 +216,11 @@ export class QueryProcessor {
     // Convert provider response back to Anthropic Message format
     // This is a temporary adapter - for now we'll assume Anthropic format
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    return response as any;
+    return response;
   }
 
   private async processIterations(
-    initialResponse: Message,
+    initialResponse: ProviderResponse,
     context: ReturnType<typeof this.initializeQueryContext>,
     aiProvider: AIProvider,
     onUpdate?: (content: string) => void,
@@ -271,7 +277,7 @@ export class QueryProcessor {
   }
 
   private async processIteration(
-    response: Message,
+    response: ProviderResponse,
     context: ReturnType<typeof this.initializeQueryContext>,
     signal?: AbortSignal,
   ) {
@@ -279,7 +285,7 @@ export class QueryProcessor {
     const assistantContent: ContentBlock[] = [];
     let hasToolUse = false;
 
-    for (const content of response.content) {
+    for (const content of response.content as ContentBlock[]) {
       // Check if aborted during content processing
       if (signal?.aborted) {
         throw new Error("Chat was cancelled");
@@ -336,18 +342,46 @@ export class QueryProcessor {
     context.finalText.push(toolMessage);
 
     try {
-      this.toolCaller.addClientLog(`Executing tool: ${content.name}`, "debug");
-      const toolResultMessage = await this.executeToolAndUpdateMessages(
-        content,
-        context,
-        assistantContent,
-        signal,
-      );
-      // Add the tool result to iteration content for real-time display
-      if (toolResultMessage) {
-        iterationContent.push(toolResultMessage);
+      // Request approval before executing the tool
+      let approved = true;
+      if (this.toolCallApprover) {
+        this.toolCaller.addClientLog(`Requesting approval for tool: ${content.name}`, "debug");
+        approved = await this.toolCallApprover.requestToolCallApproval(
+          content.name, 
+          content.input, 
+          content.id
+        );
       }
-      this.toolCaller.addClientLog(`Tool execution successful: ${content.name}`, "debug");
+
+      if (approved) {
+        this.toolCaller.addClientLog(`Executing tool: ${content.name}`, "debug");
+        const toolResultMessage = await this.executeToolAndUpdateMessages(
+          content,
+          context,
+          assistantContent,
+          signal,
+        );
+        // Add the tool result to iteration content for real-time display
+        if (toolResultMessage) {
+          iterationContent.push(toolResultMessage);
+        }
+        this.toolCaller.addClientLog(`Tool execution successful: ${content.name}`, "debug");
+      } else {
+        // Tool execution was rejected
+        this.toolCaller.addClientLog(`Tool execution rejected by user: ${content.name}`, "info");
+        const rejectMessage = `[Tool ${content.name} execution was rejected by user]`;
+        iterationContent.push(rejectMessage);
+        context.finalText.push(rejectMessage);
+        
+        // Add rejection message as tool result
+        this.addMessagesToContext(
+          context,
+          assistantContent,
+          content.id,
+          "Tool execution was rejected by user",
+          true
+        );
+      }
     } catch (error) {
       this.toolCaller.addClientLog(
         `Tool execution failed: ${content.name} - ${error}`,
@@ -474,7 +508,7 @@ export class QueryProcessor {
     context: ReturnType<typeof this.initializeQueryContext>,
     aiProvider: AIProvider,
     signal?: AbortSignal,
-  ): Promise<Message> {
+  ): Promise<ProviderResponse> {
     // Check if aborted before making API call
     if (signal?.aborted) {
       throw new Error("Chat was cancelled");
@@ -497,10 +531,7 @@ export class QueryProcessor {
       throw new Error("Chat was cancelled");
     }
 
-    // Convert provider response back to Anthropic Message format
-    // This is a temporary adapter - for now we'll assume Anthropic format
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    return response as any;
+    return response;
   }
 
   private sendIterationUpdate(
@@ -531,6 +562,7 @@ export class QueryProcessor {
     }
   }
 }
+
 
 export class ChatLoop {
   private provider: ChatLoopProvider;

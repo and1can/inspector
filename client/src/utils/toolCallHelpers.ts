@@ -1,4 +1,4 @@
-import { ToolCallInfo } from "@/components/ToolCallMessage";
+import { ToolCallInfo } from "@/components/chat/ToolCallMessage";
 
 export interface ParsedContent {
   text: string;
