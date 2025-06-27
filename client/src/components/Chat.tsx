@@ -42,16 +42,18 @@ interface ChatProps {
   updateTrigger?: number;
 }
 
-// Helper functions
-const createMessage = (
-  role: "user" | "assistant",
-  content: string,
-): Message => ({
+// =============================================================================
+// HELPER FUNCTIONS
+// =============================================================================
+
+// Message helpers
+const createMessage = (role: "user" | "assistant", content: string): Message => ({
   role,
   content,
   timestamp: new Date(),
 });
 
+// Provider and model helpers
 const getAnyApiKey = (): boolean => {
   const providers: SupportedProvider[] = ["anthropic", "openai", "ollama"];
   return providers.some(provider => providerManager.isProviderReady(provider));
@@ -86,6 +88,7 @@ const getModelsForProvider = (provider: SupportedProvider): ProviderModel[] => {
   return [];
 };
 
+// Validation helpers
 const validateSendConditions = (
   input: string,
   provider: unknown,
@@ -99,14 +102,13 @@ const validateSendConditions = (
   };
 };
 
+// UI helpers
 const handleTextareaResize = (target: HTMLTextAreaElement) => {
   target.style.height = "auto";
   target.style.height = Math.min(target.scrollHeight, 128) + "px";
 };
 
-const createSyntheticFormEvent = (
-  preventDefault: () => void,
-): React.FormEvent => {
+const createSyntheticFormEvent = (preventDefault: () => void): React.FormEvent => {
   const formEvent = new Event("submit", {
     bubbles: true,
     cancelable: true,
@@ -117,6 +119,88 @@ const createSyntheticFormEvent = (
   });
   return formEvent as unknown as React.FormEvent;
 };
+
+// Tools fetching helper
+const fetchToolsForProvider = async (
+  provider: ChatProvider | null,
+  config: ChatConfig,
+): Promise<{ tools: Tool[], toolsCount: number }> => {
+  if (!provider) return { tools: [], toolsCount: 0 };
+  
+  try {
+    if (config.mode === "global" && "getAllTools" in provider) {
+      // For global mode (MCPJamAgent) - use cached tools directly
+      const agent = provider as MCPJamAgent;
+      const allServerTools = await agent.getAllTools();
+      const allTools = allServerTools.flatMap(serverTools => serverTools.tools);
+      return { tools: allTools, toolsCount: allTools.length };
+    } else if (config.mode === "single" && "listTools" in provider) {
+      // For single mode (MCPJamClient)
+      const response = await (provider as MCPJamClient).listTools();
+      const tools = response.tools || [];
+      return { tools, toolsCount: tools.length };
+    }
+  } catch (e: unknown) {
+    const errorMessage = e instanceof Error ? e.message : "Failed to fetch tools";
+    console.error("Error fetching tools:", e);
+    throw new Error(errorMessage);
+  }
+  
+  return { tools: [], toolsCount: 0 };
+};
+
+// Model refresh helper
+const refreshOllamaModels = async (
+  selectedProvider: SupportedProvider,
+  selectedModel: string,
+  onModelUpdate: (modelId: string) => void,
+): Promise<void> => {
+  if (selectedProvider !== "ollama") return;
+  
+  const provider = providerManager.getProvider("ollama");
+  if (provider && "refreshModels" in provider && typeof provider.refreshModels === "function") {
+    await provider.refreshModels();
+    // Force a re-render by getting fresh models
+    const freshModels = getModelsForProvider(selectedProvider);
+    // If current model is not in the refreshed list, select the first available
+    if (freshModels.length > 0 && !freshModels.find(m => m.id === selectedModel)) {
+      onModelUpdate(freshModels[0].id);
+    }
+  }
+};
+
+// Message processing helper
+const processUserMessage = async (
+  provider: ChatProvider,
+  userMessage: string,
+  tools: Tool[],
+  selectedModel: string,
+  selectedProvider: SupportedProvider,
+  onUpdate: (content: string) => void,
+  signal?: AbortSignal,
+): Promise<string> => {
+  // Convert MCP tools to Anthropic tools format
+  const convertedTools: AnthropicTool[] = tools.map((tool: Tool) => ({
+    name: tool.name,
+    description: tool.description || "",
+    input_schema: tool.inputSchema || { type: "object", properties: {} },
+  }));
+
+  const response = await provider.processQuery(
+    userMessage,
+    convertedTools,
+    onUpdate,
+    selectedModel,
+    selectedProvider,
+    signal
+  );
+
+  return response;
+};
+
+// =============================================================================
+// UI COMPONENTS
+// =============================================================================
 
 // Loading dots animation component
 const LoadingDots: React.FC = () => (
@@ -352,17 +436,19 @@ const EmptyChatsState: React.FC<{
   );
 };
 
+// =============================================================================
+// MAIN COMPONENT
+// =============================================================================
+
 const Chat: React.FC<ChatProps> = ({ provider, config, getServersCount, updateTrigger }) => {
+  // State
   const [input, setInput] = useState("");
   const [chat, setChat] = useState<Message[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [tools, setTools] = useState<Tool[]>([]);
-  const [selectedProvider, setSelectedProvider] =
-    useState<SupportedProvider>("anthropic");
-  const [selectedModel, setSelectedModel] = useState<string>(
-    "claude-3-5-sonnet-latest",
-  );
+  const [selectedProvider, setSelectedProvider] = useState<SupportedProvider>("anthropic");
+  const [selectedModel, setSelectedModel] = useState<string>("claude-3-5-sonnet-latest");
   const [showProviderSelector, setShowProviderSelector] = useState(false);
   const [showModelSelector, setShowModelSelector] = useState(false);
   const [abortController, setAbortController] = useState<AbortController | null>(null);
@@ -370,11 +456,13 @@ const Chat: React.FC<ChatProps> = ({ provider, config, getServersCount, updateTr
   const [toolsCount, setToolsCount] = useState(0);
   const [serversCount, setServersCount] = useState(0);
 
+  // Refs
   const chatEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const providerSelectorRef = useRef<HTMLDivElement>(null);
   const modelSelectorRef = useRef<HTMLDivElement>(null);
 
+  // Computed values
   const hasAnyApiKey = getAnyApiKey();
   const availableProviders = getAvailableProviders();
   const availableModels = getModelsForProvider(selectedProvider);
@@ -385,120 +473,10 @@ const Chat: React.FC<ChatProps> = ({ provider, config, getServersCount, updateTr
     loading,
   );
 
-  // Helper functions for component logic
-  const fetchTools = async () => {
-    if (!provider) return;
-    
-    try {
-      if (config.mode === "global" && "getAllTools" in provider) {
-        // For global mode (MCPJamAgent) - use cached tools directly
-        const agent = provider as MCPJamAgent;
-        
-        const allServerTools = await agent.getAllTools();
-        const allTools = allServerTools.flatMap(serverTools => serverTools.tools);
-        setTools(allTools);
-        // Use the direct count instead of calling getToolsCount() again
-        setToolsCount(allTools.length);
-      } else if (config.mode === "single" && "listTools" in provider) {
-        // For single mode (MCPJamClient)
-        const response = await (provider as MCPJamClient).listTools();
-        setTools(response.tools || []);
-        setToolsCount(response.tools?.length || 0);
-      }
-    } catch (e: unknown) {
-      const errorMessage =
-        e instanceof Error ? e.message : "Failed to fetch tools";
-      console.error("Error fetching tools:", e);
-      setError(errorMessage);
-    }
-  };
-
-  const addMessageToChat = (message: Message) => {
-    setChat((prev) => [...prev, message]);
-  };
-
-  const processUserQuery = async (
-    userMessage: string,
-    signal?: AbortSignal,
-  ) => {
-    if (!provider) {
-      throw new Error(
-        "Chat functionality is not available. Please ensure you have a valid API key and the server is connected.",
-      );
-    }
-
-    // Convert MCP tools to Anthropic tools format
-    const convertedTools: AnthropicTool[] = tools.map((tool: Tool) => ({
-      name: tool.name,
-      description: tool.description || "",
-      input_schema: tool.inputSchema || { type: "object", properties: {} },
-    }));
-
-    let fullResponse = "";
-    let currentAssistantMessage: Message | null = null;
-
-    // Create a streaming response handler
-    const onUpdate = (content: string) => {
-      fullResponse = content;
-      
-      if (currentAssistantMessage) {
-        // Update existing message
-        setChat((prev) => 
-          prev.map((msg) => 
-            msg === currentAssistantMessage 
-              ? { ...msg, content: content }
-              : msg
-          )
-        );
-      } else {
-        // Create new assistant message
-        currentAssistantMessage = createMessage("assistant", content);
-        addMessageToChat(currentAssistantMessage);
-      }
-    };
-
-    try {
-      const response = await provider.processQuery(
-        userMessage,
-        convertedTools,
-        onUpdate,
-        selectedModel,
-        selectedProvider,
-        signal
-      );
-
-      return response;
-      
-    } catch (error) {
-      // Handle errors with partial messages
-      if (currentAssistantMessage && signal?.aborted) {
-        setChat((prev) => 
-          prev.map((msg) => 
-            msg === currentAssistantMessage 
-              ? { ...msg, content: fullResponse + "\n\n*[Response cancelled]*" }
-              : msg
-          )
-        );
-      } else if (currentAssistantMessage) {
-        const errorMessage = error instanceof Error ? error.message : String(error);
-        setChat((prev) => 
-          prev.map((msg) => 
-            msg === currentAssistantMessage 
-              ? { ...msg, content: fullResponse + `\n\n*[Error: ${errorMessage}]*` }
-              : msg
-          )
-        );
-      }
-      
-      throw error;
-    }
-  };
-
   const handleSend = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
-
-    if (!canSend) return;
+    if (!canSend || !provider) return;
 
     const userMessage = input.trim();
     const newMessage = createMessage("user", userMessage);
@@ -511,12 +489,32 @@ const Chat: React.FC<ChatProps> = ({ provider, config, getServersCount, updateTr
     const controller = new AbortController();
     setAbortController(controller);
 
+    let fullResponse = "";
+    let currentAssistantMessage: Message | null = null;
+
+    const onUpdate = (content: string) => {
+      fullResponse = content;
+      if (currentAssistantMessage) {
+        addMessageToChat(createMessage("assistant", content));
+      } else {
+        currentAssistantMessage = createMessage("assistant", content);
+        addMessageToChat(currentAssistantMessage);
+      }
+    };
+
     try {
-      await processUserQuery(userMessage, controller.signal);
+      await processUserMessage(
+        provider,
+        userMessage,
+        tools,
+        selectedModel,
+        selectedProvider,
+        onUpdate,
+        controller.signal
+      );
     } catch (e: unknown) {
-      const errorMessage =
-        e instanceof Error ? e.message : "Error sending message";
-      // Don't show error message if the request was cancelled
+      const errorMessage = e instanceof Error ? e.message : "Error sending message";
+      addMessageToChat(createMessage("assistant", fullResponse + `\n\n*[Error: ${errorMessage}]*`));
       if (errorMessage !== "Chat was cancelled") {
         setError(errorMessage);
       }
@@ -524,6 +522,10 @@ const Chat: React.FC<ChatProps> = ({ provider, config, getServersCount, updateTr
       setLoading(false);
       setAbortController(null);
     }
+  };
+
+  const addMessageToChat = (message: Message) => {
+    setChat((prev) => [...prev, message]);
   };
 
   const handleStop = () => {
@@ -565,29 +567,12 @@ const Chat: React.FC<ChatProps> = ({ provider, config, getServersCount, updateTr
     setShowModelSelector(false);
   };
 
-  const toggleProviderSelector = () => {
-    setShowProviderSelector(!showProviderSelector);
-  };
-
-  const toggleModelSelector = () => {
-    setShowModelSelector(!showModelSelector);
-  };
-
   const handleRefreshModels = async () => {
     if (selectedProvider !== "ollama" || refreshingModels) return;
     
     setRefreshingModels(true);
     try {
-      const provider = providerManager.getProvider("ollama");
-      if (provider && "refreshModels" in provider && typeof provider.refreshModels === "function") {
-        await provider.refreshModels();
-        // Force a re-render by getting fresh models
-        const freshModels = getModelsForProvider(selectedProvider);
-        // If current model is not in the refreshed list, select the first available
-        if (freshModels.length > 0 && !freshModels.find(m => m.id === selectedModel)) {
-          setSelectedModel(freshModels[0].id);
-        }
-      }
+      await refreshOllamaModels(selectedProvider, selectedModel, setSelectedModel);
     } catch (error) {
       console.warn("Failed to refresh Ollama models:", error);
       setError("Failed to refresh models. Please ensure Ollama is running.");
@@ -596,7 +581,6 @@ const Chat: React.FC<ChatProps> = ({ provider, config, getServersCount, updateTr
     }
   };
 
-  // Initialize with first available provider and model
   useEffect(() => {
     if (availableProviders.length > 0) {
       const firstProvider = availableProviders[0];
@@ -609,33 +593,48 @@ const Chat: React.FC<ChatProps> = ({ provider, config, getServersCount, updateTr
     }
   }, []);
 
-  // Effects
+  // Fetch tools and server count when provider or updateTrigger changes
   useEffect(() => {
     let mounted = true;
+    
     const initializeTools = async () => {
-      if (mounted) {
-        await fetchTools();
-        if (getServersCount) {
-          setServersCount(getServersCount());
+      if (!mounted) return;
+      
+      try {
+        const { tools, toolsCount } = await fetchToolsForProvider(provider, config);
+        if (mounted) {
+          setTools(tools);
+          setToolsCount(toolsCount);
+          if (getServersCount) {
+            setServersCount(getServersCount());
+          }
+        }
+      } catch (error) {
+        if (mounted) {
+          setError(error instanceof Error ? error.message : "Failed to fetch tools");
         }
       }
     };
+    
     initializeTools();
     return () => {
       mounted = false;
     };
-  }, [provider, updateTrigger]);
+  }, [provider, updateTrigger, config, getServersCount]);
 
+  // Auto-scroll to bottom when new messages arrive
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [chat]);
 
+  // Focus input when API key becomes available
   useEffect(() => {
     if (hasAnyApiKey && inputRef.current) {
       inputRef.current.focus();
     }
   }, [hasAnyApiKey]);
 
+  // Handle clicks outside of dropdowns
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (
@@ -670,261 +669,274 @@ const Chat: React.FC<ChatProps> = ({ provider, config, getServersCount, updateTr
     };
   }, [abortController]);
 
-  return (
-    <div className="flex flex-col h-full bg-white dark:bg-slate-950">
-      {/* Header */}
-      <div className="flex-shrink-0 border-b border-slate-200 dark:border-slate-800">
-        <div className="px-6 py-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="w-8 h-8 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center">
-                <ProviderLogo
-                  className="text-slate-600 dark:text-slate-300"
-                  size={20}
-                  provider={selectedProvider}
-                />
-              </div>
-              <div>
-                <h1 className="text-base font-semibold text-slate-900 dark:text-slate-100">
-                  {config.title}
-                </h1>
-                <p className="text-xs text-slate-500 dark:text-slate-400">
-                  {hasAnyApiKey 
-                    ? config.mode === "global" 
-                      ? `${serversCount} connected servers • ${toolsCount} tools available`
-                      : undefined
-                    : "API key required"
-                  }
-                </p>
-              </div>
-            </div>
+  // =============================================================================
+  // RENDER
+  // =============================================================================
 
-            {hasAnyApiKey && (
-              <div className="flex items-center gap-2">
-                {/* Provider Selector */}
-                <div className="relative" ref={providerSelectorRef}>
-                  <button
-                    onClick={toggleProviderSelector}
-                    className="flex items-center gap-2 px-3 py-1.5 text-sm bg-slate-50 dark:bg-slate-800/50 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors border border-slate-200 dark:border-slate-700"
-                    disabled={loading}
-                  >
-                    <span className="text-slate-700 dark:text-slate-200 font-medium">
-                      {getProviderDisplayName(selectedProvider)}
-                    </span>
-                    <ChevronDown className="w-3 h-3 text-slate-400" />
-                  </button>
-
-                  {showProviderSelector && (
-                    <div className="absolute right-0 top-full mt-2 w-48 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl shadow-lg z-50">
-                      <div className="py-2">
-                        {availableProviders.map((provider) => (
-                          <button
-                            key={provider}
-                            onClick={() => handleProviderSelect(provider)}
-                            className={cn(
-                              "w-full px-4 py-2 text-left hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors",
-                              selectedProvider === provider &&
-                                "bg-slate-50 dark:bg-slate-800",
-                            )}
-                          >
-                            <div className="text-sm font-medium text-slate-900 dark:text-slate-100">
-                              {getProviderDisplayName(provider)}
-                            </div>
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-                </div>
-
-                {/* Model Selector */}
-                <div className="relative" ref={modelSelectorRef}>
-                  <button
-                    onClick={toggleModelSelector}
-                    className="flex items-center gap-2 px-3 py-1.5 text-sm bg-slate-50 dark:bg-slate-800/50 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors border border-slate-200 dark:border-slate-700"
-                    disabled={loading}
-                  >
-                    <span className="text-slate-700 dark:text-slate-200 font-medium">
-                      {availableModels.find((m) => m.id === selectedModel)
-                        ?.name || selectedModel}
-                    </span>
-                    <ChevronDown className="w-3 h-3 text-slate-400" />
-                  </button>
-
-                  {showModelSelector && (
-                    <div className="absolute right-0 top-full mt-2 w-72 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl shadow-lg z-50">
-                      <div className="py-2">
-                        {availableModels.map((model) => (
-                          <button
-                            key={model.id}
-                            onClick={() => handleModelSelect(model.id)}
-                            className={cn(
-                              "w-full px-4 py-3 text-left hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors",
-                              selectedModel === model.id &&
-                                "bg-slate-50 dark:bg-slate-800",
-                            )}
-                          >
-                            <div className="text-sm font-medium text-slate-900 dark:text-slate-100">
-                              {model.name}
-                            </div>
-                            <div className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-                              {model.description}
-                            </div>
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-                </div>
-
-                {/* Refresh Models Button (only for Ollama) */}
-                {selectedProvider === "ollama" && (
-                  <button
-                    onClick={handleRefreshModels}
-                    disabled={loading || refreshingModels}
-                    className={cn(
-                      "flex items-center gap-2 px-3 py-1.5 text-sm bg-slate-50 dark:bg-slate-800/50 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors border border-slate-200 dark:border-slate-700",
-                      (loading || refreshingModels) && "opacity-50 cursor-not-allowed"
-                    )}
-                    title={availableModels.length === 0 ? "Pull models first from ollama.com/search?c=tools" : "Refresh available models"}
-                  >
-                    <RefreshCw className={cn("w-3 h-3 text-slate-400", refreshingModels && "animate-spin")} />
-                    <span className="text-slate-700 dark:text-slate-200 font-medium">
-                      {refreshingModels ? "Refreshing..." : availableModels.length === 0 ? "No Models" : "Refresh"}
-                    </span>
-                  </button>
-                )}
-              </div>
-            )}
+  const renderHeader = () => {
+    return       <div className="flex-shrink-0 border-b border-slate-200 dark:border-slate-800">
+    <div className="px-6 py-4">
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <div className="w-8 h-8 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center">
+            <ProviderLogo
+              className="text-slate-600 dark:text-slate-300"
+              size={20}
+              provider={selectedProvider}
+            />
+          </div>
+          <div>
+            <h1 className="text-base font-semibold text-slate-900 dark:text-slate-100">
+              {config.title}
+            </h1>
+            <p className="text-xs text-slate-500 dark:text-slate-400">
+              {hasAnyApiKey 
+                ? config.mode === "global" 
+                  ? `${serversCount} connected servers • ${toolsCount} tools available`
+                  : undefined
+                : "API key required"
+              }
+            </p>
           </div>
         </div>
-      </div>
 
-      {/* Chat Messages */}
-      <div className="flex-1 overflow-y-auto">
-        {!hasAnyApiKey ? (
-          <ApiKeyRequiredState />
-        ) : selectedProvider === "ollama" && availableModels.length === 0 ? (
-          <OllamaSetupInstructions />
-        ) : chat.length === 0 ? (
-          <EmptyChatsState
-            onSuggestionClick={setInput}
-            selectedProvider={selectedProvider}
-            config={config}
-            toolsCount={toolsCount}
-            serversCount={serversCount}
-          />
-        ) : (
-          <div className="py-2">
-            {chat.map((message, idx) => (
-              <MessageBubble
-                key={idx}
-                message={message}
-                selectedProvider={selectedProvider}
-              />
-            ))}
-            {loading && (
-              <div className="flex gap-3 px-6 py-4">
-                <div className="flex-shrink-0 w-8 h-8 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center">
-                  <ProviderLogo
-                    className="text-slate-600 dark:text-slate-300"
-                    size={20}
-                    provider={selectedProvider}
-                  />
+        {hasAnyApiKey && (
+          <div className="flex items-center gap-2">
+            {/* Provider Selector */}
+            <div className="relative" ref={providerSelectorRef}>
+              <button
+                onClick={() => setShowProviderSelector(!showProviderSelector)}
+                className="flex items-center gap-2 px-3 py-1.5 text-sm bg-slate-50 dark:bg-slate-800/50 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors border border-slate-200 dark:border-slate-700"
+                disabled={loading}
+              >
+                <span className="text-slate-700 dark:text-slate-200 font-medium">
+                  {getProviderDisplayName(selectedProvider)}
+                </span>
+                <ChevronDown className="w-3 h-3 text-slate-400" />
+              </button>
+
+              {showProviderSelector && (
+                <div className="absolute right-0 top-full mt-2 w-48 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl shadow-lg z-50">
+                  <div className="py-2">
+                    {availableProviders.map((provider) => (
+                      <button
+                        key={provider}
+                        onClick={() => handleProviderSelect(provider)}
+                        className={cn(
+                          "w-full px-4 py-2 text-left hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors",
+                          selectedProvider === provider &&
+                            "bg-slate-50 dark:bg-slate-800",
+                        )}
+                      >
+                        <div className="text-sm font-medium text-slate-900 dark:text-slate-100">
+                          {getProviderDisplayName(provider)}
+                        </div>
+                      </button>
+                    ))}
+                  </div>
                 </div>
-                <div className="bg-slate-50 dark:bg-slate-800/50 rounded-xl px-4 py-3">
-                  <LoadingDots />
-                </div>
-              </div>
-            )}
-          </div>
-        )}
-        <div ref={chatEndRef} />
-      </div>
-
-      {/* Error Display */}
-      {error && (
-        <div className="flex-shrink-0 px-6 py-3 bg-red-50 dark:bg-red-950/50 border-t border-red-200 dark:border-red-800">
-          <div className="flex items-center gap-2 text-red-700 dark:text-red-300 text-sm">
-            <span className="text-xs">⚠️</span>
-            <span>{error}</span>
-          </div>
-        </div>
-      )}
-
-      {/* Input Form */}
-      <div className="flex-shrink-0 border-t border-slate-200 dark:border-slate-800">
-        <div className="p-6">
-          <form onSubmit={handleSend} className="relative">
-            <div className="relative flex items-end gap-3">
-              <textarea
-                ref={inputRef}
-                value={input}
-                onChange={handleInputChange}
-                onKeyDown={handleKeyDown}
-                placeholder={
-                  !hasAnyApiKey
-                    ? "API key required..."
-                    : loading
-                      ? `${getProviderDisplayName(selectedProvider)} is thinking...`
-                      : config.mode === "global"
-                        ? `Message ${getProviderDisplayName(selectedProvider)} with global tools...`
-                        : `Message ${getProviderDisplayName(selectedProvider)}...`
-                }
-                disabled={isDisabled}
-                rows={1}
-                className={cn(
-                  "flex-1 px-4 py-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 resize-none",
-                  "focus:outline-none focus:ring-2 focus:ring-slate-400 dark:focus:ring-slate-500 focus:border-transparent",
-                  "placeholder:text-slate-400 dark:placeholder:text-slate-500 text-sm",
-                  "min-h-[48px] max-h-32 overflow-y-auto",
-                  !hasAnyApiKey && "opacity-50 cursor-not-allowed",
-                )}
-                style={{
-                  height: "auto",
-                  minHeight: "48px",
-                  maxHeight: "128px",
-                }}
-              />
-              {loading ? (
-                <button
-                  type="button"
-                  onClick={handleStop}
-                  className={cn(
-                    "flex-shrink-0 w-10 h-10 rounded-xl flex items-center justify-center transition-colors",
-                    "bg-red-600 hover:bg-red-700 text-white",
-                  )}
-                >
-                  <Square className="w-4 h-4" />
-                </button>
-              ) : (
-                <button
-                  type="submit"
-                  disabled={isSendDisabled}
-                  className={cn(
-                    "flex-shrink-0 w-10 h-10 rounded-xl flex items-center justify-center transition-colors",
-                    isSendDisabled
-                      ? "bg-slate-100 dark:bg-slate-800 text-slate-400 cursor-not-allowed"
-                      : "bg-slate-900 dark:bg-slate-100 text-white dark:text-slate-900 hover:bg-slate-800 dark:hover:bg-slate-200",
-                  )}
-                >
-                  <Send className="w-4 h-4" />
-                </button>
               )}
             </div>
 
-            {/* Tips */}
-            {hasAnyApiKey && !loading && (
-              <div className="text-xs text-slate-400 dark:text-slate-500 mt-3 px-1">
-                <span className="hidden sm:inline">
-                  Press Enter to send • Shift+Enter for new line
-                  {config.mode === "global" && ` • Tools from ${serversCount} connected servers`}
+            {/* Model Selector */}
+            <div className="relative" ref={modelSelectorRef}>
+              <button
+                onClick={() => setShowModelSelector(!showModelSelector)}
+                className="flex items-center gap-2 px-3 py-1.5 text-sm bg-slate-50 dark:bg-slate-800/50 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors border border-slate-200 dark:border-slate-700"
+                disabled={loading}
+              >
+                <span className="text-slate-700 dark:text-slate-200 font-medium">
+                  {availableModels.find((m) => m.id === selectedModel)
+                    ?.name || selectedModel}
                 </span>
-              </div>
+                <ChevronDown className="w-3 h-3 text-slate-400" />
+              </button>
+
+              {showModelSelector && (
+                <div className="absolute right-0 top-full mt-2 w-72 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl shadow-lg z-50">
+                  <div className="py-2">
+                    {availableModels.map((model) => (
+                      <button
+                        key={model.id}
+                        onClick={() => handleModelSelect(model.id)}
+                        className={cn(
+                          "w-full px-4 py-3 text-left hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors",
+                          selectedModel === model.id &&
+                            "bg-slate-50 dark:bg-slate-800",
+                        )}
+                      >
+                        <div className="text-sm font-medium text-slate-900 dark:text-slate-100">
+                          {model.name}
+                        </div>
+                        <div className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                          {model.description}
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Refresh Models Button (only for Ollama) */}
+            {selectedProvider === "ollama" && (
+              <button
+                onClick={handleRefreshModels}
+                disabled={loading || refreshingModels}
+                className={cn(
+                  "flex items-center gap-2 px-3 py-1.5 text-sm bg-slate-50 dark:bg-slate-800/50 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors border border-slate-200 dark:border-slate-700",
+                  (loading || refreshingModels) && "opacity-50 cursor-not-allowed"
+                )}
+                title={availableModels.length === 0 ? "Pull models first from ollama.com/search?c=tools" : "Refresh available models"}
+              >
+                <RefreshCw className={cn("w-3 h-3 text-slate-400", refreshingModels && "animate-spin")} />
+                <span className="text-slate-700 dark:text-slate-200 font-medium">
+                  {refreshingModels ? "Refreshing..." : availableModels.length === 0 ? "No Models" : "Refresh"}
+                </span>
+              </button>
             )}
-          </form>
+          </div>
+        )}
+      </div>
+    </div>
+  </div>
+  }
+
+  const renderChat = () => {
+    return <div className="flex-1 overflow-y-auto">
+    {!hasAnyApiKey ? (
+      <ApiKeyRequiredState />
+    ) : selectedProvider === "ollama" && availableModels.length === 0 ? (
+      <OllamaSetupInstructions />
+    ) : chat.length === 0 ? (
+      <EmptyChatsState
+        onSuggestionClick={setInput}
+        selectedProvider={selectedProvider}
+        config={config}
+        toolsCount={toolsCount}
+        serversCount={serversCount}
+      />
+    ) : (
+      <div className="py-2">
+        {chat.map((message, idx) => (
+          <MessageBubble
+            key={idx}
+            message={message}
+            selectedProvider={selectedProvider}
+          />
+        ))}
+        {loading && (
+          <div className="flex gap-3 px-6 py-4">
+            <div className="flex-shrink-0 w-8 h-8 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center">
+              <ProviderLogo
+                className="text-slate-600 dark:text-slate-300"
+                size={20}
+                provider={selectedProvider}
+              />
+            </div>
+            <div className="bg-slate-50 dark:bg-slate-800/50 rounded-xl px-4 py-3">
+              <LoadingDots />
+            </div>
+          </div>
+        )}
+      </div>
+    )}
+    <div ref={chatEndRef} />
+  </div>
+  }
+
+  const maybeRenderError = () => {
+    return error && (
+      <div className="flex-shrink-0 px-6 py-3 bg-red-50 dark:bg-red-950/50 border-t border-red-200 dark:border-red-800">
+        <div className="flex items-center gap-2 text-red-700 dark:text-red-300 text-sm">
+          <span className="text-xs">⚠️</span>
+          <span>{error}</span>
         </div>
       </div>
+    )
+  }
+
+  const renderInputForm = () => {
+    return <div className="flex-shrink-0 border-t border-slate-200 dark:border-slate-800">
+    <div className="p-6">
+      <form onSubmit={handleSend} className="relative">
+        <div className="relative flex items-end gap-3">
+          <textarea
+            ref={inputRef}
+            value={input}
+            onChange={handleInputChange}
+            onKeyDown={handleKeyDown}
+            placeholder={
+              !hasAnyApiKey
+                ? "API key required..."
+                : loading
+                  ? `${getProviderDisplayName(selectedProvider)} is thinking...`
+                  : config.mode === "global"
+                    ? `Message ${getProviderDisplayName(selectedProvider)} with global tools...`
+                    : `Message ${getProviderDisplayName(selectedProvider)}...`
+            }
+            disabled={isDisabled}
+            rows={1}
+            className={cn(
+              "flex-1 px-4 py-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 resize-none",
+              "focus:outline-none focus:ring-2 focus:ring-slate-400 dark:focus:ring-slate-500 focus:border-transparent",
+              "placeholder:text-slate-400 dark:placeholder:text-slate-500 text-sm",
+              "min-h-[48px] max-h-32 overflow-y-auto",
+              !hasAnyApiKey && "opacity-50 cursor-not-allowed",
+            )}
+            style={{
+              height: "auto",
+              minHeight: "48px",
+              maxHeight: "128px",
+            }}
+          />
+          {loading ? (
+            <button
+              type="button"
+              onClick={handleStop}
+              className={cn(
+                "flex-shrink-0 w-10 h-10 rounded-xl flex items-center justify-center transition-colors",
+                "bg-red-600 hover:bg-red-700 text-white",
+              )}
+            >
+              <Square className="w-4 h-4" />
+            </button>
+          ) : (
+            <button
+              type="submit"
+              disabled={isSendDisabled}
+              className={cn(
+                "flex-shrink-0 w-10 h-10 rounded-xl flex items-center justify-center transition-colors",
+                isSendDisabled
+                  ? "bg-slate-100 dark:bg-slate-800 text-slate-400 cursor-not-allowed"
+                  : "bg-slate-900 dark:bg-slate-100 text-white dark:text-slate-900 hover:bg-slate-800 dark:hover:bg-slate-200",
+              )}
+            >
+              <Send className="w-4 h-4" />
+            </button>
+          )}
+        </div>
+
+        {/* Tips */}
+        {hasAnyApiKey && !loading && (
+          <div className="text-xs text-slate-400 dark:text-slate-500 mt-3 px-1">
+            <span className="hidden sm:inline">
+              Press Enter to send • Shift+Enter for new line
+              {config.mode === "global" && ` • Tools from ${serversCount} connected servers`}
+            </span>
+          </div>
+        )}
+      </form>
+    </div>
+  </div>
+  }
+
+  return (
+    <div className="flex flex-col h-full bg-white dark:bg-slate-950">
+      {renderHeader()}
+      {renderChat()}
+      {maybeRenderError()}
+      {renderInputForm()}
     </div>
   );
 };
