@@ -466,6 +466,7 @@ export const useMCPOperations = () => {
       const operationTimestamp = new Date().toISOString();
 
       if (selectedServerName === "all") {
+        // Use cached tools directly - cache is managed by MCPJamAgent
         const allServerTools = await mcpAgent.getAllTools();
         const flatTools = allServerTools.flatMap(({ tools }) => tools);
         const endTime = performance.now();
@@ -482,23 +483,24 @@ export const useMCPOperations = () => {
         );
         setTools(flatTools);
       } else {
-        const client = mcpAgent.getClient(selectedServerName);
-        if (client) {
-          const toolsResponse = await client.tools();
-          const endTime = performance.now();
-          const latency = Math.round(endTime - startTime);
-          addClientLog(
-            `Listed ${toolsResponse.tools.length} tools from ${selectedServerName}`,
-            "info",
-          );
-          addRequestHistory(
-            { method: "tools/list", server: selectedServerName },
-            { tools: toolsResponse.tools },
-            operationTimestamp,
-            latency,
-          );
-          setTools(toolsResponse.tools);
-        }
+        // Use cached tools for individual servers
+        const allServerTools = await mcpAgent.getAllTools();
+        const serverTools = allServerTools.find(({ serverName }) => serverName === selectedServerName);
+        const tools = serverTools ? serverTools.tools : [];
+        
+        const endTime = performance.now();
+        const latency = Math.round(endTime - startTime);
+        addClientLog(
+          `Listed ${tools.length} tools from ${selectedServerName} (cached)`,
+          "info",
+        );
+        addRequestHistory(
+          { method: "tools/list", server: selectedServerName },
+          { tools },
+          operationTimestamp,
+          latency,
+        );
+        setTools(tools);
       }
     },
     [addRequestHistory],

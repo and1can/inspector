@@ -37,8 +37,9 @@ interface ChatProps {
   provider: ChatProvider | null;
   config: ChatConfig;
   // Optional functions for getting additional info
-  getToolsCount?: () => Promise<number>;
   getServersCount?: () => number;
+  // Optional trigger to refetch tools when connections change
+  updateTrigger?: number;
 }
 
 // Helper functions
@@ -351,7 +352,7 @@ const EmptyChatsState: React.FC<{
   );
 };
 
-const Chat: React.FC<ChatProps> = ({ provider, config, getToolsCount, getServersCount }) => {
+const Chat: React.FC<ChatProps> = ({ provider, config, getServersCount, updateTrigger }) => {
   const [input, setInput] = useState("");
   const [chat, setChat] = useState<Message[]>([]);
   const [loading, setLoading] = useState(false);
@@ -390,13 +391,14 @@ const Chat: React.FC<ChatProps> = ({ provider, config, getToolsCount, getServers
     
     try {
       if (config.mode === "global" && "getAllTools" in provider) {
-        // For global mode (MCPJamAgent)
-        const allServerTools = await (provider as MCPJamAgent).getAllTools();
+        // For global mode (MCPJamAgent) - use cached tools directly
+        const agent = provider as MCPJamAgent;
+        
+        const allServerTools = await agent.getAllTools();
         const allTools = allServerTools.flatMap(serverTools => serverTools.tools);
         setTools(allTools);
-        if (getToolsCount) {
-          setToolsCount(await getToolsCount());
-        }
+        // Use the direct count instead of calling getToolsCount() again
+        setToolsCount(allTools.length);
       } else if (config.mode === "single" && "listTools" in provider) {
         // For single mode (MCPJamClient)
         const response = await (provider as MCPJamClient).listTools();
@@ -622,21 +624,7 @@ const Chat: React.FC<ChatProps> = ({ provider, config, getToolsCount, getServers
     return () => {
       mounted = false;
     };
-  }, [provider]);
-
-  // Refetch tools when connection status might have changed (for global mode)
-  useEffect(() => {
-    if (!provider || config.mode !== "global") return;
-    
-    const interval = setInterval(() => {
-      fetchTools();
-      if (getServersCount) {
-        setServersCount(getServersCount());
-      }
-    }, 2000); // Check every 2 seconds
-    
-    return () => clearInterval(interval);
-  }, [provider, config.mode]);
+  }, [provider, updateTrigger]);
 
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: "smooth" });

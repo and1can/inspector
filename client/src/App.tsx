@@ -422,9 +422,8 @@ const App = () => {
   const handleConnectServer = useCallback(
     async (serverName: string) => {
       await connectionState.connectServer(serverName);
-      mcpOperations.listTools(connectionState.mcpAgent, serverName);
     },
-    [connectionState, mcpOperations],
+    [connectionState],
   );
 
   // MCP operation wrappers
@@ -1020,7 +1019,7 @@ const App = () => {
         case "settings":
           return <SettingsTab />;
         case "global-chat":
-          return <GlobalChatTab mcpAgent={connectionState.mcpAgent} />;
+          return <GlobalChatTab mcpAgent={connectionState.mcpAgent} updateTrigger={connectionState.sidebarUpdateTrigger} />;
         default:
           return null;
       }
