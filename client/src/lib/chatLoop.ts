@@ -337,12 +337,16 @@ export class QueryProcessor {
 
     try {
       this.toolCaller.addClientLog(`Executing tool: ${content.name}`, "debug");
-      await this.executeToolAndUpdateMessages(
+      const toolResultMessage = await this.executeToolAndUpdateMessages(
         content,
         context,
         assistantContent,
         signal,
       );
+      // Add the tool result to iteration content for real-time display
+      if (toolResultMessage) {
+        iterationContent.push(toolResultMessage);
+      }
       this.toolCaller.addClientLog(`Tool execution successful: ${content.name}`, "debug");
     } catch (error) {
       this.toolCaller.addClientLog(
@@ -368,7 +372,7 @@ export class QueryProcessor {
     context: ReturnType<typeof this.initializeQueryContext>,
     assistantContent: ContentBlock[],
     signal?: AbortSignal,
-  ) {
+  ): Promise<string> {
     // Check if aborted before tool execution
     if (signal?.aborted) {
       throw new Error("Chat was cancelled");
@@ -404,12 +408,18 @@ export class QueryProcessor {
       resultContent = typeof result === 'string' ? result : JSON.stringify(result);
     }
 
+    // Add tool result to the displayed text (for user to see)
+    const toolResultMessage = `[Tool ${content.name} result: ${resultContent}]`;
+    context.finalText.push(toolResultMessage);
+
     this.addMessagesToContext(
       context,
       assistantContent,
       content.id,
       resultContent,
     );
+
+    return toolResultMessage;
   }
 
   private handleToolError(

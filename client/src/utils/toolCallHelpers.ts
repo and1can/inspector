@@ -32,6 +32,18 @@ export const parseToolCallContent = (content: string): ParsedContent => {
     cleanText = cleanText.replace(fullMatch, "").trim();
   }
 
+  // Pattern for tool results: [Tool TOOL_NAME result: RESULT]
+  const toolResultPattern = /\[Tool (\w+) result: ([\s\S]*?)\](?=\s*(?:\n|$|\[(?:Tool|Warning|Calling)))/g;
+  while ((match = toolResultPattern.exec(content)) !== null) {
+    const [fullMatch, toolName, result] = match;
+    toolCalls.push({
+      type: "tool_result",
+      toolName,
+      result: result.trim(),
+    });
+    cleanText = cleanText.replace(fullMatch, "").trim();
+  }
+
   // Pattern for tool errors: [Tool TOOL_NAME failed: ERROR]
   // Handle complex multi-line errors with nested structures
   const toolErrorPattern =

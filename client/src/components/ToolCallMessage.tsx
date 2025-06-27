@@ -1,26 +1,29 @@
 import React from "react";
-import { Wrench, AlertTriangle, Clock } from "lucide-react";
+import { Wrench, AlertTriangle, Clock, CheckCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 // Tool call message types
 export interface ToolCallInfo {
-  type: "tool_call" | "tool_error" | "tool_warning";
+  type: "tool_call" | "tool_error" | "tool_warning" | "tool_result";
   toolName: string;
   args?: string | Record<string, unknown>;
   error?: string;
   message?: string;
+  result?: string;
 }
 
 // Tool call message component
 export const ToolCallMessage: React.FC<{ toolCall: ToolCallInfo }> = ({
   toolCall,
 }) => {
-  const { type, toolName, args, error, message } = toolCall;
+  const { type, toolName, args, error, message, result } = toolCall;
 
   const getIcon = () => {
     switch (type) {
       case "tool_call":
         return <Wrench className="w-3 h-3" />;
+      case "tool_result":
+        return <CheckCircle className="w-3 h-3" />;
       case "tool_error":
         return <AlertTriangle className="w-3 h-3" />;
       case "tool_warning":
@@ -34,6 +37,8 @@ export const ToolCallMessage: React.FC<{ toolCall: ToolCallInfo }> = ({
     switch (type) {
       case "tool_call":
         return "bg-blue-50 dark:bg-blue-950/30 border-blue-200 dark:border-blue-800 text-blue-800 dark:text-blue-300";
+      case "tool_result":
+        return "bg-green-50 dark:bg-green-950/30 border-green-200 dark:border-green-800 text-green-800 dark:text-green-300";
       case "tool_error":
         return "bg-red-50 dark:bg-red-950/30 border-red-200 dark:border-red-800 text-red-800 dark:text-red-300";
       case "tool_warning":
@@ -64,6 +69,7 @@ export const ToolCallMessage: React.FC<{ toolCall: ToolCallInfo }> = ({
         {getIcon()}
         <span className="font-semibold">
           {type === "tool_call" && `Calling ${toolName}`}
+          {type === "tool_result" && `${toolName} result`}
           {type === "tool_error" && `${toolName} failed`}
           {type === "tool_warning" && "Warning"}
         </span>
@@ -92,6 +98,15 @@ export const ToolCallMessage: React.FC<{ toolCall: ToolCallInfo }> = ({
           <div className="text-xs bg-black/10 dark:bg-white/10 rounded p-2">
             {message}
           </div>
+        </div>
+      )}
+
+      {type === "tool_result" && result && (
+        <div className="mt-2">
+          <div className="text-xs opacity-75 mb-1">Result:</div>
+          <pre className="text-xs bg-black/10 dark:bg-white/10 rounded p-2 overflow-x-auto whitespace-pre-wrap">
+            {result}
+          </pre>
         </div>
       )}
     </div>
