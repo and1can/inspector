@@ -390,8 +390,11 @@ const Chat: React.FC<ChatProps> = ({ provider, config, getToolsCount, getServers
     
     try {
       if (config.mode === "global" && "getAllTools" in provider) {
-        // For global mode (MCPJamAgent)
-        const allServerTools = await (provider as MCPJamAgent).getAllTools();
+        // For global mode (MCPJamAgent) - initialize cache if needed
+        const agent = provider as MCPJamAgent;
+        await agent.initializeToolsCache();
+        
+        const allServerTools = await agent.getAllTools();
         const allTools = allServerTools.flatMap(serverTools => serverTools.tools);
         setTools(allTools);
         if (getToolsCount) {
@@ -623,20 +626,6 @@ const Chat: React.FC<ChatProps> = ({ provider, config, getToolsCount, getServers
       mounted = false;
     };
   }, [provider]);
-
-  // Refetch tools when connection status might have changed (for global mode)
-  useEffect(() => {
-    if (!provider || config.mode !== "global") return;
-    
-    const interval = setInterval(() => {
-      fetchTools();
-      if (getServersCount) {
-        setServersCount(getServersCount());
-      }
-    }, 2000); // Check every 2 seconds
-    
-    return () => clearInterval(interval);
-  }, [provider, config.mode]);
 
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: "smooth" });

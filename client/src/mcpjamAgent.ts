@@ -70,6 +70,9 @@ export class MCPJamAgent implements ChatLoopProvider, ToolCaller {
   private addRequestHistory: (request: object, response?: object) => void;
   public addClientLog: (message: string, level: ClientLogLevels) => void;
   private queryProcessor: QueryProcessor;
+  
+  // Tools cache - stores tools for each connected server
+  private toolsCache = new Map<string, Tool[]>();
 
   constructor(options: MCPClientOptions) {
     this.serverConfigs = options.servers;
@@ -93,12 +96,17 @@ export class MCPJamAgent implements ChatLoopProvider, ToolCaller {
 
   // Remove a server and disconnect its client
   async removeServer(name: string) {
-    const client = this.mcpClientsById.get(name);
-    if (client) {
-      await client.disconnect();
-      this.mcpClientsById.delete(name);
-    }
+    // Disconnect if connected
+    await this.disconnectFromServer(name);
+    
+    // Remove from server configs
     delete this.serverConfigs[name];
+    
+    // Remove the client from the map
+    this.mcpClientsById.delete(name);
+    
+    // Clear tools cache for the removed server
+    this.clearToolsCache(name);
   }
 
   // Get list of all configured servers
@@ -126,7 +134,12 @@ export class MCPJamAgent implements ChatLoopProvider, ToolCaller {
     if (!serverConfig) {
       throw new Error(`Server ${serverName} not found`);
     }
-    return await this.getOrCreateClient(serverName, serverConfig);
+    const client = await this.getOrCreateClient(serverName, serverConfig);
+    
+    // Cache tools for the newly connected server
+    await this.cacheToolsForServer(serverName);
+    
+    return client;
   }
 
   // Connect to all servers
@@ -141,11 +154,29 @@ export class MCPJamAgent implements ChatLoopProvider, ToolCaller {
     await Promise.all(connectionPromises);
   }
 
+  // Initialize tools cache for already connected servers (useful for agent restoration)
+  async initializeToolsCache(): Promise<void> {
+    const connectionInfo = this.getAllConnectionInfo();
+    const connectedServers = connectionInfo.filter(
+      (conn) => conn.connectionStatus === "connected" && !this.toolsCache.has(conn.name)
+    );
+    
+    if (connectedServers.length > 0) {
+      this.addClientLog(`Initializing tools cache for ${connectedServers.length} connected servers`, "debug");
+      const cachePromises = connectedServers.map(serverInfo => 
+        this.cacheToolsForServer(serverInfo.name)
+      );
+      await Promise.all(cachePromises);
+    }
+  }
+
   // Disconnect from a specific server
   async disconnectFromServer(serverName: string): Promise<void> {
     const client = this.mcpClientsById.get(serverName);
     if (client) {
       await client.disconnect();
+      // Clear tools cache for the disconnected server
+      this.clearToolsCache(serverName);
       // Don't remove the client from the map - keep it so it shows as disconnected
       // this.mcpClientsById.delete(serverName);
     }
@@ -232,29 +263,55 @@ export class MCPJamAgent implements ChatLoopProvider, ToolCaller {
   async getAllTools(): Promise<{ serverName: string; tools: Tool[] }[]> {
     const allServerTools: { serverName: string; tools: Tool[] }[] = [];
     
-    // Only query tools from connected servers
+    // Only return tools from connected servers using cached data
     const connectionInfo = this.getAllConnectionInfo();
     const connectedServers = connectionInfo.filter(
       (conn) => conn.connectionStatus === "connected"
     );
     
     for (const serverInfo of connectedServers) {
-      try {
-        const client = await this.getConnectedClientForServer(serverInfo.name);
-        const toolsResponse = await client.tools();
-        allServerTools.push({
-          serverName: serverInfo.name,
-          tools: toolsResponse.tools,
-        });
-      } catch (error) {
-        console.error(`Failed to get tools from server ${serverInfo.name}:`, error);
-        allServerTools.push({
-          serverName: serverInfo.name,
-          tools: [],
-        });
-      }
+      const cachedTools = this.toolsCache.get(serverInfo.name) || [];
+      allServerTools.push({
+        serverName: serverInfo.name,
+        tools: cachedTools,
+      });
     }
+    
     return allServerTools;
+  }
+
+  // Cache tools for a specific server (called when server connects)
+  private async cacheToolsForServer(serverName: string): Promise<void> {
+    try {
+      const client = await this.getConnectedClientForServer(serverName);
+      const toolsResponse = await client.tools();
+      this.toolsCache.set(serverName, toolsResponse.tools);
+      this.addClientLog(`Cached ${toolsResponse.tools.length} tools for server ${serverName}`, "debug");
+    } catch (error) {
+      console.error(`Failed to cache tools for server ${serverName}:`, error);
+      this.toolsCache.set(serverName, []);
+    }
+  }
+
+  // Remove tools from cache when server disconnects
+  private clearToolsCache(serverName: string): void {
+    this.toolsCache.delete(serverName);
+    this.addClientLog(`Cleared tools cache for server ${serverName}`, "debug");
+  }
+
+  // Manually refresh tools cache for all connected servers (if needed)
+  async refreshAllToolsCache(): Promise<void> {
+    const connectionInfo = this.getAllConnectionInfo();
+    const connectedServers = connectionInfo.filter(
+      (conn) => conn.connectionStatus === "connected"
+    );
+    
+    const cachePromises = connectedServers.map(serverInfo => 
+      this.cacheToolsForServer(serverInfo.name)
+    );
+    
+    await Promise.all(cachePromises);
+    this.addClientLog(`Refreshed tools cache for ${connectedServers.length} connected servers`, "info");
   }
 
   async getAllResources(): Promise<

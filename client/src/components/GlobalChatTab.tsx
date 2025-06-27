@@ -16,6 +16,7 @@ const GlobalChatTab: React.FC<GlobalChatTabProps> = ({ mcpAgent }) => {
   const getToolsCount = async (): Promise<number> => {
     if (!mcpAgent) return 0;
     try {
+      await mcpAgent.initializeToolsCache();
       const allServerTools = await mcpAgent.getAllTools();
       return allServerTools.reduce((total, serverTools) => total + serverTools.tools.length, 0);
     } catch {
