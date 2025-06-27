@@ -391,13 +391,13 @@ const Chat: React.FC<ChatProps> = ({ provider, config, getServersCount, updateTr
     
     try {
       if (config.mode === "global" && "getAllTools" in provider) {
-        // For global mode (MCPJamAgent) - initialize cache if needed
+        // For global mode (MCPJamAgent) - use cached tools directly
         const agent = provider as MCPJamAgent;
-        await agent.initializeToolsCache();
         
         const allServerTools = await agent.getAllTools();
         const allTools = allServerTools.flatMap(serverTools => serverTools.tools);
         setTools(allTools);
+        // Use the direct count instead of calling getToolsCount() again
         setToolsCount(allTools.length);
       } else if (config.mode === "single" && "listTools" in provider) {
         // For single mode (MCPJamClient)

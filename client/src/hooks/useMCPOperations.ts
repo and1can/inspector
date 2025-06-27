@@ -466,8 +466,7 @@ export const useMCPOperations = () => {
       const operationTimestamp = new Date().toISOString();
 
       if (selectedServerName === "all") {
-        // Initialize cache if needed before getting all tools
-        await mcpAgent.initializeToolsCache();
+        // Use cached tools directly - cache is managed by MCPJamAgent
         const allServerTools = await mcpAgent.getAllTools();
         const flatTools = allServerTools.flatMap(({ tools }) => tools);
         const endTime = performance.now();
@@ -484,8 +483,7 @@ export const useMCPOperations = () => {
         );
         setTools(flatTools);
       } else {
-        // Use cached tools for individual servers instead of calling client.tools()
-        await mcpAgent.initializeToolsCache(); // Ensure cache is initialized
+        // Use cached tools for individual servers
         const allServerTools = await mcpAgent.getAllTools();
         const serverTools = allServerTools.find(({ serverName }) => serverName === selectedServerName);
         const tools = serverTools ? serverTools.tools : [];

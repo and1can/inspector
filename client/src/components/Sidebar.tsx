@@ -75,8 +75,7 @@ const Sidebar: React.FC<SidebarProps> = ({
       }
       
       try {
-        // Initialize cache if needed before getting tools
-        await mcpAgent.initializeToolsCache();
+        // Use cached tools directly - cache is managed by MCPJamAgent
         const allServerTools = await mcpAgent.getAllTools();
         const totalTools = allServerTools.reduce((sum, serverTools) => sum + serverTools.tools.length, 0);
         setTotalToolsCount(totalTools);
