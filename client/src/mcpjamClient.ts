@@ -6,8 +6,8 @@ import {
   ServerCapabilities,
   ClientRequest,
   Progress,
-  ResourceReference,
-  PromptReference,
+  ResourceReference, // Keep using this despite deprecation warning for now
+  PromptReference,   // Keep using this despite deprecation warning for now
   CompleteResultSchema,
   McpError,
   ErrorCode,
@@ -15,6 +15,7 @@ import {
   CreateMessageResult,
   ListRootsRequestSchema,
   CreateMessageRequest,
+  ElicitRequest,
   ElicitRequestSchema,
 } from "@modelcontextprotocol/sdk/types.js";
 import {
@@ -57,8 +58,11 @@ import { auth } from "@modelcontextprotocol/sdk/client/auth.js";
 import { HttpServerDefinition, MCPJamServerConfig } from "@/lib/serverTypes";
 import { ClientLogLevels } from "./hooks/helpers/types";
 import { ChatLoopProvider, ChatLoop, QueryProcessor, ToolCaller } from "./lib/chatLoop";
+import { ElicitationResponse } from "./components/ElicitationModal";
 
-// Add interface for extended MCP client with AI provider
+/**
+ * Extended MCP client interface adding AI provider capabilities
+ */
 export interface ExtendedMcpClient extends Client {
   aiProvider: AIProvider;
   processQuery: (
@@ -66,36 +70,57 @@ export interface ExtendedMcpClient extends Client {
     tools: Tool[],
     onUpdate?: (content: string) => void,
     model?: string,
-    provider?: string,
+    provider?: SupportedProvider,
   ) => Promise<string>;
   chatLoop: (tools: Tool[]) => Promise<void>;
   cleanup: () => Promise<void>;
 }
 
+/**
+ * Implementation of MCP client for connecting to MCP servers
+ */
 export class MCPJamClient extends Client<Request, Notification, Result> implements ChatLoopProvider, ToolCaller {
-  clientTransport: Transport | undefined;
-  serverConfig: MCPJamServerConfig;
-  headers: HeadersInit;
-  mcpProxyServerUrl: URL;
-  connectionStatus: ConnectionStatus;
-  serverCapabilities: ServerCapabilities | null;
-  inspectorConfig: InspectorConfig;
-  completionsSupported: boolean;
-  bearerToken?: string;
-  headerName?: string;
-  onStdErrNotification?: (notification: StdErrNotification) => void;
-  onPendingRequest?: (
+  private clientTransport: Transport | undefined;
+  private serverConfig: MCPJamServerConfig;
+  private headers: HeadersInit;
+  private mcpProxyServerUrl: URL;
+  private inspectorConfig: InspectorConfig;
+  private queryProcessor: QueryProcessor;
+  
+  public connectionStatus: ConnectionStatus;
+  public serverCapabilities: ServerCapabilities | null;
+  public completionsSupported: boolean;
+  
+  public bearerToken?: string;
+  public headerName?: string;
+  public onStdErrNotification?: (notification: StdErrNotification) => void;
+  public onPendingRequest?: (
     request: CreateMessageRequest,
     resolve: (result: CreateMessageResult) => void,
     reject: (error: Error) => void,
   ) => void;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  onElicitationRequest?: (request: any, resolve: any) => void;
-  getRoots?: () => unknown[];
-  addRequestHistory: (request: object, response?: object) => void;
-  addClientLog: (message: string, level: ClientLogLevels) => void;
-  private queryProcessor: QueryProcessor;
+  public onElicitationRequest?: (
+    request: ElicitRequest,
+    resolve: (result: ElicitationResponse) => void,
+  ) => void;
+  public getRoots?: () => unknown[];
+  public addRequestHistory: (request: object, response?: object) => void;
+  public addClientLog: (message: string, level: ClientLogLevels) => void;
 
+  /**
+   * Creates a new MCPJamClient instance
+   * 
+   * @param serverConfig Configuration for the server connection
+   * @param inspectorConfig Inspector configuration
+   * @param addRequestHistory Callback to record request history
+   * @param addClientLog Callback to log client activity
+   * @param bearerToken Optional authentication token
+   * @param headerName Optional custom header name for authentication
+   * @param onStdErrNotification Callback for stderr notifications
+   * @param onPendingRequest Callback for pending message requests
+   * @param onElicitationRequest Callback for elicitation requests
+   * @param getRoots Callback to retrieve root resources
+   */
   constructor(
     serverConfig: MCPJamServerConfig,
     inspectorConfig: InspectorConfig,
@@ -109,8 +134,7 @@ export class MCPJamClient extends Client<Request, Notification, Result> implemen
       resolve: (result: CreateMessageResult) => void,
       reject: (error: Error) => void,
     ) => void,
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    onElicitationRequest?: (request: any, resolve: any) => void,
+    onElicitationRequest?: (request: ElicitRequest, resolve: (result: ElicitationResponse) => void) => void,
     getRoots?: () => unknown[],
   ) {
     super(
@@ -126,24 +150,25 @@ export class MCPJamClient extends Client<Request, Notification, Result> implemen
       },
     );
 
-    // Assign properties
     this.serverConfig = serverConfig;
     this.headers = {};
-    this.mcpProxyServerUrl = new URL(
-      `${getMCPProxyAddress(inspectorConfig)}/stdio`,
-    );
-    this.bearerToken = bearerToken;
-    this.headerName = headerName;
+    this.mcpProxyServerUrl = new URL(`${getMCPProxyAddress(inspectorConfig)}/stdio`);
+    this.inspectorConfig = inspectorConfig;
     this.connectionStatus = "disconnected";
     this.serverCapabilities = null;
     this.completionsSupported = true;
-    this.inspectorConfig = inspectorConfig;
+    
+    // Callbacks and handlers
+    this.bearerToken = bearerToken;
+    this.headerName = headerName;
     this.onStdErrNotification = onStdErrNotification;
     this.onPendingRequest = onPendingRequest;
     this.onElicitationRequest = onElicitationRequest;
     this.getRoots = getRoots;
     this.addRequestHistory = addRequestHistory;
     this.addClientLog = addClientLog;
+    
+    // Initialize query processor
     this.queryProcessor = new QueryProcessor(this);
   }
 
@@ -152,6 +177,9 @@ export class MCPJamClient extends Client<Request, Notification, Result> implemen
     return providerManager.getDefaultProvider();
   }
 
+  /**
+   * Connect to MCP server via STDIO transport
+   */
   async connectStdio() {
     const serverUrl = new URL(
       `${await getMCPProxyAddressAsync(this.inspectorConfig)}/stdio`,
@@ -189,8 +217,7 @@ export class MCPJamClient extends Client<Request, Notification, Result> implemen
 
     this.mcpProxyServerUrl = serverUrl;
     try {
-      const command =
-        "command" in this.serverConfig ? this.serverConfig.command : "unknown";
+      const command = "command" in this.serverConfig ? this.serverConfig.command : "unknown";
       this.addClientLog(
         `Connecting to MCP server via stdio: ${command}`,
         "info",
@@ -219,6 +246,9 @@ export class MCPJamClient extends Client<Request, Notification, Result> implemen
     }
   }
 
+  /**
+   * Connect to MCP server via Server-Sent Events (SSE) transport
+   */
   async connectSSE() {
     try {
       const serverUrl = new URL(
@@ -265,6 +295,9 @@ export class MCPJamClient extends Client<Request, Notification, Result> implemen
     }
   }
 
+  /**
+   * Connect to MCP server via Streamable HTTP transport
+   */
   async connectStreamableHttp() {
     try {
       const serverUrl = new URL(
@@ -314,6 +347,10 @@ export class MCPJamClient extends Client<Request, Notification, Result> implemen
     }
   }
 
+  /**
+   * Check if the MCP proxy server is healthy
+   * @throws Error if proxy server is not healthy
+   */
   async checkProxyHealth() {
     try {
       const proxyHealthUrl = new URL(
@@ -338,7 +375,12 @@ export class MCPJamClient extends Client<Request, Notification, Result> implemen
     }
   }
 
-  is401Error = (error: unknown): boolean => {
+  /**
+   * Check if an error is an HTTP 401 Unauthorized error
+   * @param error The error to check
+   * @returns true if the error is a 401 Unauthorized error
+   */
+  private is401Error = (error: unknown): boolean => {
     return (
       (error instanceof SseError && error.code === 401) ||
       (error instanceof Error && error.message.includes("401")) ||
@@ -346,36 +388,204 @@ export class MCPJamClient extends Client<Request, Notification, Result> implemen
     );
   };
 
-  handleAuthError = async (error: unknown) => {
+  /**
+   * Create auth provider for the current server
+   * @returns Auth provider or null if not applicable
+   */
+  private createAuthProvider(): InspectorOAuthClientProvider | null {
+    if (
+      this.serverConfig.transportType !== "stdio" &&
+      "url" in this.serverConfig &&
+      this.serverConfig.url
+    ) {
+      return new InspectorOAuthClientProvider(
+        this.serverConfig.url.toString()
+      );
+    }
+    return null;
+  }
+  
+  /**
+   * Attempt OAuth authentication flow
+   * @returns true if authentication successful
+   */
+  private async performOAuthFlow(): Promise<boolean> {
+    const authProvider = this.createAuthProvider();
+    if (!authProvider) {
+      return false;
+    }
+    
+    try {
+      const serverUrl = "url" in this.serverConfig && this.serverConfig.url ? 
+        this.serverConfig.url.toString() : "";
+        
+      const result = await auth(authProvider, {
+        serverUrl: serverUrl,
+      });
+      
+      if (result === "AUTHORIZED") {
+        this.addClientLog("OAuth authentication successful", "info");
+        return true;
+      } else {
+        this.addClientLog("OAuth authentication failed", "error");
+        return false;
+      }
+    } catch (error) {
+      const errorMessage = error instanceof Error ? 
+        error.message : String(error);
+      this.addClientLog(`OAuth flow failed: ${errorMessage}`, "error");
+      return false;
+    }
+  }
+
+  /**
+   * Handle authentication errors by attempting OAuth flow
+   * @param error The error that occurred
+   * @returns true if auth was successful and retry should happen
+   */
+  private handleAuthError = async (error: unknown): Promise<boolean> => {
     if (this.is401Error(error)) {
       this.addClientLog(
         "Authentication error detected, attempting OAuth flow",
         "warn",
       );
-      // Only handle OAuth for HTTP-based transports
-      if (
-        this.serverConfig.transportType !== "stdio" &&
-        "url" in this.serverConfig &&
-        this.serverConfig.url
-      ) {
-        const serverAuthProvider = new InspectorOAuthClientProvider(
-          this.serverConfig.url.toString(),
-        );
-        const result = await auth(serverAuthProvider, {
-          serverUrl: this.serverConfig.url.toString(),
-        });
-        if (result === "AUTHORIZED") {
-          this.addClientLog("OAuth authentication successful", "info");
-        } else {
-          this.addClientLog("OAuth authentication failed", "error");
-        }
-        return result === "AUTHORIZED";
-      }
+      
+      return await this.performOAuthFlow();
     }
 
     return false;
   };
 
+  /**
+   * Configure the request handlers for this client
+   */
+  private setupRequestHandlers(): void {
+    // Configure handlers for pending message requests
+    if (this.onPendingRequest) {
+      this.setRequestHandler(CreateMessageRequestSchema, (request) => {
+        return new Promise((resolve, reject) => {
+          this.onPendingRequest?.(request, resolve, reject);
+        });
+      });
+    }
+
+    // Configure handlers for elicitation requests
+    if (this.onElicitationRequest) {
+      this.setRequestHandler(ElicitRequestSchema, (request) => {
+        return new Promise((resolve) => {
+          this.onElicitationRequest?.(request, resolve as (result: ElicitationResponse) => void);
+        });
+      });
+    }
+
+    // Configure handlers for roots requests
+    if (this.getRoots) {
+      this.setRequestHandler(ListRootsRequestSchema, async () => {
+        return { roots: this.getRoots?.() ?? [] };
+      });
+      this.addClientLog("Roots request handler configured", "debug");
+    }
+
+    // Configure stderr notification handler
+    if (this.onStdErrNotification) {
+      this.setNotificationHandler(
+        StdErrNotificationSchema,
+        this.onStdErrNotification,
+      );
+      this.addClientLog("StdErr notification handler configured", "debug");
+    }
+  }
+
+  /**
+   * Prepare the authentication headers based on server type
+   * @returns The headers object with authentication information
+   */
+  private async prepareAuthHeaders(): Promise<HeadersInit> {
+    const headers: HeadersInit = {};
+
+    // Only apply OAuth authentication for HTTP-based transports
+    if (
+      this.serverConfig.transportType !== "stdio" &&
+      "url" in this.serverConfig &&
+      this.serverConfig.url
+    ) {
+      this.addClientLog(
+        "Setting up OAuth authentication for HTTP transport",
+        "debug",
+      );
+      // Create an auth provider with the current server URL
+      const serverAuthProvider = new InspectorOAuthClientProvider(
+        this.serverConfig.url.toString(),
+      );
+
+      // Use manually provided bearer token if available, otherwise use OAuth tokens
+      const token =
+        this.bearerToken || (await serverAuthProvider.tokens())?.access_token;
+      if (token) {
+        const authHeaderName = this.headerName || "Authorization";
+        headers[authHeaderName] = `Bearer ${token}`;
+        this.addClientLog(
+          "Bearer token configured for authentication",
+          "debug",
+        );
+      } else {
+        this.addClientLog(
+          "No bearer token available for authentication",
+          "warn",
+        );
+      }
+    } else if (this.bearerToken) {
+      // For stdio or when manually providing bearer token, still apply it
+      const authHeaderName = this.headerName || "Authorization";
+      headers[authHeaderName] = `Bearer ${this.bearerToken}`;
+      this.addClientLog(
+        "Bearer token configured for stdio transport",
+        "debug",
+      );
+    }
+
+    return headers;
+  }
+
+  /**
+   * Establish connection to transport and update capabilities
+   */
+  private async connectToTransport(): Promise<void> {
+    switch (this.serverConfig.transportType) {
+      case "stdio":
+        await this.connectStdio();
+        break;
+      case "sse":
+        await this.connectSSE();
+        break;
+      case "streamable-http":
+        await this.connectStreamableHttp();
+        break;
+    }
+
+    // Update server capabilities after successful connection
+    this.serverCapabilities = this.getServerCapabilities() ?? null;
+    this.addClientLog(
+      `Server capabilities retrieved: ${JSON.stringify(this.serverCapabilities)}`,
+      "debug",
+    );
+
+    const initializeRequest = {
+      method: "initialize",
+    };
+    this.addRequestHistory(initializeRequest, {
+      capabilities: this.serverCapabilities,
+      serverInfo: this.getServerVersion(),
+      instructions: this.getInstructions(),
+    });
+    this.addClientLog("MCP client initialization completed", "info");
+  }
+
+  /**
+   * Connect to an MCP server
+   * @param _e Optional error object (unused)
+   * @param retryCount Current retry attempt count
+   */
   async connectToServer(_e?: unknown, retryCount: number = 0): Promise<void> {
     const MAX_RETRIES = 1; // Limit retries to prevent infinite loops
 
@@ -392,91 +602,26 @@ export class MCPJamClient extends Client<Request, Notification, Result> implemen
         `Attempting to connect to MCP server (attempt ${retryCount + 1}/${MAX_RETRIES + 1})`,
         "info",
       );
-      // Inject auth manually instead of using SSEClientTransport, because we're
-      // proxying through the inspector server first.
-      const headers: HeadersInit = {};
 
-      // Only apply OAuth authentication for HTTP-based transports
-      if (
-        this.serverConfig.transportType !== "stdio" &&
-        "url" in this.serverConfig &&
-        this.serverConfig.url
-      ) {
-        this.addClientLog(
-          "Setting up OAuth authentication for HTTP transport",
-          "debug",
-        );
-        // Create an auth provider with the current server URL
-        const serverAuthProvider = new InspectorOAuthClientProvider(
-          this.serverConfig.url.toString(),
-        );
-
-        // Use manually provided bearer token if available, otherwise use OAuth tokens
-        const token =
-          this.bearerToken || (await serverAuthProvider.tokens())?.access_token;
-        if (token) {
-          const authHeaderName = this.headerName || "Authorization";
-          headers[authHeaderName] = `Bearer ${token}`;
-          this.addClientLog(
-            "Bearer token configured for authentication",
-            "debug",
-          );
-        } else {
-          this.addClientLog(
-            "No bearer token available for authentication",
-            "warn",
-          );
-        }
-      } else if (this.bearerToken) {
-        // For stdio or when manually providing bearer token, still apply it
-        const authHeaderName = this.headerName || "Authorization";
-        headers[authHeaderName] = `Bearer ${this.bearerToken}`;
-        this.addClientLog(
-          "Bearer token configured for stdio transport",
-          "debug",
-        );
-      }
-
-      // Update the headers property with auth headers
-      this.headers = { ...this.headers, ...headers };
-
-      if (this.onStdErrNotification) {
-        this.setNotificationHandler(
-          StdErrNotificationSchema,
-          this.onStdErrNotification,
-        );
-        this.addClientLog("StdErr notification handler configured", "debug");
-      }
+      // Get authentication headers and update the client's headers
+      const authHeaders = await this.prepareAuthHeaders();
+      this.headers = { ...this.headers, ...authHeaders };
 
       try {
-        switch (this.serverConfig.transportType) {
-          case "stdio":
-            await this.connectStdio();
-            break;
-          case "sse":
-            await this.connectSSE();
-            break;
-          case "streamable-http":
-            await this.connectStreamableHttp();
-            break;
-        }
+        // Connect to transport based on server config
+        await this.connectToTransport();
+        
+        // Reset completions support on new connection
+        this.completionsSupported = true;
+        
+        // Set up request handlers
+        this.setupRequestHandlers();
 
-        // Update server capabilities after successful connection
-        this.serverCapabilities = this.getServerCapabilities() ?? null;
+        this.connectionStatus = "connected";
         this.addClientLog(
-          `Server capabilities retrieved: ${JSON.stringify(this.serverCapabilities)}`,
-          "debug",
+          "MCP client connection established successfully",
+          "info",
         );
-
-        const initializeRequest = {
-          method: "initialize",
-        };
-        this.addRequestHistory(initializeRequest, {
-          capabilities: this.serverCapabilities,
-          serverInfo: this.getServerVersion(),
-          instructions: this.getInstructions(),
-        });
-        this.addClientLog("MCP client initialization completed", "info");
       } catch (error) {
         const errorMessage =
           error instanceof Error ? error.message : String(error);
@@ -512,36 +657,6 @@ export class MCPJamClient extends Client<Request, Notification, Result> implemen
         }
         throw error;
       }
-      this.completionsSupported = true; // Reset completions support on new connection
-
-      if (this.onPendingRequest) {
-        this.setRequestHandler(CreateMessageRequestSchema, (request) => {
-          return new Promise((resolve, reject) => {
-            this.onPendingRequest?.(request, resolve, reject);
-          });
-        });
-      }
-
-      if (this.onElicitationRequest) {
-        this.setRequestHandler(ElicitRequestSchema, (request) => {
-          return new Promise((resolve) => {
-            this.onElicitationRequest?.(request, resolve);
-          });
-        });
-      }
-
-      if (this.getRoots) {
-        this.setRequestHandler(ListRootsRequestSchema, async () => {
-          return { roots: this.getRoots?.() ?? [] };
-        });
-        this.addClientLog("Roots request handler configured", "debug");
-      }
-
-      this.connectionStatus = "connected";
-      this.addClientLog(
-        "MCP client connection established successfully",
-        "info",
-      );
     } catch (e) {
       const errorMessage = e instanceof Error ? e.message : String(e);
       this.addClientLog(`Connection failed: ${errorMessage}`, "error");
@@ -550,54 +665,102 @@ export class MCPJamClient extends Client<Request, Notification, Result> implemen
     }
   }
 
-  getTransport() {
+  /**
+   * Get the current transport used for MCP communication
+   */
+  getTransport(): Transport | undefined {
     return this.clientTransport;
   }
 
-  getMCPProxyServerUrl() {
+  /**
+   * Get the MCP proxy server URL
+   */
+  getMCPProxyServerUrl(): URL {
     return this.mcpProxyServerUrl;
   }
 
+  /**
+   * Prepares request options with appropriate timeouts
+   * @param options User-provided options or undefined
+   * @returns Request options with defaults applied
+   */
+  private prepareRequestOptions(options?: RequestOptions & { suppressToast?: boolean }): RequestOptions {
+    const abortController = new AbortController();
+
+    // Prepare MCP Client request options with appropriate timeouts
+    const mcpRequestOptions: RequestOptions = {
+      signal: options?.signal ?? abortController.signal,
+      resetTimeoutOnProgress:
+        options?.resetTimeoutOnProgress ??
+        resetRequestTimeoutOnProgress(this.inspectorConfig),
+      timeout:
+        options?.timeout ?? getMCPServerRequestTimeout(this.inspectorConfig),
+      maxTotalTimeout:
+        options?.maxTotalTimeout ??
+        getMCPServerRequestMaxTotalTimeout(this.inspectorConfig),
+    };
+
+    // Configure progress handler to reset timeouts if enabled
+    if (mcpRequestOptions.resetTimeoutOnProgress) {
+      mcpRequestOptions.onprogress = this.handleProgressNotification;
+    }
+    
+    return mcpRequestOptions;
+  }
+  
+  /**
+   * Handle progress notifications
+   * @param params Progress parameters
+   */
+  private handleProgressNotification = (params: Progress): void => {
+    this.addClientLog("Progress notification received", "debug");
+    if (params.progress) {
+      this.addClientLog(`Progress: ${params.progress}`, "debug");
+    }
+  };
+  
+  /**
+   * Format and display error toast message
+   * @param error The error that occurred
+   */
+  private showErrorToast(error: unknown): void {
+    const errorString = error instanceof Error ? error.message : String(error);
+    this.addClientLog(
+      `Request error (toast shown): ${errorString}`,
+      "error",
+    );
+    toast({
+      title: "Error",
+      description: errorString,
+      variant: "destructive",
+    });
+  }
+
+  /**
+   * Make a request to the MCP server
+   * @param request The request to send
+   * @param schema Zod schema to validate the response
+   * @param options Request options including timeout settings
+   * @returns The validated response
+   */
   async makeRequest<T extends z.ZodType>(
     request: ClientRequest,
     schema: T,
     options?: RequestOptions & { suppressToast?: boolean },
   ): Promise<z.output<T>> {
-    console.log("makeRequestTriggered");
+    // Log the request being made
     this.addClientLog(`Making MCP request: ${request.method}`, "debug");
     try {
-      const abortController = new AbortController();
+      const mcpRequestOptions = this.prepareRequestOptions(options);
 
-      // prepare MCP Client request options
-      const mcpRequestOptions: RequestOptions = {
-        signal: options?.signal ?? abortController.signal,
-        resetTimeoutOnProgress:
-          options?.resetTimeoutOnProgress ??
-          resetRequestTimeoutOnProgress(this.inspectorConfig),
-        timeout:
-          options?.timeout ?? getMCPServerRequestTimeout(this.inspectorConfig),
-        maxTotalTimeout:
-          options?.maxTotalTimeout ??
-          getMCPServerRequestMaxTotalTimeout(this.inspectorConfig),
-      };
-
-      // If progress notifications are enabled, add an onprogress hook to the MCP Client request options
-      // This is required by SDK to reset the timeout on progress notifications
-      if (mcpRequestOptions.resetTimeoutOnProgress) {
-        // eslint-disable-next-line @typescript-eslint/no-unused-vars
-        mcpRequestOptions.onprogress = (_params: Progress) => {
-          // Add progress notification to `Server Notification` window in the UI
-          // TODO: Add Notification to UI
-          this.addClientLog("Progress notification received", "debug");
-        };
-      }
-
-      let response;
       try {
-        response = await this.request(request, schema, mcpRequestOptions);
+        // Execute the request
+        const response = await this.request(request, schema, mcpRequestOptions);
         this.addClientLog(`MCP request successful: ${request.method}`, "info");
         this.addRequestHistory(request, response);
+        return response;
       } catch (error) {
+        // Handle request execution errors
         const errorMessage =
           error instanceof Error ? error.message : String(error);
         this.addClientLog(
@@ -607,37 +770,28 @@ export class MCPJamClient extends Client<Request, Notification, Result> implemen
         this.addRequestHistory(request, { error: errorMessage });
         throw error;
       }
-
-      return response;
     } catch (e: unknown) {
+      // Handle outer errors and show toast if needed
       if (!options?.suppressToast) {
-        const errorString = (e as Error).message ?? String(e);
-        this.addClientLog(
-          `Request error (toast shown): ${errorString}`,
-          "error",
-        );
-        toast({
-          title: "Error",
-          description: errorString,
-          variant: "destructive",
-        });
+        this.showErrorToast(e);
       }
       throw e;
     }
   }
 
-  handleCompletion = async (
+  /**
+   * Create a request for argument completion
+   * @param ref Reference to the resource or prompt
+   * @param argName Name of the argument to complete
+   * @param value Current value of the argument
+   * @returns Client request object
+   */
+  private createCompletionRequest(
     ref: ResourceReference | PromptReference,
     argName: string,
-    value: string,
-    signal?: AbortSignal,
-  ): Promise<string[]> => {
-    if (!this.completionsSupported) {
-      this.addClientLog("Completions not supported by server", "debug");
-      return [];
-    }
-
-    const request: ClientRequest = {
+    value: string
+  ): ClientRequest {
+    return {
       method: "completion/complete",
       params: {
         argument: {
@@ -647,43 +801,80 @@ export class MCPJamClient extends Client<Request, Notification, Result> implemen
         ref,
       },
     };
+  }
+  
+  /**
+   * Handle unsupported completion method error
+   * @param error The error from completion attempt
+   * @returns Empty array as fallback
+   */
+  private handleUnsupportedCompletion(error: unknown): string[] {
+    if (error instanceof McpError && error.code === ErrorCode.MethodNotFound) {
+      this.completionsSupported = false;
+      this.addClientLog(
+        "Completions disabled - server does not support them",
+        "warn",
+      );
+      return [];
+    }
+    
+    // For other errors, show toast and rethrow
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    this.addClientLog(`Completion request failed: ${errorMessage}`, "error");
+    toast({
+      title: "Error",
+      description: errorMessage,
+      variant: "destructive",
+    });
+    throw error;
+  }
+
+  /**
+   * Handle completion requests for resources or prompts
+   * @param ref Reference to the resource or prompt
+   * @param argName Name of the argument to complete
+   * @param value Current value of the argument
+   * @param signal Optional abort signal
+   * @returns Array of completion strings
+   */
+  handleCompletion = async (
+    ref: ResourceReference | PromptReference,
+    argName: string,
+    value: string,
+    signal?: AbortSignal,
+  ): Promise<string[]> => {
+    // Early return if completions not supported
+    if (!this.completionsSupported) {
+      this.addClientLog("Completions not supported by server", "debug");
+      return [];
+    }
 
     try {
+      // Create and execute completion request
+      const request = this.createCompletionRequest(ref, argName, value);
       this.addClientLog(`Requesting completion for ${argName}`, "debug");
+      
       const response = await this.makeRequest(request, CompleteResultSchema, {
         signal,
         suppressToast: true,
       });
+      
+      // Log results and return values
       const completionCount = response?.completion.values?.length || 0;
       this.addClientLog(
         `Received ${completionCount} completion suggestions`,
         "debug",
       );
       return response?.completion.values || [];
-    } catch (e: unknown) {
-      // Disable completions silently if the server doesn't support them.
-      // See https://github.com/modelcontextprotocol/specification/discussions/122
-      if (e instanceof McpError && e.code === ErrorCode.MethodNotFound) {
-        this.completionsSupported = false;
-        this.addClientLog(
-          "Completions disabled - server does not support them",
-          "warn",
-        );
-        return [];
-      }
-
-      // Unexpected errors - show toast and rethrow
-      const errorMessage = e instanceof Error ? e.message : String(e);
-      this.addClientLog(`Completion request failed: ${errorMessage}`, "error");
-      toast({
-        title: "Error",
-        description: errorMessage,
-        variant: "destructive",
-      });
-      throw e;
+    } catch (error) {
+      return this.handleUnsupportedCompletion(error);
     }
   };
 
+  /**
+   * List all tools available from the MCP server
+   * @returns The tools response
+   */
   async tools() {
     this.addClientLog("Listing available tools", "debug");
     const tools = await this.listTools();
@@ -691,6 +882,9 @@ export class MCPJamClient extends Client<Request, Notification, Result> implemen
     return tools;
   }
 
+  /**
+   * Disconnect from the MCP server
+   */
   async disconnect() {
     this.addClientLog("Disconnecting from MCP server", "info");
     await this.close();
@@ -706,11 +900,25 @@ export class MCPJamClient extends Client<Request, Notification, Result> implemen
     this.addClientLog("MCP client disconnected successfully", "info");
   }
 
+  /**
+   * Update the server capabilities
+   * @param capabilities The new capabilities
+   */
   async setServerCapabilities(capabilities: ServerCapabilities) {
     this.serverCapabilities = capabilities;
     this.addClientLog("Server capabilities updated", "debug");
   }
 
+  /**
+   * Process a query using the specified model and tools
+   * @param query The query text
+   * @param tools Tools available for the model to use
+   * @param onUpdate Optional callback for streaming updates
+   * @param model Model name to use
+   * @param provider Optional AI provider to use
+   * @param signal Optional abort signal
+   * @returns The model's response
+   */
   async processQuery(
     query: string,
     tools: Tool[],
@@ -722,12 +930,19 @@ export class MCPJamClient extends Client<Request, Notification, Result> implemen
     return this.queryProcessor.processQuery(query, tools, onUpdate, model, provider, signal);
   }
 
-  async chatLoop(tools: Tool[]) {
+  /**
+   * Start an interactive chat loop with tools
+   * @param tools Tools available for the chat
+   */
+  async chatLoop(tools: Tool[]): Promise<void> {
     const chatLoop = new ChatLoop(this);
     return await chatLoop.start(tools);
   }
 
-  async cleanup() {
+  /**
+   * Clean up resources used by this client
+   */
+  async cleanup(): Promise<void> {
     this.addClientLog("Cleaning up MCP client", "info");
     await this.close();
   }
