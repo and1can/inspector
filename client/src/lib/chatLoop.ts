@@ -126,12 +126,12 @@ export class QueryProcessor {
     tools: AnthropicTool[],
     onUpdate?: (content: string) => void,
     model: string = "claude-3-5-sonnet-latest",
-    provider?: string,
+    provider?: SupportedProvider,
     signal?: AbortSignal,
   ): Promise<string> {
     // Get the specified provider or fall back to default
     const aiProvider = provider
-      ? providerManager.getProvider(provider as SupportedProvider)
+      ? providerManager.getProvider(provider)
       : providerManager.getDefaultProvider();
 
     if (!aiProvider) {
@@ -547,9 +547,6 @@ export class ChatLoop {
     });
 
     try {
-      console.log("\nMCP Client Started!");
-      console.log("Type your queries or 'quit' to exit.");
-
       while (true) {
         const message = await rl.question("\nQuery: ");
         if (message.toLowerCase() === "quit") {
