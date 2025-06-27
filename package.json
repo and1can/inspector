@@ -30,6 +30,7 @@
     "dev": "concurrently \"cd client && npm run dev\" \"cd server && npm run dev\"",
     "dev:windows": "concurrently \"cd client && npm run dev\" \"cd server && npm run dev:windows\"",
     "start": "node client/bin/start.js",
+    "ollama": "ollama serve",
     "start-server": "cd server && npm run start",
     "start-client": "cd client && npm run preview",
     "test": "npm run prettier-check && cd client && npm test",

@@ -46,11 +46,37 @@ export interface ProviderResponseContent {
   input?: Record<string, unknown>;
 }
 
-export interface ProviderConfig {
-  apiKey: string;
-  baseURL?: string;
+// Base configuration interface
+export interface BaseProviderConfig {
   timeout?: number;
   dangerouslyAllowBrowser?: boolean;
+}
+
+// API key based providers (Anthropic, OpenAI)
+export interface ApiKeyProviderConfig extends BaseProviderConfig {
+  apiKey: string;
+}
+
+// Host URL based providers (Ollama)
+export interface HostUrlProviderConfig extends BaseProviderConfig {
+  hostUrl: string;
+}
+
+// Union type for all provider configurations
+export type ProviderConfig = ApiKeyProviderConfig | HostUrlProviderConfig;
+
+// Type guard to check if config uses API key
+export function isApiKeyConfig(
+  config: ProviderConfig,
+): config is ApiKeyProviderConfig {
+  return "apiKey" in config;
+}
+
+// Type guard to check if config uses host URL
+export function isHostUrlConfig(
+  config: ProviderConfig,
+): config is HostUrlProviderConfig {
+  return "hostUrl" in config;
 }
 
 export interface ProviderModel {
@@ -74,7 +100,7 @@ export abstract class AIProvider {
   abstract getProviderName(): string;
   abstract getDefaultModel(): string;
   abstract getSupportedModels(): ProviderModel[];
-  
+
   // Optional method for providers that can refresh their model list dynamically
   async refreshModels?(): Promise<ProviderModel[]>;
 }
