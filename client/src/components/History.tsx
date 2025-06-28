@@ -48,31 +48,34 @@ const HistoryAndNotifications = ({
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       // Only handle shortcuts when history is not collapsed and not in an input field
-      if (isHistoryCollapsed || 
-          (e.target as HTMLElement)?.tagName?.toLowerCase() === 'input' ||
-          (e.target as HTMLElement)?.tagName?.toLowerCase() === 'textarea') {
+      if (
+        isHistoryCollapsed ||
+        (e.target as HTMLElement)?.tagName?.toLowerCase() === "input" ||
+        (e.target as HTMLElement)?.tagName?.toLowerCase() === "textarea"
+      ) {
         return;
       }
 
       // Alt + Up/Down to adjust height
-      if (e.altKey && (e.key === 'ArrowUp' || e.key === 'ArrowDown')) {
+      if (e.altKey && (e.key === "ArrowUp" || e.key === "ArrowDown")) {
         e.preventDefault();
         const increment = e.shiftKey ? 50 : 25; // Shift for larger increments
-        const newHeight = e.key === 'ArrowUp' 
-          ? historyPaneHeight + increment 
-          : historyPaneHeight - increment;
+        const newHeight =
+          e.key === "ArrowUp"
+            ? historyPaneHeight + increment
+            : historyPaneHeight - increment;
         setCustomHeight(newHeight);
       }
-      
+
       // Alt + R to reset height
-      if (e.altKey && e.key === 'r') {
+      if (e.altKey && e.key === "r") {
         e.preventDefault();
         resetHeight();
       }
     };
 
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
   }, [isHistoryCollapsed, historyPaneHeight, setCustomHeight, resetHeight]);
 
   useEffect(() => {
@@ -112,16 +115,18 @@ const HistoryAndNotifications = ({
         onDoubleClick={handleDoubleClick}
         title="Drag to resize • Double-click to reset • Alt+↑/↓ to adjust • Alt+R to reset"
       >
-        <div className={`flex items-center space-x-1 opacity-0 group-hover:opacity-100 transition-opacity duration-200 ${isDragging ? "opacity-100" : ""}`}>
+        <div
+          className={`flex items-center space-x-1 opacity-0 group-hover:opacity-100 transition-opacity duration-200 ${isDragging ? "opacity-100" : ""}`}
+        >
           <GripHorizontal className="w-4 h-4 text-muted-foreground" />
         </div>
       </div>
 
       {/* Visual indicator line */}
-      <div 
+      <div
         className={`absolute w-full h-0.5 -top-0.5 transition-all duration-200 ${
           isDragging ? "bg-primary" : "bg-border/50"
-        }`} 
+        }`}
       />
 
       {/* Content */}

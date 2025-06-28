@@ -5,6 +5,7 @@ This file provides guidance to Claude Code when working with the client portion 
 ## Common Commands
 
 ### Development
+
 ```bash
 # Install client dependencies
 npm install
@@ -20,12 +21,14 @@ npm run lint
 ```
 
 ### Building
+
 ```bash
 # Build client
 npm run build
 ```
 
 ### Testing
+
 ```bash
 # Run client tests
 npm test

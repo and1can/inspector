@@ -207,13 +207,15 @@ const ParametersSection = ({
     try {
       // Check if clipboard API is available
       if (!navigator.clipboard) {
-        alert("Clipboard access is not available in this browser. Please use a modern browser with HTTPS.");
+        alert(
+          "Clipboard access is not available in this browser. Please use a modern browser with HTTPS.",
+        );
         return;
       }
 
       // Read text from clipboard
       const clipboardText = await navigator.clipboard.readText();
-      
+
       if (!clipboardText.trim()) {
         alert("Clipboard is empty or contains no text.");
         return;
@@ -221,75 +223,98 @@ const ParametersSection = ({
 
       // Try to parse as JSON with forgiving parser
       const parseResult = tryParseJson(clipboardText);
-      
+
       if (!parseResult.success) {
         // If basic JSON parsing fails, try to fix common issues
         let fixedJson = clipboardText.trim();
-        
+
         // Try to fix unquoted keys (common LLM output issue)
         fixedJson = fixedJson.replace(/(\w+)(\s*:)/g, '"$1"$2');
-        
+
         // Try to fix single quotes
         fixedJson = fixedJson.replace(/'/g, '"');
-        
+
         // Try parsing again
         const retryResult = tryParseJson(fixedJson);
-        
+
         if (!retryResult.success) {
-          alert("Could not parse clipboard content as JSON. Please ensure the clipboard contains valid JSON data.");
+          alert(
+            "Could not parse clipboard content as JSON. Please ensure the clipboard contains valid JSON data.",
+          );
           return;
         }
-        
+
         // Use the fixed JSON result
-        if (typeof retryResult.data === 'object' && retryResult.data !== null && !Array.isArray(retryResult.data)) {
+        if (
+          typeof retryResult.data === "object" &&
+          retryResult.data !== null &&
+          !Array.isArray(retryResult.data)
+        ) {
           const jsonData = retryResult.data as Record<string, unknown>;
-          
+
           // Populate form fields with matching keys
           Object.entries(jsonData).forEach(([key, value]) => {
             if (key in properties) {
               onParamChange(key, value);
             }
           });
-          
+
           // Show success message
-          const matchedKeys = Object.keys(jsonData).filter(key => key in properties);
+          const matchedKeys = Object.keys(jsonData).filter(
+            (key) => key in properties,
+          );
           if (matchedKeys.length > 0) {
-            alert(`Successfully populated ${matchedKeys.length} field(s): ${matchedKeys.join(', ')}`);
+            alert(
+              `Successfully populated ${matchedKeys.length} field(s): ${matchedKeys.join(", ")}`,
+            );
           } else {
             alert("No matching fields found in the JSON data.");
           }
         } else {
-          alert("Clipboard content must be a JSON object, not an array or primitive value.");
+          alert(
+            "Clipboard content must be a JSON object, not an array or primitive value.",
+          );
         }
         return;
       }
 
       // Handle successful JSON parsing
-      if (typeof parseResult.data === 'object' && parseResult.data !== null && !Array.isArray(parseResult.data)) {
+      if (
+        typeof parseResult.data === "object" &&
+        parseResult.data !== null &&
+        !Array.isArray(parseResult.data)
+      ) {
         const jsonData = parseResult.data as Record<string, unknown>;
-        
+
         // Populate form fields with matching keys
         Object.entries(jsonData).forEach(([key, value]) => {
           if (key in properties) {
             onParamChange(key, value);
           }
         });
-        
+
         // Show success message
-        const matchedKeys = Object.keys(jsonData).filter(key => key in properties);
+        const matchedKeys = Object.keys(jsonData).filter(
+          (key) => key in properties,
+        );
         if (matchedKeys.length > 0) {
-          alert(`Successfully populated ${matchedKeys.length} field(s): ${matchedKeys.join(', ')}`);
+          alert(
+            `Successfully populated ${matchedKeys.length} field(s): ${matchedKeys.join(", ")}`,
+          );
         } else {
           alert("No matching fields found in the JSON data.");
         }
       } else {
-        alert("Clipboard content must be a JSON object, not an array or primitive value.");
+        alert(
+          "Clipboard content must be a JSON object, not an array or primitive value.",
+        );
       }
-      
     } catch (error) {
       console.error("Failed to paste inputs:", error);
-      if (error instanceof Error && error.name === 'NotAllowedError') {
-        alert("Clipboard access denied. Please grant clipboard permissions or copy the content again.");
+      if (error instanceof Error && error.name === "NotAllowedError") {
+        alert(
+          "Clipboard access denied. Please grant clipboard permissions or copy the content again.",
+        );
       } else {
         alert("Failed to read from clipboard. Please try again.");
       }

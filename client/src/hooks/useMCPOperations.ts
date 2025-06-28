@@ -485,9 +485,11 @@ export const useMCPOperations = () => {
       } else {
         // Use cached tools for individual servers
         const allServerTools = await mcpAgent.getAllTools();
-        const serverTools = allServerTools.find(({ serverName }) => serverName === selectedServerName);
+        const serverTools = allServerTools.find(
+          ({ serverName }) => serverName === selectedServerName,
+        );
         const tools = serverTools ? serverTools.tools : [];
-        
+
         const endTime = performance.now();
         const latency = Math.round(endTime - startTime);
         addClientLog(

@@ -31,7 +31,7 @@ export function createChatConfig(
   options: {
     subtitle?: string;
     additionalSuggestions?: string[];
-  } = {}
+  } = {},
 ): ChatConfig {
   const providerName = getProviderDisplayName();
   const baseSuggestions = [
@@ -42,11 +42,11 @@ export function createChatConfig(
 
   const config: ChatConfig = {
     mode,
-    title: mode === "global" ? `Global Chat - ${providerName}` : `${providerName} Chat`,
-    suggestions: [
-      ...baseSuggestions,
-      ...(options.additionalSuggestions || []),
-    ],
+    title:
+      mode === "global"
+        ? `Global Chat - ${providerName}`
+        : `${providerName} Chat`,
+    suggestions: [...baseSuggestions, ...(options.additionalSuggestions || [])],
   };
 
   if (options.subtitle) {

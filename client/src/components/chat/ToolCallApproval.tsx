@@ -35,7 +35,7 @@ export const ToolCallApproval: React.FC<ToolCallApprovalProps> = ({
           onClick={() => onApprove(toolCall)}
           className={cn(
             "flex-shrink-0 w-8 h-8 rounded-lg flex items-center justify-center",
-            "bg-green-600 hover:bg-green-700 text-white transition-colors"
+            "bg-green-600 hover:bg-green-700 text-white transition-colors",
           )}
           title="Approve tool call"
         >
@@ -45,7 +45,7 @@ export const ToolCallApproval: React.FC<ToolCallApprovalProps> = ({
           onClick={() => onReject(toolCall)}
           className={cn(
             "flex-shrink-0 w-8 h-8 rounded-lg flex items-center justify-center",
-            "bg-red-600 hover:bg-red-700 text-white transition-colors"
+            "bg-red-600 hover:bg-red-700 text-white transition-colors",
           )}
           title="Reject tool call"
         >

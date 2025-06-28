@@ -28,12 +28,19 @@ export interface ChatLoopProvider {
 }
 
 export interface ToolCaller {
-  callTool(params: { name: string; arguments?: { [x: string]: unknown } }): Promise<unknown>;
+  callTool(params: {
+    name: string;
+    arguments?: { [x: string]: unknown };
+  }): Promise<unknown>;
   addClientLog(message: string, level: ClientLogLevels): void;
 }
 
 export interface ToolCallApprover {
-  requestToolCallApproval(name: string, input: unknown, id: string): Promise<boolean>;
+  requestToolCallApproval(
+    name: string,
+    input: unknown,
+    id: string,
+  ): Promise<boolean>;
 }
 
 // Helper function to recursively sanitize schema objects
@@ -167,7 +174,11 @@ export class QueryProcessor {
     );
   }
 
-  private initializeQueryContext(query: string, tools: AnthropicTool[], model: string) {
+  private initializeQueryContext(
+    query: string,
+    tools: AnthropicTool[],
+    model: string,
+  ) {
     this.toolCaller.addClientLog(
       `Initializing query context with ${tools.length} tools`,
       "debug",
@@ -195,7 +206,10 @@ export class QueryProcessor {
       throw new Error("Chat was cancelled");
     }
 
-    this.toolCaller.addClientLog("Making initial API call to AI provider", "debug");
+    this.toolCaller.addClientLog(
+      "Making initial API call to AI provider",
+      "debug",
+    );
     const response = await aiProvider.createMessage({
       model: context.model,
       max_tokens: 1000,
@@ -250,7 +264,10 @@ export class QueryProcessor {
       this.sendIterationUpdate(iterationResult.content, onUpdate);
 
       if (!iterationResult.hasToolUse) {
-        this.toolCaller.addClientLog("No tool use detected, ending iterations", "debug");
+        this.toolCaller.addClientLog(
+          "No tool use detected, ending iterations",
+          "debug",
+        );
         break;
       }
 
@@ -300,7 +317,10 @@ export class QueryProcessor {
         );
       } else if (content.type === "tool_use") {
         hasToolUse = true;
-        this.toolCaller.addClientLog(`Tool use detected: ${content.name}`, "debug");
+        this.toolCaller.addClientLog(
+          `Tool use detected: ${content.name}`,
+          "debug",
+        );
         await this.handleToolUse(
           content,
           iterationContent,
@@ -345,16 +365,22 @@ export class QueryProcessor {
       // Request approval before executing the tool
       let approved = true;
       if (this.toolCallApprover) {
-        this.toolCaller.addClientLog(`Requesting approval for tool: ${content.name}`, "debug");
+        this.toolCaller.addClientLog(
+          `Requesting approval for tool: ${content.name}`,
+          "debug",
+        );
         approved = await this.toolCallApprover.requestToolCallApproval(
-          content.name, 
-          content.input, 
-          content.id
+          content.name,
+          content.input,
+          content.id,
         );
       }
 
       if (approved) {
-        this.toolCaller.addClientLog(`Executing tool: ${content.name}`, "debug");
+        this.toolCaller.addClientLog(
+          `Executing tool: ${content.name}`,
+          "debug",
+        );
         const toolResultMessage = await this.executeToolAndUpdateMessages(
           content,
           context,
@@ -365,21 +391,27 @@ export class QueryProcessor {
         if (toolResultMessage) {
           iterationContent.push(toolResultMessage);
         }
-        this.toolCaller.addClientLog(`Tool execution successful: ${content.name}`, "debug");
+        this.toolCaller.addClientLog(
+          `Tool execution successful: ${content.name}`,
+          "debug",
+        );
       } else {
         // Tool execution was rejected
-        this.toolCaller.addClientLog(`Tool execution rejected by user: ${content.name}`, "info");
+        this.toolCaller.addClientLog(
+          `Tool execution rejected by user: ${content.name}`,
+          "info",
+        );
         const rejectMessage = `[Tool ${content.name} execution was rejected by user]`;
         iterationContent.push(rejectMessage);
         context.finalText.push(rejectMessage);
-        
+
         // Add rejection message as tool result
         this.addMessagesToContext(
           context,
           assistantContent,
           content.id,
           "Tool execution was rejected by user",
-          true
+          true,
         );
       }
     } catch (error) {
@@ -424,22 +456,25 @@ export class QueryProcessor {
 
     // Extract content from MCP result structure
     let resultContent: string;
-    if (result && typeof result === 'object' && 'content' in result) {
+    if (result && typeof result === "object" && "content" in result) {
       // Handle MCP SDK CompatibilityCallToolResult format
-      const mcpResult = result as { content: Array<{ type: string; text?: string }> };
+      const mcpResult = result as {
+        content: Array<{ type: string; text?: string }>;
+      };
       if (Array.isArray(mcpResult.content) && mcpResult.content.length > 0) {
         // Extract text from content array
         const textItems = mcpResult.content
-          .filter(item => item.type === 'text' && item.text)
-          .map(item => item.text)
-          .join('\n');
+          .filter((item) => item.type === "text" && item.text)
+          .map((item) => item.text)
+          .join("\n");
         resultContent = textItems || JSON.stringify(result);
       } else {
         resultContent = JSON.stringify(result);
       }
     } else {
       // Handle direct string result or other formats
-      resultContent = typeof result === 'string' ? result : JSON.stringify(result);
+      resultContent =
+        typeof result === "string" ? result : JSON.stringify(result);
     }
 
     // Add tool result to the displayed text (for user to see)
@@ -513,7 +548,10 @@ export class QueryProcessor {
     if (signal?.aborted) {
       throw new Error("Chat was cancelled");
     }
-    this.toolCaller.addClientLog("Making follow-up API call to AI provider", "debug");
+    this.toolCaller.addClientLog(
+      "Making follow-up API call to AI provider",
+      "debug",
+    );
     const response = await aiProvider.createMessage({
       model: context.model,
       max_tokens: 1000,
@@ -563,7 +601,6 @@ export class QueryProcessor {
   }
 }
 
-
 export class ChatLoop {
   private provider: ChatLoopProvider;
 
@@ -597,4 +634,4 @@ export class ChatLoop {
       this.provider.addClientLog("Chat loop interface closed", "debug");
     }
   }
-} 
+}

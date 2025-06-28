@@ -20,12 +20,12 @@ interface EmptyChatsStateProps {
   serversCount?: number;
 }
 
-export const EmptyChatsState: React.FC<EmptyChatsStateProps> = ({ 
-  onSuggestionClick, 
-  selectedProvider, 
-  config, 
-  toolsCount = 0, 
-  serversCount = 0 
+export const EmptyChatsState: React.FC<EmptyChatsStateProps> = ({
+  onSuggestionClick,
+  selectedProvider,
+  config,
+  toolsCount = 0,
+  serversCount = 0,
 }) => {
   return (
     <div className="flex items-center justify-center h-full p-8">
@@ -52,18 +52,18 @@ export const EmptyChatsState: React.FC<EmptyChatsStateProps> = ({
           {selectedProvider === "ollama" && (
             <p className="text-xs text-slate-400 dark:text-slate-500 mt-2">
               💡 New to Ollama? Download from{" "}
-              <a 
-                href="https://ollama.com/download" 
-                target="_blank" 
+              <a
+                href="https://ollama.com/download"
+                target="_blank"
                 rel="noopener noreferrer"
                 className="text-blue-500 hover:underline"
               >
                 ollama.com/download
               </a>{" "}
               and pull{" "}
-              <a 
-                href="https://ollama.com/search?c=tools" 
-                target="_blank" 
+              <a
+                href="https://ollama.com/search?c=tools"
+                target="_blank"
                 rel="noopener noreferrer"
                 className="text-blue-500 hover:underline"
               >
@@ -88,4 +88,4 @@ export const EmptyChatsState: React.FC<EmptyChatsStateProps> = ({
   );
 };
 
-export type { ChatConfig }; 
+export type { ChatConfig };

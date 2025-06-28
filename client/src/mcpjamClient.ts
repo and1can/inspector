@@ -7,7 +7,7 @@ import {
   ClientRequest,
   Progress,
   ResourceReference, // Keep using this despite deprecation warning for now
-  PromptReference,   // Keep using this despite deprecation warning for now
+  PromptReference, // Keep using this despite deprecation warning for now
   CompleteResultSchema,
   McpError,
   ErrorCode,
@@ -23,9 +23,7 @@ import {
   providerManager,
   SupportedProvider,
 } from "@/lib/providers";
-import {
-  Tool,
-} from "@anthropic-ai/sdk/resources/messages/messages.mjs";
+import { Tool } from "@anthropic-ai/sdk/resources/messages/messages.mjs";
 import packageJson from "../package.json";
 import {
   getMCPProxyAddress,
@@ -57,7 +55,12 @@ import {
 import { auth } from "@modelcontextprotocol/sdk/client/auth.js";
 import { HttpServerDefinition, MCPJamServerConfig } from "@/lib/serverTypes";
 import { ClientLogLevels } from "./hooks/helpers/types";
-import { ChatLoopProvider, ChatLoop, QueryProcessor, ToolCaller } from "./lib/chatLoop";
+import {
+  ChatLoopProvider,
+  ChatLoop,
+  QueryProcessor,
+  ToolCaller,
+} from "./lib/chatLoop";
 import { ElicitationResponse } from "./components/ElicitationModal";
 
 /**
@@ -79,18 +82,21 @@ export interface ExtendedMcpClient extends Client {
 /**
  * Implementation of MCP client for connecting to MCP servers
  */
-export class MCPJamClient extends Client<Request, Notification, Result> implements ChatLoopProvider, ToolCaller {
+export class MCPJamClient
+  extends Client<Request, Notification, Result>
+  implements ChatLoopProvider, ToolCaller
+{
   private clientTransport: Transport | undefined;
   private serverConfig: MCPJamServerConfig;
   private headers: HeadersInit;
   private mcpProxyServerUrl: URL;
   private inspectorConfig: InspectorConfig;
   private queryProcessor: QueryProcessor;
-  
+
   public connectionStatus: ConnectionStatus;
   public serverCapabilities: ServerCapabilities | null;
   public completionsSupported: boolean;
-  
+
   public bearerToken?: string;
   public headerName?: string;
   public onStdErrNotification?: (notification: StdErrNotification) => void;
@@ -109,7 +115,7 @@ export class MCPJamClient extends Client<Request, Notification, Result> implemen
 
   /**
    * Creates a new MCPJamClient instance
-   * 
+   *
    * @param serverConfig Configuration for the server connection
    * @param inspectorConfig Inspector configuration
    * @param addRequestHistory Callback to record request history
@@ -134,7 +140,10 @@ export class MCPJamClient extends Client<Request, Notification, Result> implemen
       resolve: (result: CreateMessageResult) => void,
       reject: (error: Error) => void,
     ) => void,
-    onElicitationRequest?: (request: ElicitRequest, resolve: (result: ElicitationResponse) => void) => void,
+    onElicitationRequest?: (
+      request: ElicitRequest,
+      resolve: (result: ElicitationResponse) => void,
+    ) => void,
     getRoots?: () => unknown[],
   ) {
     super(
@@ -152,12 +161,14 @@ export class MCPJamClient extends Client<Request, Notification, Result> implemen
 
     this.serverConfig = serverConfig;
     this.headers = {};
-    this.mcpProxyServerUrl = new URL(`${getMCPProxyAddress(inspectorConfig)}/stdio`);
+    this.mcpProxyServerUrl = new URL(
+      `${getMCPProxyAddress(inspectorConfig)}/stdio`,
+    );
     this.inspectorConfig = inspectorConfig;
     this.connectionStatus = "disconnected";
     this.serverCapabilities = null;
     this.completionsSupported = true;
-    
+
     // Callbacks and handlers
     this.bearerToken = bearerToken;
     this.headerName = headerName;
@@ -167,7 +178,7 @@ export class MCPJamClient extends Client<Request, Notification, Result> implemen
     this.getRoots = getRoots;
     this.addRequestHistory = addRequestHistory;
     this.addClientLog = addClientLog;
-    
+
     // Initialize query processor
     this.queryProcessor = new QueryProcessor(this);
   }
@@ -217,7 +228,8 @@ export class MCPJamClient extends Client<Request, Notification, Result> implemen
 
     this.mcpProxyServerUrl = serverUrl;
     try {
-      const command = "command" in this.serverConfig ? this.serverConfig.command : "unknown";
+      const command =
+        "command" in this.serverConfig ? this.serverConfig.command : "unknown";
       this.addClientLog(
         `Connecting to MCP server via stdio: ${command}`,
         "info",
@@ -398,13 +410,11 @@ export class MCPJamClient extends Client<Request, Notification, Result> implemen
       "url" in this.serverConfig &&
       this.serverConfig.url
     ) {
-      return new InspectorOAuthClientProvider(
-        this.serverConfig.url.toString()
-      );
+      return new InspectorOAuthClientProvider(this.serverConfig.url.toString());
     }
     return null;
   }
-  
+
   /**
    * Attempt OAuth authentication flow
    * @returns true if authentication successful
@@ -414,15 +424,17 @@ export class MCPJamClient extends Client<Request, Notification, Result> implemen
     if (!authProvider) {
       return false;
     }
-    
+
     try {
-      const serverUrl = "url" in this.serverConfig && this.serverConfig.url ? 
-        this.serverConfig.url.toString() : "";
-        
+      const serverUrl =
+        "url" in this.serverConfig && this.serverConfig.url
+          ? this.serverConfig.url.toString()
+          : "";
+
       const result = await auth(authProvider, {
         serverUrl: serverUrl,
       });
-      
+
       if (result === "AUTHORIZED") {
         this.addClientLog("OAuth authentication successful", "info");
         return true;
@@ -431,8 +443,8 @@ export class MCPJamClient extends Client<Request, Notification, Result> implemen
         return false;
       }
     } catch (error) {
-      const errorMessage = error instanceof Error ? 
-        error.message : String(error);
+      const errorMessage =
+        error instanceof Error ? error.message : String(error);
       this.addClientLog(`OAuth flow failed: ${errorMessage}`, "error");
       return false;
     }
@@ -449,7 +461,7 @@ export class MCPJamClient extends Client<Request, Notification, Result> implemen
         "Authentication error detected, attempting OAuth flow",
         "warn",
       );
-      
+
       return await this.performOAuthFlow();
     }
 
@@ -473,7 +485,10 @@ export class MCPJamClient extends Client<Request, Notification, Result> implemen
     if (this.onElicitationRequest) {
       this.setRequestHandler(ElicitRequestSchema, (request) => {
         return new Promise((resolve) => {
-          this.onElicitationRequest?.(request, resolve as (result: ElicitationResponse) => void);
+          this.onElicitationRequest?.(
+            request,
+            resolve as (result: ElicitationResponse) => void,
+          );
         });
       });
     }
@@ -538,10 +553,7 @@ export class MCPJamClient extends Client<Request, Notification, Result> implemen
       // For stdio or when manually providing bearer token, still apply it
       const authHeaderName = this.headerName || "Authorization";
       headers[authHeaderName] = `Bearer ${this.bearerToken}`;
-      this.addClientLog(
-        "Bearer token configured for stdio transport",
-        "debug",
-      );
+      this.addClientLog("Bearer token configured for stdio transport", "debug");
     }
 
     return headers;
@@ -610,10 +622,10 @@ export class MCPJamClient extends Client<Request, Notification, Result> implemen
       try {
         // Connect to transport based on server config
         await this.connectToTransport();
-        
+
         // Reset completions support on new connection
         this.completionsSupported = true;
-        
+
         // Set up request handlers
         this.setupRequestHandlers();
 
@@ -684,7 +696,9 @@ export class MCPJamClient extends Client<Request, Notification, Result> implemen
    * @param options User-provided options or undefined
    * @returns Request options with defaults applied
    */
-  private prepareRequestOptions(options?: RequestOptions & { suppressToast?: boolean }): RequestOptions {
+  private prepareRequestOptions(
+    options?: RequestOptions & { suppressToast?: boolean },
+  ): RequestOptions {
     const abortController = new AbortController();
 
     // Prepare MCP Client request options with appropriate timeouts
@@ -704,10 +718,10 @@ export class MCPJamClient extends Client<Request, Notification, Result> implemen
     if (mcpRequestOptions.resetTimeoutOnProgress) {
       mcpRequestOptions.onprogress = this.handleProgressNotification;
     }
-    
+
     return mcpRequestOptions;
   }
-  
+
   /**
    * Handle progress notifications
    * @param params Progress parameters
@@ -718,17 +732,14 @@ export class MCPJamClient extends Client<Request, Notification, Result> implemen
       this.addClientLog(`Progress: ${params.progress}`, "debug");
     }
   };
-  
+
   /**
    * Format and display error toast message
    * @param error The error that occurred
    */
   private showErrorToast(error: unknown): void {
     const errorString = error instanceof Error ? error.message : String(error);
-    this.addClientLog(
-      `Request error (toast shown): ${errorString}`,
-      "error",
-    );
+    this.addClientLog(`Request error (toast shown): ${errorString}`, "error");
     toast({
       title: "Error",
       description: errorString,
@@ -789,7 +800,7 @@ export class MCPJamClient extends Client<Request, Notification, Result> implemen
   private createCompletionRequest(
     ref: ResourceReference | PromptReference,
     argName: string,
-    value: string
+    value: string,
   ): ClientRequest {
     return {
       method: "completion/complete",
@@ -802,7 +813,7 @@ export class MCPJamClient extends Client<Request, Notification, Result> implemen
       },
     };
   }
-  
+
   /**
    * Handle unsupported completion method error
    * @param error The error from completion attempt
@@ -817,7 +828,7 @@ export class MCPJamClient extends Client<Request, Notification, Result> implemen
       );
       return [];
     }
-    
+
     // For other errors, show toast and rethrow
     const errorMessage = error instanceof Error ? error.message : String(error);
     this.addClientLog(`Completion request failed: ${errorMessage}`, "error");
@@ -853,12 +864,12 @@ export class MCPJamClient extends Client<Request, Notification, Result> implemen
       // Create and execute completion request
       const request = this.createCompletionRequest(ref, argName, value);
       this.addClientLog(`Requesting completion for ${argName}`, "debug");
-      
+
       const response = await this.makeRequest(request, CompleteResultSchema, {
         signal,
         suppressToast: true,
       });
-      
+
       // Log results and return values
       const completionCount = response?.completion.values?.length || 0;
       this.addClientLog(
@@ -927,7 +938,14 @@ export class MCPJamClient extends Client<Request, Notification, Result> implemen
     provider?: SupportedProvider,
     signal?: AbortSignal,
   ): Promise<string> {
-    return this.queryProcessor.processQuery(query, tools, onUpdate, model, provider, signal);
+    return this.queryProcessor.processQuery(
+      query,
+      tools,
+      onUpdate,
+      model,
+      provider,
+      signal,
+    );
   }
 
   /**
