@@ -443,7 +443,7 @@ export class QueryProcessor {
     }
 
     // Add tool result to the displayed text (for user to see)
-    const toolResultMessage = `[Tool ${content.name} result: ${resultContent}]`;
+    const toolResultMessage = `[Tool ${content.name} result ${resultContent}]`;
     context.finalText.push(toolResultMessage);
 
     this.addMessagesToContext(
