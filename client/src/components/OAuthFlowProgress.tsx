@@ -125,7 +125,7 @@ export const OAuthFlowProgress = ({
       </p>
 
       <div className="space-y-3">
-      <OAuthStepDetails
+        <OAuthStepDetails
           label="Metadata Discovery"
           {...getStepProps("metadata_discovery")}
         >
@@ -196,9 +196,7 @@ export const OAuthFlowProgress = ({
                   {authState.authServerUrl && (
                     <p className="text-xs text-muted-foreground">
                       From{" "}
-                      {
-                        oauthAuthServerMetadataUrl(authState.authServerUrl).href
-                      }
+                      {oauthAuthServerMetadataUrl(authState.authServerUrl).href}
                     </p>
                   )}
                   <pre className="mt-2 p-2 bg-muted rounded-md overflow-auto max-h-[300px]">

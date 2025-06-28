@@ -23,24 +23,37 @@ interface ChatProps {
   updateTrigger?: number;
 }
 
-const Chat: React.FC<ChatProps> = ({ provider, config, getServersCount, updateTrigger }) => {
+const Chat: React.FC<ChatProps> = ({
+  provider,
+  config,
+  getServersCount,
+  updateTrigger,
+}) => {
   // Core state
   const [input, setInput] = useState("");
   const [chat, setChat] = useState<Message[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [abortController, setAbortController] = useState<AbortController | null>(null);
-  const [pendingToolCalls, setPendingToolCalls] = useState<Map<string, PendingToolCall>>(new Map());
-  const [toolCallResolutions, setToolCallResolutions] = useState<Map<string, Promise<boolean>>>(new Map());
-  
+  const [abortController, setAbortController] =
+    useState<AbortController | null>(null);
+  const [pendingToolCalls, setPendingToolCalls] = useState<
+    Map<string, PendingToolCall>
+  >(new Map());
+  const [toolCallResolutions, setToolCallResolutions] = useState<
+    Map<string, Promise<boolean>>
+  >(new Map());
+
   // Tools and server state
   const [tools, setTools] = useState<Tool[]>([]);
   const [toolsCount, setToolsCount] = useState(0);
   const [serversCount, setServersCount] = useState(0);
-  
+
   // Provider and model state
-  const [selectedProvider, setSelectedProvider] = useState<SupportedProvider>("anthropic");
-  const [selectedModel, setSelectedModel] = useState<string>("claude-3-5-sonnet-latest");
+  const [selectedProvider, setSelectedProvider] =
+    useState<SupportedProvider>("anthropic");
+  const [selectedModel, setSelectedModel] = useState<string>(
+    "claude-3-5-sonnet-latest",
+  );
   const [showProviderSelector, setShowProviderSelector] = useState(false);
   const [showModelSelector, setShowModelSelector] = useState(false);
 
@@ -52,48 +65,63 @@ const Chat: React.FC<ChatProps> = ({ provider, config, getServersCount, updateTr
 
   // Computed values
   const availableProviders = (): SupportedProvider[] => {
-    return (["anthropic", "openai", "ollama"] as SupportedProvider[])
-      .filter(p => providerManager.isProviderReady(p));
+    return (["anthropic", "openai", "ollama"] as SupportedProvider[]).filter(
+      (p) => providerManager.isProviderReady(p),
+    );
   };
-  
+
   const hasApiKey = availableProviders().length > 0;
-  const availableModels = providerManager.getProvider(selectedProvider)?.getSupportedModels() || [];
+  const availableModels =
+    providerManager.getProvider(selectedProvider)?.getSupportedModels() || [];
   const canSend = input.trim() && provider && hasApiKey && !loading;
   const hasPendingToolCalls = pendingToolCalls.size > 0;
 
   // Message helpers
-  const createMessage = (role: "user" | "assistant", content: string): Message => ({
+  const createMessage = (
+    role: "user" | "assistant",
+    content: string,
+  ): Message => ({
     role,
     content,
     timestamp: new Date(),
   });
 
   const addMessageToChat = (message: Message) => {
-    setChat(prev => [...prev, message]);
+    setChat((prev) => [...prev, message]);
   };
 
   // Tool fetching
   const fetchTools = React.useCallback(async () => {
     if (!provider) return;
-    
+
     try {
       let tools: Tool[] = [];
-      
+
       if (config.mode === "global" && "getAllTools" in provider) {
         const allServerTools = await (provider as MCPJamAgent).getAllTools();
-        tools = allServerTools.flatMap(serverTools => serverTools.tools);
+        tools = allServerTools.flatMap((serverTools) => serverTools.tools);
       } else if (config.mode === "single" && "listTools" in provider) {
         const response = await (provider as MCPJamClient).listTools();
         tools = response.tools || [];
       }
-      
+
       setTools(tools);
       setToolsCount(tools.length);
       setServersCount(getServersCount?.() || 0);
     } catch (error) {
-      setError(error instanceof Error ? error.message : "Failed to fetch tools");
+      setError(
+        error instanceof Error ? error.message : "Failed to fetch tools",
+      );
     }
-  }, [provider, config, getServersCount, setTools, setToolsCount, setServersCount, setError]);
+  }, [
+    provider,
+    config,
+    getServersCount,
+    setTools,
+    setToolsCount,
+    setServersCount,
+    setError,
+  ]);
 
   // Message processing
   // Tool call approval handlers
@@ -102,10 +130,12 @@ const Chat: React.FC<ChatProps> = ({ provider, config, getServersCount, updateTr
     const resolver = toolCallResolutions.get(toolCall.id);
     if (resolver) {
       // Resolve the promise with true (approved)
-      (resolver as unknown as { resolve: (value: boolean) => void }).resolve(true);
-      
+      (resolver as unknown as { resolve: (value: boolean) => void }).resolve(
+        true,
+      );
+
       // Remove the tool call from pending list
-      setPendingToolCalls(prev => {
+      setPendingToolCalls((prev) => {
         const newMap = new Map(prev);
         newMap.delete(toolCall.id);
         return newMap;
@@ -118,10 +148,12 @@ const Chat: React.FC<ChatProps> = ({ provider, config, getServersCount, updateTr
     const resolver = toolCallResolutions.get(toolCall.id);
     if (resolver) {
       // Resolve the promise with false (rejected)
-      (resolver as unknown as { resolve: (value: boolean) => void }).resolve(false);
-      
+      (resolver as unknown as { resolve: (value: boolean) => void }).resolve(
+        false,
+      );
+
       // Remove the tool call from pending list
-      setPendingToolCalls(prev => {
+      setPendingToolCalls((prev) => {
         const newMap = new Map(prev);
         newMap.delete(toolCall.id);
         return newMap;
@@ -130,31 +162,34 @@ const Chat: React.FC<ChatProps> = ({ provider, config, getServersCount, updateTr
   };
 
   // Implement the ToolCallApprover interface method
-  const requestToolCallApproval = React.useCallback((name: string, input: unknown, id: string): Promise<boolean> => {
-    return new Promise((resolve) => {
-      // Create a pending tool call
-      const toolCall: PendingToolCall = {
-        id,
-        name,
-        input,
-        timestamp: new Date()
-      };
-      
-      // Add to the pending tool calls
-      setPendingToolCalls(prev => {
-        const newMap = new Map(prev);
-        newMap.set(id, toolCall);
-        return newMap;
+  const requestToolCallApproval = React.useCallback(
+    (name: string, input: unknown, id: string): Promise<boolean> => {
+      return new Promise((resolve) => {
+        // Create a pending tool call
+        const toolCall: PendingToolCall = {
+          id,
+          name,
+          input,
+          timestamp: new Date(),
+        };
+
+        // Add to the pending tool calls
+        setPendingToolCalls((prev) => {
+          const newMap = new Map(prev);
+          newMap.set(id, toolCall);
+          return newMap;
+        });
+
+        // Store the resolver so we can call it when user approves/rejects
+        setToolCallResolutions((prev) => {
+          const newMap = new Map(prev);
+          newMap.set(id, { resolve } as unknown as Promise<boolean>);
+          return newMap;
+        });
       });
-      
-      // Store the resolver so we can call it when user approves/rejects
-      setToolCallResolutions(prev => {
-        const newMap = new Map(prev);
-        newMap.set(id, { resolve } as unknown as Promise<boolean>);
-        return newMap;
-      });
-    });
-  }, [setPendingToolCalls, setToolCallResolutions]);
+    },
+    [setPendingToolCalls, setToolCallResolutions],
+  );
 
   const processMessage = async (userMessage: string) => {
     if (!provider) return;
@@ -181,7 +216,7 @@ const Chat: React.FC<ChatProps> = ({ provider, config, getServersCount, updateTr
     };
 
     try {
-      const convertedTools: AnthropicTool[] = tools.map(tool => ({
+      const convertedTools: AnthropicTool[] = tools.map((tool) => ({
         name: tool.name,
         description: tool.description || "",
         input_schema: tool.inputSchema || { type: "object", properties: {} },
@@ -190,11 +225,12 @@ const Chat: React.FC<ChatProps> = ({ provider, config, getServersCount, updateTr
       // Pass to the tool call processing
       // If the provider is already a QueryProcessor, it would have been instantiated
       // with a tool call approver in the component that created it
-      const queryProcessor = provider instanceof QueryProcessor 
-        ? provider 
-        : new QueryProcessor(provider, {
-            requestToolCallApproval // Use our approval implementation
-          });
+      const queryProcessor =
+        provider instanceof QueryProcessor
+          ? provider
+          : new QueryProcessor(provider, {
+              requestToolCallApproval, // Use our approval implementation
+            });
 
       await queryProcessor.processQuery(
         userMessage,
@@ -202,15 +238,23 @@ const Chat: React.FC<ChatProps> = ({ provider, config, getServersCount, updateTr
         onUpdate,
         selectedModel,
         selectedProvider,
-        controller.signal
+        controller.signal,
       );
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : "Error sending message";
+      const errorMessage =
+        error instanceof Error ? error.message : "Error sending message";
       if (errorMessage !== "Chat was cancelled") {
         if (hasStarted) {
-          addMessageToChat(createMessage("assistant", fullResponse + `\n\n*[Error: ${errorMessage}]*`));
+          addMessageToChat(
+            createMessage(
+              "assistant",
+              fullResponse + `\n\n*[Error: ${errorMessage}]*`,
+            ),
+          );
         } else {
-          addMessageToChat(createMessage("assistant", `*[Error: ${errorMessage}]*`));
+          addMessageToChat(
+            createMessage("assistant", `*[Error: ${errorMessage}]*`),
+          );
         }
         setError(errorMessage);
       }
@@ -246,7 +290,7 @@ const Chat: React.FC<ChatProps> = ({ provider, config, getServersCount, updateTr
   const handleInputChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     const target = e.target;
     setInput(target.value);
-    
+
     // Auto-resize textarea
     target.style.height = "auto";
     target.style.height = Math.min(target.scrollHeight, 128) + "px";
@@ -255,9 +299,10 @@ const Chat: React.FC<ChatProps> = ({ provider, config, getServersCount, updateTr
   const selectProvider = (provider: SupportedProvider) => {
     setSelectedProvider(provider);
     setShowProviderSelector(false);
-    
+
     // Update model to first available for this provider
-    const models = providerManager.getProvider(provider)?.getSupportedModels() || [];
+    const models =
+      providerManager.getProvider(provider)?.getSupportedModels() || [];
     if (models.length > 0) {
       setSelectedModel(models[0].id);
     }
@@ -274,8 +319,9 @@ const Chat: React.FC<ChatProps> = ({ provider, config, getServersCount, updateTr
     if (providers.length > 0) {
       const firstProvider = providers[0];
       setSelectedProvider(firstProvider);
-      
-      const models = providerManager.getProvider(firstProvider)?.getSupportedModels() || [];
+
+      const models =
+        providerManager.getProvider(firstProvider)?.getSupportedModels() || [];
       if (models.length > 0) {
         setSelectedModel(models[0].id);
       }
@@ -299,17 +345,24 @@ const Chat: React.FC<ChatProps> = ({ provider, config, getServersCount, updateTr
   // Handle clicks outside dropdowns
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
-      if (providerSelectorRef.current && !providerSelectorRef.current.contains(event.target as Node)) {
+      if (
+        providerSelectorRef.current &&
+        !providerSelectorRef.current.contains(event.target as Node)
+      ) {
         setShowProviderSelector(false);
       }
-      if (modelSelectorRef.current && !modelSelectorRef.current.contains(event.target as Node)) {
+      if (
+        modelSelectorRef.current &&
+        !modelSelectorRef.current.contains(event.target as Node)
+      ) {
         setShowModelSelector(false);
       }
     };
 
     if (showProviderSelector || showModelSelector) {
       document.addEventListener("mousedown", handleClickOutside);
-      return () => document.removeEventListener("mousedown", handleClickOutside);
+      return () =>
+        document.removeEventListener("mousedown", handleClickOutside);
     }
   }, [showProviderSelector, showModelSelector]);
 
@@ -331,19 +384,22 @@ const Chat: React.FC<ChatProps> = ({ provider, config, getServersCount, updateTr
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
               <div className="w-8 h-8 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center">
-                <ProviderLogo className="text-slate-600 dark:text-slate-300" size={20} provider={selectedProvider} />
+                <ProviderLogo
+                  className="text-slate-600 dark:text-slate-300"
+                  size={20}
+                  provider={selectedProvider}
+                />
               </div>
               <div>
                 <h1 className="text-base font-semibold text-slate-900 dark:text-slate-100">
                   {config.title}
                 </h1>
                 <p className="text-xs text-slate-500 dark:text-slate-400">
-                  {hasApiKey 
-                    ? config.mode === "global" 
+                  {hasApiKey
+                    ? config.mode === "global"
                       ? `${serversCount} servers • ${toolsCount} tools`
                       : `${toolsCount} tools available`
-                    : "API key required"
-                  }
+                    : "API key required"}
                 </p>
               </div>
             </div>
@@ -353,7 +409,9 @@ const Chat: React.FC<ChatProps> = ({ provider, config, getServersCount, updateTr
                 {/* Provider Selector */}
                 <div className="relative" ref={providerSelectorRef}>
                   <button
-                    onClick={() => setShowProviderSelector(!showProviderSelector)}
+                    onClick={() =>
+                      setShowProviderSelector(!showProviderSelector)
+                    }
                     className="flex items-center gap-2 px-3 py-1.5 text-sm bg-slate-50 dark:bg-slate-800/50 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors border border-slate-200 dark:border-slate-700"
                     disabled={loading}
                   >
@@ -372,7 +430,8 @@ const Chat: React.FC<ChatProps> = ({ provider, config, getServersCount, updateTr
                             onClick={() => selectProvider(provider)}
                             className={cn(
                               "w-full px-4 py-2 text-left hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors",
-                              selectedProvider === provider && "bg-slate-50 dark:bg-slate-800"
+                              selectedProvider === provider &&
+                                "bg-slate-50 dark:bg-slate-800",
                             )}
                           >
                             <div className="text-sm font-medium text-slate-900 dark:text-slate-100">
@@ -393,7 +452,8 @@ const Chat: React.FC<ChatProps> = ({ provider, config, getServersCount, updateTr
                     disabled={loading}
                   >
                     <span className="text-slate-700 dark:text-slate-200 font-medium">
-                      {availableModels.find(m => m.id === selectedModel)?.name || selectedModel}
+                      {availableModels.find((m) => m.id === selectedModel)
+                        ?.name || selectedModel}
                     </span>
                     <ChevronDown className="w-3 h-3 text-slate-400" />
                   </button>
@@ -407,7 +467,8 @@ const Chat: React.FC<ChatProps> = ({ provider, config, getServersCount, updateTr
                             onClick={() => selectModel(model.id)}
                             className={cn(
                               "w-full px-4 py-3 text-left hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors",
-                              selectedModel === model.id && "bg-slate-50 dark:bg-slate-800"
+                              selectedModel === model.id &&
+                                "bg-slate-50 dark:bg-slate-800",
                             )}
                           >
                             <div className="text-sm font-medium text-slate-900 dark:text-slate-100">
@@ -468,7 +529,11 @@ const Chat: React.FC<ChatProps> = ({ provider, config, getServersCount, updateTr
             {loading && (
               <div className="flex gap-3 px-6 py-4">
                 <div className="flex-shrink-0 w-8 h-8 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center">
-                  <ProviderLogo className="text-slate-600 dark:text-slate-300" size={20} provider={selectedProvider} />
+                  <ProviderLogo
+                    className="text-slate-600 dark:text-slate-300"
+                    size={20}
+                    provider={selectedProvider}
+                  />
                 </div>
                 <div className="bg-slate-50 dark:bg-slate-800/50 rounded-xl px-4 py-3">
                   <LoadingDots />
@@ -514,11 +579,15 @@ const Chat: React.FC<ChatProps> = ({ provider, config, getServersCount, updateTr
                   "focus:outline-none focus:ring-2 focus:ring-slate-400 dark:focus:ring-slate-500 focus:border-transparent",
                   "placeholder:text-slate-400 dark:placeholder:text-slate-500 text-sm",
                   "min-h-[48px] max-h-32 overflow-y-auto",
-                  (!hasApiKey || loading) && "opacity-50 cursor-not-allowed"
+                  (!hasApiKey || loading) && "opacity-50 cursor-not-allowed",
                 )}
-                style={{ height: "auto", minHeight: "48px", maxHeight: "128px" }}
+                style={{
+                  height: "auto",
+                  minHeight: "48px",
+                  maxHeight: "128px",
+                }}
               />
-              
+
               {loading ? (
                 <button
                   type="button"
@@ -535,7 +604,7 @@ const Chat: React.FC<ChatProps> = ({ provider, config, getServersCount, updateTr
                     "flex-shrink-0 w-10 h-10 rounded-xl flex items-center justify-center transition-colors",
                     !canSend
                       ? "bg-slate-100 dark:bg-slate-800 text-slate-400 cursor-not-allowed"
-                      : "bg-slate-900 dark:bg-slate-100 text-white dark:text-slate-900 hover:bg-slate-800 dark:hover:bg-slate-200"
+                      : "bg-slate-900 dark:bg-slate-100 text-white dark:text-slate-900 hover:bg-slate-800 dark:hover:bg-slate-200",
                   )}
                 >
                   <Send className="w-4 h-4" />
@@ -547,7 +616,8 @@ const Chat: React.FC<ChatProps> = ({ provider, config, getServersCount, updateTr
               <div className="text-xs text-slate-400 dark:text-slate-500 mt-3 px-1">
                 <span className="hidden sm:inline">
                   Press Enter to send • Shift+Enter for new line
-                  {config.mode === "global" && ` • ${toolsCount} tools from ${serversCount} servers`}
+                  {config.mode === "global" &&
+                    ` • ${toolsCount} tools from ${serversCount} servers`}
                 </span>
               </div>
             )}
@@ -558,4 +628,4 @@ const Chat: React.FC<ChatProps> = ({ provider, config, getServersCount, updateTr
   );
 };
 
-export default Chat; 
+export default Chat;

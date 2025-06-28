@@ -5,6 +5,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ## Common Commands
 
 ### Development
+
 ```bash
 # Install dependencies
 npm install
@@ -23,6 +24,7 @@ npm run clean
 ```
 
 ### Building
+
 ```bash
 # Build all components
 npm run build
@@ -37,6 +39,7 @@ npm run start
 ```
 
 ### Testing
+
 ```bash
 # Run all tests
 npm run test
@@ -49,6 +52,7 @@ cd client && npm run test:watch
 ```
 
 ### Linting
+
 ```bash
 # Check code formatting
 npm run prettier-check
@@ -58,6 +62,7 @@ cd client && npm run lint
 ```
 
 ### Running
+
 ```bash
 # Start the MCP Inspector
 npm run start

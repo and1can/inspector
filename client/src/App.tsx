@@ -30,7 +30,6 @@ import RootsTab from "./components/RootsTab";
 import SamplingTab from "./components/SamplingTab";
 import ToolsTab from "./components/ToolsTab";
 import ChatTab from "./components/chat/ChatTab";
-import GlobalChatTab from "./components/chat/GlobalChatTab";
 import Sidebar from "./components/Sidebar";
 import Tabs from "./components/Tabs";
 import SettingsTab from "./components/settings/SettingsTab";
@@ -106,7 +105,7 @@ const App = () => {
     const hasSeenStarModal = localStorage.getItem("hasSeenStarModal");
     if (hasSeenStarModal) {
       return;
-    };
+    }
 
     // Show modal after 1 minute (60000ms)
     const timer = setTimeout(() => {
@@ -967,7 +966,12 @@ const App = () => {
             />
           );
         case "chat":
-          return <ChatTab />;
+          return (
+            <ChatTab
+              mcpAgent={connectionState.mcpAgent}
+              updateTrigger={connectionState.sidebarUpdateTrigger}
+            />
+          );
         case "console":
           return <ConsoleTab />;
         case "ping":
@@ -1018,8 +1022,6 @@ const App = () => {
           );
         case "settings":
           return <SettingsTab />;
-        case "global-chat":
-          return <GlobalChatTab mcpAgent={connectionState.mcpAgent} updateTrigger={connectionState.sidebarUpdateTrigger} />;
         default:
           return null;
       }
@@ -1053,7 +1055,6 @@ const App = () => {
           updateTrigger={connectionState.sidebarUpdateTrigger}
           isExpanded={isSidebarExpanded}
           onToggleExpanded={() => setIsSidebarExpanded(!isSidebarExpanded)}
-          onOpenChat={() => setCurrentPage("global-chat")}
         />
 
         {/* Main Content Area - Right Side */}

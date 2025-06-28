@@ -17,7 +17,13 @@ import {
 import { ConnectionStatus } from "./lib/constants";
 import { ClientLogLevels } from "./hooks/helpers/types";
 import { ElicitationResponse } from "./components/ElicitationModal";
-import { ChatLoopProvider, ChatLoop, mappedTools, QueryProcessor, ToolCaller } from "./lib/chatLoop";
+import {
+  ChatLoopProvider,
+  ChatLoop,
+  mappedTools,
+  QueryProcessor,
+  ToolCaller,
+} from "./lib/chatLoop";
 import { Tool as AnthropicTool } from "@anthropic-ai/sdk/resources/messages/messages.mjs";
 import { SupportedProvider } from "./lib/providers";
 
@@ -65,11 +71,11 @@ export class MCPJamAgent implements ChatLoopProvider, ToolCaller {
   private mcpClientsById = new Map<string, MCPJamClient>();
   private serverConfigs: Record<string, MCPJamServerConfig>;
   private inspectorConfig: InspectorConfig;
-  
+
   // Authentication
   private bearerToken?: string;
   private headerName?: string;
-  
+
   // Callbacks and handlers
   private onStdErrNotification?: (notification: StdErrNotification) => void;
   private onPendingRequest?: (
@@ -83,18 +89,24 @@ export class MCPJamAgent implements ChatLoopProvider, ToolCaller {
   ) => void;
   private getRoots?: () => unknown[];
   private addRequestHistory: (request: object, response?: object) => void;
-  
+
   // Public methods
   public addClientLog: (message: string, level: ClientLogLevels) => void;
-  
+
   // Processing components
   private queryProcessor: QueryProcessor;
-  
+
   // Performance optimization: cache data and timestamps for each server
-  private toolsCache = new Map<string, { tools: Tool[], timestamp: number }>();
-  private resourcesCache = new Map<string, { resources: Resource[], timestamp: number }>();
-  private promptsCache = new Map<string, { prompts: Prompt[], timestamp: number }>();
-  
+  private toolsCache = new Map<string, { tools: Tool[]; timestamp: number }>();
+  private resourcesCache = new Map<
+    string,
+    { resources: Resource[]; timestamp: number }
+  >();
+  private promptsCache = new Map<
+    string,
+    { prompts: Prompt[]; timestamp: number }
+  >();
+
   // Cache expiry times in milliseconds
   private readonly TOOLS_CACHE_EXPIRY = 5 * 60 * 1000; // 5 minutes
   private readonly RESOURCES_CACHE_EXPIRY = 2 * 60 * 1000; // 2 minutes
@@ -107,11 +119,11 @@ export class MCPJamAgent implements ChatLoopProvider, ToolCaller {
   constructor(options: MCPClientOptions) {
     this.serverConfigs = options.servers;
     this.inspectorConfig = options.inspectorConfig || createDefaultConfig();
-    
+
     // Set authentication options
     this.bearerToken = options.bearerToken;
     this.headerName = options.headerName;
-    
+
     // Set callbacks
     this.onStdErrNotification = options.onStdErrNotification;
     this.onPendingRequest = options.onPendingRequest;
@@ -119,7 +131,7 @@ export class MCPJamAgent implements ChatLoopProvider, ToolCaller {
     this.getRoots = options.getRoots;
     this.addRequestHistory = options.addRequestHistory;
     this.addClientLog = options.addClientLog;
-    
+
     // Initialize query processor
     this.queryProcessor = new QueryProcessor(this);
   }
@@ -140,7 +152,7 @@ export class MCPJamAgent implements ChatLoopProvider, ToolCaller {
   async removeServer(name: string): Promise<void> {
     // Disconnect if connected
     await this.disconnectFromServer(name);
-    
+
     // Clean up all references to this server
     delete this.serverConfigs[name];
     this.mcpClientsById.delete(name);
@@ -184,17 +196,20 @@ export class MCPJamAgent implements ChatLoopProvider, ToolCaller {
       throw new Error(`Server ${serverName} not found`);
     }
     const client = await this.getOrCreateClient(serverName, serverConfig);
-    
+
     // Cache data for the newly connected server for performance
-    this.addClientLog(`Initializing caches for new connection to ${serverName}`, "debug");
-    
+    this.addClientLog(
+      `Initializing caches for new connection to ${serverName}`,
+      "debug",
+    );
+
     // Use Promise.all to initialize all caches in parallel
     await Promise.all([
       this.cacheToolsForServer(serverName),
       this.cacheResourcesForServer(serverName),
-      this.cachePromptsForServer(serverName)
+      this.cachePromptsForServer(serverName),
     ]);
-    
+
     return client;
   }
 
@@ -223,42 +238,54 @@ export class MCPJamAgent implements ChatLoopProvider, ToolCaller {
   private isCacheValid<T>(
     cache: Map<string, { timestamp: number } & T>,
     serverName: string,
-    expiryTime: number
+    expiryTime: number,
   ): boolean {
     const cacheEntry = cache.get(serverName);
     if (!cacheEntry) return false;
-    
+
     const now = Date.now();
-    return (now - cacheEntry.timestamp) < expiryTime;
+    return now - cacheEntry.timestamp < expiryTime;
   }
-  
+
   /**
    * Check if the tools cache for a server is valid and not expired
    * @param serverName Name of the server to check
    * @returns true if cache exists and is valid
    */
   private isToolsCacheValid(serverName: string): boolean {
-    return this.isCacheValid(this.toolsCache, serverName, this.TOOLS_CACHE_EXPIRY);
+    return this.isCacheValid(
+      this.toolsCache,
+      serverName,
+      this.TOOLS_CACHE_EXPIRY,
+    );
   }
-  
+
   /**
    * Check if the resources cache for a server is valid and not expired
    * @param serverName Name of the server to check
    * @returns true if cache exists and is valid
    */
   private isResourcesCacheValid(serverName: string): boolean {
-    return this.isCacheValid(this.resourcesCache, serverName, this.RESOURCES_CACHE_EXPIRY);
+    return this.isCacheValid(
+      this.resourcesCache,
+      serverName,
+      this.RESOURCES_CACHE_EXPIRY,
+    );
   }
-  
+
   /**
    * Check if the prompts cache for a server is valid and not expired
    * @param serverName Name of the server to check
    * @returns true if cache exists and is valid
    */
   private isPromptsCacheValid(serverName: string): boolean {
-    return this.isCacheValid(this.promptsCache, serverName, this.PROMPTS_CACHE_EXPIRY);
+    return this.isCacheValid(
+      this.promptsCache,
+      serverName,
+      this.PROMPTS_CACHE_EXPIRY,
+    );
   }
-  
+
   /**
    * Find servers that need tools cache initialization
    * @returns Array of server information objects that need cache initialization
@@ -266,7 +293,9 @@ export class MCPJamAgent implements ChatLoopProvider, ToolCaller {
   private findServersNeedingCacheInit(): ServerConnectionInfo[] {
     const connectionInfo = this.getAllConnectionInfo();
     return connectionInfo.filter(
-      (conn) => conn.connectionStatus === "connected" && !this.isToolsCacheValid(conn.name)
+      (conn) =>
+        conn.connectionStatus === "connected" &&
+        !this.isToolsCacheValid(conn.name),
     );
   }
 
@@ -276,11 +305,14 @@ export class MCPJamAgent implements ChatLoopProvider, ToolCaller {
    */
   async initializeToolsCache(): Promise<void> {
     const serversNeedingCache = this.findServersNeedingCacheInit();
-    
+
     if (serversNeedingCache.length > 0) {
-      this.addClientLog(`Initializing tools cache for ${serversNeedingCache.length} connected servers`, "debug");
-      const cachePromises = serversNeedingCache.map(serverInfo => 
-        this.cacheToolsForServer(serverInfo.name)
+      this.addClientLog(
+        `Initializing tools cache for ${serversNeedingCache.length} connected servers`,
+        "debug",
+      );
+      const cachePromises = serversNeedingCache.map((serverInfo) =>
+        this.cacheToolsForServer(serverInfo.name),
       );
       await Promise.all(cachePromises);
     }
@@ -312,9 +344,9 @@ export class MCPJamAgent implements ChatLoopProvider, ToolCaller {
         } catch (error) {
           console.error(`Failed to disconnect from server ${name}:`, error);
         }
-      }
+      },
     );
-    
+
     await Promise.all(disconnectionPromises);
     this.mcpClientsById.clear();
   }
@@ -390,7 +422,9 @@ export class MCPJamAgent implements ChatLoopProvider, ToolCaller {
    * @returns Connected client instance
    * @throws Error if server not found
    */
-  private async getConnectedClientForServer(serverName: string): Promise<MCPJamClient> {
+  private async getConnectedClientForServer(
+    serverName: string,
+  ): Promise<MCPJamClient> {
     const serverConfig = this.serverConfigs[serverName];
     if (!serverConfig) {
       throw new Error(`Server ${serverName} not found`);
@@ -407,14 +441,14 @@ export class MCPJamAgent implements ChatLoopProvider, ToolCaller {
    */
   private getServerTools(
     serverInfo: ServerConnectionInfo,
-    refreshPromises: Promise<void>[]
+    refreshPromises: Promise<void>[],
   ): { serverName: string; tools: Tool[] } {
     // Check if cache needs refreshing
     if (!this.isToolsCacheValid(serverInfo.name)) {
       // Add to refresh promises but don't wait - continue processing other servers
       refreshPromises.push(this.cacheToolsForServer(serverInfo.name));
     }
-    
+
     // Use cached data (even if it's being refreshed concurrently)
     const cachedEntry = this.toolsCache.get(serverInfo.name);
     return {
@@ -431,28 +465,28 @@ export class MCPJamAgent implements ChatLoopProvider, ToolCaller {
   async getAllTools(): Promise<{ serverName: string; tools: Tool[] }[]> {
     const allServerTools: { serverName: string; tools: Tool[] }[] = [];
     const refreshPromises: Promise<void>[] = [];
-    
+
     // Get all connected servers
     const connectedServers = this.getConnectedServers();
-    
+
     // Process each connected server
     for (const serverInfo of connectedServers) {
       const serverTools = this.getServerTools(serverInfo, refreshPromises);
       allServerTools.push(serverTools);
     }
-    
+
     // Start cache refresh in background if needed
     if (refreshPromises.length > 0) {
       this.addClientLog(
         `Starting background refresh for ${refreshPromises.length} expired tool caches`,
-        "debug"
+        "debug",
       );
       // Use Promise.all but don't await - let it run in background
-      Promise.all(refreshPromises).catch(error => {
+      Promise.all(refreshPromises).catch((error) => {
         console.error("Error refreshing tool cache:", error);
       });
     }
-    
+
     return allServerTools;
   }
 
@@ -465,14 +499,17 @@ export class MCPJamAgent implements ChatLoopProvider, ToolCaller {
       const client = await this.getConnectedClientForServer(serverName);
       const toolsResponse = await client.tools();
       const timestamp = Date.now();
-      
+
       // Store tools with timestamp for cache expiration checking
       this.toolsCache.set(serverName, {
         tools: toolsResponse.tools,
-        timestamp
+        timestamp,
       });
-      
-      this.addClientLog(`Cached ${toolsResponse.tools.length} tools for ${serverName}`, "debug");
+
+      this.addClientLog(
+        `Cached ${toolsResponse.tools.length} tools for ${serverName}`,
+        "debug",
+      );
     } catch (error) {
       console.error(`Failed to cache tools for server ${serverName}:`, error);
       // Store empty tools array with current timestamp
@@ -488,19 +525,28 @@ export class MCPJamAgent implements ChatLoopProvider, ToolCaller {
     // Clear tools cache
     if (this.toolsCache.has(serverName)) {
       this.toolsCache.delete(serverName);
-      this.addClientLog(`Cleared tools cache for server ${serverName}`, "debug");
+      this.addClientLog(
+        `Cleared tools cache for server ${serverName}`,
+        "debug",
+      );
     }
-    
+
     // Clear resources cache
     if (this.resourcesCache.has(serverName)) {
       this.resourcesCache.delete(serverName);
-      this.addClientLog(`Cleared resources cache for server ${serverName}`, "debug");
+      this.addClientLog(
+        `Cleared resources cache for server ${serverName}`,
+        "debug",
+      );
     }
-    
+
     // Clear prompts cache
     if (this.promptsCache.has(serverName)) {
       this.promptsCache.delete(serverName);
-      this.addClientLog(`Cleared prompts cache for server ${serverName}`, "debug");
+      this.addClientLog(
+        `Cleared prompts cache for server ${serverName}`,
+        "debug",
+      );
     }
   }
 
@@ -511,7 +557,7 @@ export class MCPJamAgent implements ChatLoopProvider, ToolCaller {
   private getConnectedServers(): ServerConnectionInfo[] {
     const connectionInfo = this.getAllConnectionInfo();
     return connectionInfo.filter(
-      (conn) => conn.connectionStatus === "connected"
+      (conn) => conn.connectionStatus === "connected",
     );
   }
 
@@ -520,20 +566,30 @@ export class MCPJamAgent implements ChatLoopProvider, ToolCaller {
    * @param serverName Name of server to refresh caches for
    */
   async refreshServerCaches(serverName: string): Promise<void> {
-    this.addClientLog(`Refreshing all caches for server ${serverName}`, "debug");
-    
+    this.addClientLog(
+      `Refreshing all caches for server ${serverName}`,
+      "debug",
+    );
+
     try {
       // Run all cache operations in parallel
       await Promise.all([
         this.cacheToolsForServer(serverName),
         this.cacheResourcesForServer(serverName),
-        this.cachePromptsForServer(serverName)
+        this.cachePromptsForServer(serverName),
       ]);
-      
-      this.addClientLog(`Successfully refreshed all caches for ${serverName}`, "info");
+
+      this.addClientLog(
+        `Successfully refreshed all caches for ${serverName}`,
+        "info",
+      );
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : String(error);
-      this.addClientLog(`Error refreshing caches for ${serverName}: ${errorMessage}`, "error");
+      const errorMessage =
+        error instanceof Error ? error.message : String(error);
+      this.addClientLog(
+        `Error refreshing caches for ${serverName}: ${errorMessage}`,
+        "error",
+      );
     }
   }
 
@@ -542,42 +598,57 @@ export class MCPJamAgent implements ChatLoopProvider, ToolCaller {
    */
   async refreshAllToolsCache(): Promise<void> {
     const connectedServers = this.getConnectedServers();
-    
+
     if (connectedServers.length === 0) {
       this.addClientLog("No connected servers to refresh cache", "info");
       return;
     }
-    
-    this.addClientLog(`Starting tools cache refresh for ${connectedServers.length} servers`, "debug");
-    
-    const cachePromises = connectedServers.map(serverInfo => 
-      this.cacheToolsForServer(serverInfo.name)
+
+    this.addClientLog(
+      `Starting tools cache refresh for ${connectedServers.length} servers`,
+      "debug",
     );
-    
+
+    const cachePromises = connectedServers.map((serverInfo) =>
+      this.cacheToolsForServer(serverInfo.name),
+    );
+
     await Promise.all(cachePromises);
-    this.addClientLog(`Refreshed tools cache for ${connectedServers.length} connected servers`, "info");
+    this.addClientLog(
+      `Refreshed tools cache for ${connectedServers.length} connected servers`,
+      "info",
+    );
   }
-  
+
   /**
    * Manually refresh all caches for all connected servers
    */
   async refreshAllCaches(): Promise<void> {
     const connectedServers = this.getConnectedServers();
-    
+
     if (connectedServers.length === 0) {
       this.addClientLog("No connected servers to refresh caches", "info");
       return;
     }
-    
-    this.addClientLog(`Starting full cache refresh for ${connectedServers.length} servers`, "info");
-    
+
+    this.addClientLog(
+      `Starting full cache refresh for ${connectedServers.length} servers`,
+      "info",
+    );
+
     for (const serverInfo of connectedServers) {
-      await this.refreshServerCaches(serverInfo.name).catch(error => {
-        console.error(`Failed to refresh caches for ${serverInfo.name}:`, error);
+      await this.refreshServerCaches(serverInfo.name).catch((error) => {
+        console.error(
+          `Failed to refresh caches for ${serverInfo.name}:`,
+          error,
+        );
       });
     }
-    
-    this.addClientLog(`Completed full cache refresh for ${connectedServers.length} servers`, "info");
+
+    this.addClientLog(
+      `Completed full cache refresh for ${connectedServers.length} servers`,
+      "info",
+    );
   }
 
   /**
@@ -589,18 +660,27 @@ export class MCPJamAgent implements ChatLoopProvider, ToolCaller {
       const client = await this.getConnectedClientForServer(serverName);
       const resourcesResponse = await client.listResources();
       const timestamp = Date.now();
-      
+
       // Store resources with timestamp for cache expiration checking
       this.resourcesCache.set(serverName, {
         resources: resourcesResponse.resources,
-        timestamp
+        timestamp,
       });
-      
-      this.addClientLog(`Cached ${resourcesResponse.resources.length} resources for ${serverName}`, "debug");
+
+      this.addClientLog(
+        `Cached ${resourcesResponse.resources.length} resources for ${serverName}`,
+        "debug",
+      );
     } catch (error) {
-      console.error(`Failed to cache resources for server ${serverName}:`, error);
+      console.error(
+        `Failed to cache resources for server ${serverName}:`,
+        error,
+      );
       // Store empty resources array with current timestamp
-      this.resourcesCache.set(serverName, { resources: [], timestamp: Date.now() });
+      this.resourcesCache.set(serverName, {
+        resources: [],
+        timestamp: Date.now(),
+      });
     }
   }
 
@@ -614,7 +694,7 @@ export class MCPJamAgent implements ChatLoopProvider, ToolCaller {
   private async getServerResources(
     serverName: string,
     serverConfig: MCPJamServerConfig,
-    useCache: boolean = true
+    useCache: boolean = true,
   ): Promise<{ serverName: string; resources: Resource[] }> {
     // Check cache first if enabled
     if (useCache && this.isResourcesCacheValid(serverName)) {
@@ -622,45 +702,49 @@ export class MCPJamAgent implements ChatLoopProvider, ToolCaller {
       if (cachedEntry) {
         this.addClientLog(
           `Using cached ${cachedEntry.resources.length} resources for ${serverName}`,
-          "debug"
+          "debug",
         );
         return {
           serverName,
-          resources: cachedEntry.resources
+          resources: cachedEntry.resources,
         };
       }
     }
-    
+
     // If not in cache or cache disabled, fetch from server
     try {
-      this.addClientLog(`Fetching resources from server ${serverName}`, "debug");
+      this.addClientLog(
+        `Fetching resources from server ${serverName}`,
+        "debug",
+      );
       const client = await this.getOrCreateClient(serverName, serverConfig);
       const resourcesResponse = await client.listResources();
-      
+
       // Update cache with new data
       this.resourcesCache.set(serverName, {
         resources: resourcesResponse.resources,
-        timestamp: Date.now()
+        timestamp: Date.now(),
       });
-      
+
       this.addClientLog(
         `Received ${resourcesResponse.resources.length} resources from ${serverName}`,
-        "debug"
+        "debug",
       );
-      
+
       return {
         serverName,
         resources: resourcesResponse.resources,
       };
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : String(error);
+      const errorMessage =
+        error instanceof Error ? error.message : String(error);
       this.addClientLog(
         `Failed to get resources from server ${serverName}: ${errorMessage}`,
-        "error"
+        "error",
       );
       console.error(
         `Failed to get resources from server ${serverName}:`,
-        error
+        error,
       );
       return {
         serverName,
@@ -674,27 +758,41 @@ export class MCPJamAgent implements ChatLoopProvider, ToolCaller {
    * @param parallel Whether to fetch resources in parallel (default: false)
    * @returns Array of resources by server name
    */
-  async getAllResources(parallel: boolean = false): Promise<{ serverName: string; resources: Resource[] }[]> {
+  async getAllResources(
+    parallel: boolean = false,
+  ): Promise<{ serverName: string; resources: Resource[] }[]> {
     const serverEntries = Object.entries(this.serverConfigs);
-    
+
     if (parallel) {
       // Process servers in parallel for faster performance
-      this.addClientLog(`Fetching resources from ${serverEntries.length} servers in parallel`, "debug");
-      const resourcePromises = serverEntries.map(([serverName, serverConfig]) => 
-        this.getServerResources(serverName, serverConfig)
+      this.addClientLog(
+        `Fetching resources from ${serverEntries.length} servers in parallel`,
+        "debug",
       );
-      
+      const resourcePromises = serverEntries.map(([serverName, serverConfig]) =>
+        this.getServerResources(serverName, serverConfig),
+      );
+
       return await Promise.all(resourcePromises);
     } else {
       // Process servers sequentially to avoid overwhelming connections
-      this.addClientLog(`Fetching resources from ${serverEntries.length} servers sequentially`, "debug");
-      const allServerResources: { serverName: string; resources: Resource[] }[] = [];
-      
+      this.addClientLog(
+        `Fetching resources from ${serverEntries.length} servers sequentially`,
+        "debug",
+      );
+      const allServerResources: {
+        serverName: string;
+        resources: Resource[];
+      }[] = [];
+
       for (const [serverName, serverConfig] of serverEntries) {
-        const serverResources = await this.getServerResources(serverName, serverConfig);
+        const serverResources = await this.getServerResources(
+          serverName,
+          serverConfig,
+        );
         allServerResources.push(serverResources);
       }
-      
+
       return allServerResources;
     }
   }
@@ -708,14 +806,17 @@ export class MCPJamAgent implements ChatLoopProvider, ToolCaller {
       const client = await this.getConnectedClientForServer(serverName);
       const promptsResponse = await client.listPrompts();
       const timestamp = Date.now();
-      
+
       // Store prompts with timestamp for cache expiration checking
       this.promptsCache.set(serverName, {
         prompts: promptsResponse.prompts,
-        timestamp
+        timestamp,
       });
-      
-      this.addClientLog(`Cached ${promptsResponse.prompts.length} prompts for ${serverName}`, "debug");
+
+      this.addClientLog(
+        `Cached ${promptsResponse.prompts.length} prompts for ${serverName}`,
+        "debug",
+      );
     } catch (error) {
       console.error(`Failed to cache prompts for server ${serverName}:`, error);
       // Store empty prompts array with current timestamp
@@ -733,7 +834,7 @@ export class MCPJamAgent implements ChatLoopProvider, ToolCaller {
   private async getServerPrompts(
     serverName: string,
     serverConfig: MCPJamServerConfig,
-    useCache: boolean = true
+    useCache: boolean = true,
   ): Promise<{ serverName: string; prompts: Prompt[] }> {
     // Check cache first if enabled
     if (useCache && this.isPromptsCacheValid(serverName)) {
@@ -741,46 +842,44 @@ export class MCPJamAgent implements ChatLoopProvider, ToolCaller {
       if (cachedEntry) {
         this.addClientLog(
           `Using cached ${cachedEntry.prompts.length} prompts for ${serverName}`,
-          "debug"
+          "debug",
         );
         return {
           serverName,
-          prompts: cachedEntry.prompts
+          prompts: cachedEntry.prompts,
         };
       }
     }
-    
+
     // If not in cache or cache disabled, fetch from server
     try {
       this.addClientLog(`Fetching prompts from server ${serverName}`, "debug");
       const client = await this.getOrCreateClient(serverName, serverConfig);
       const promptsResponse = await client.listPrompts();
-      
+
       // Update cache with new data
       this.promptsCache.set(serverName, {
         prompts: promptsResponse.prompts,
-        timestamp: Date.now()
+        timestamp: Date.now(),
       });
-      
+
       this.addClientLog(
         `Received ${promptsResponse.prompts.length} prompts from ${serverName}`,
-        "debug"
+        "debug",
       );
-      
+
       return {
         serverName,
         prompts: promptsResponse.prompts,
       };
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : String(error);
+      const errorMessage =
+        error instanceof Error ? error.message : String(error);
       this.addClientLog(
         `Failed to get prompts from server ${serverName}: ${errorMessage}`,
-        "error"
+        "error",
       );
-      console.error(
-        `Failed to get prompts from server ${serverName}:`,
-        error
-      );
+      console.error(`Failed to get prompts from server ${serverName}:`, error);
       return {
         serverName,
         prompts: [],
@@ -793,27 +892,38 @@ export class MCPJamAgent implements ChatLoopProvider, ToolCaller {
    * @param parallel Whether to fetch prompts in parallel (default: false)
    * @returns Array of prompts by server name
    */
-  async getAllPrompts(parallel: boolean = false): Promise<{ serverName: string; prompts: Prompt[] }[]> {
+  async getAllPrompts(
+    parallel: boolean = false,
+  ): Promise<{ serverName: string; prompts: Prompt[] }[]> {
     const serverEntries = Object.entries(this.serverConfigs);
-    
+
     if (parallel) {
       // Process servers in parallel for faster performance
-      this.addClientLog(`Fetching prompts from ${serverEntries.length} servers in parallel`, "debug");
-      const promptPromises = serverEntries.map(([serverName, serverConfig]) => 
-        this.getServerPrompts(serverName, serverConfig)
+      this.addClientLog(
+        `Fetching prompts from ${serverEntries.length} servers in parallel`,
+        "debug",
       );
-      
+      const promptPromises = serverEntries.map(([serverName, serverConfig]) =>
+        this.getServerPrompts(serverName, serverConfig),
+      );
+
       return await Promise.all(promptPromises);
     } else {
       // Process servers sequentially to avoid overwhelming connections
-      this.addClientLog(`Fetching prompts from ${serverEntries.length} servers sequentially`, "debug");
+      this.addClientLog(
+        `Fetching prompts from ${serverEntries.length} servers sequentially`,
+        "debug",
+      );
       const allServerPrompts: { serverName: string; prompts: Prompt[] }[] = [];
-      
+
       for (const [serverName, serverConfig] of serverEntries) {
-        const serverPrompts = await this.getServerPrompts(serverName, serverConfig);
+        const serverPrompts = await this.getServerPrompts(
+          serverName,
+          serverConfig,
+        );
         allServerPrompts.push(serverPrompts);
       }
-      
+
       return allServerPrompts;
     }
   }
@@ -841,20 +951,27 @@ export class MCPJamAgent implements ChatLoopProvider, ToolCaller {
    * @returns Resource content
    * @throws Error if server not found or resource read fails
    */
-  async readResourceFromServer(serverName: string, uri: string): Promise<unknown> {
+  async readResourceFromServer(
+    serverName: string,
+    uri: string,
+  ): Promise<unknown> {
     try {
       const client = await this.getConnectedClientForServer(serverName);
-      this.addClientLog(`Reading resource '${uri}' from server ${serverName}`, "debug");
-      
+      this.addClientLog(
+        `Reading resource '${uri}' from server ${serverName}`,
+        "debug",
+      );
+
       const resourceResult = await client.readResource({ uri });
       this.addClientLog(`Successfully read resource '${uri}'`, "debug");
-      
+
       return resourceResult;
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : String(error);
+      const errorMessage =
+        error instanceof Error ? error.message : String(error);
       this.addClientLog(
         `Failed to read resource '${uri}' from server ${serverName}: ${errorMessage}`,
-        "error"
+        "error",
       );
       throw error; // Re-throw for proper handling by caller
     }
@@ -875,17 +992,21 @@ export class MCPJamAgent implements ChatLoopProvider, ToolCaller {
   ): Promise<unknown> {
     try {
       const client = await this.getConnectedClientForServer(serverName);
-      this.addClientLog(`Fetching prompt '${name}' from server ${serverName}`, "debug");
-      
+      this.addClientLog(
+        `Fetching prompt '${name}' from server ${serverName}`,
+        "debug",
+      );
+
       const promptResult = await client.getPrompt({ name, arguments: args });
       this.addClientLog(`Successfully fetched prompt '${name}'`, "debug");
-      
+
       return promptResult;
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : String(error);
+      const errorMessage =
+        error instanceof Error ? error.message : String(error);
       this.addClientLog(
         `Failed to get prompt '${name}' from server ${serverName}: ${errorMessage}`,
-        "error"
+        "error",
       );
       throw error; // Re-throw for proper handling by caller
     }
@@ -904,10 +1025,7 @@ export class MCPJamAgent implements ChatLoopProvider, ToolCaller {
    * @param bearerToken Optional bearer token
    * @param headerName Optional custom header name
    */
-  updateCredentials(
-    bearerToken?: string,
-    headerName?: string,
-  ): void {
+  updateCredentials(bearerToken?: string, headerName?: string): void {
     this.bearerToken = bearerToken;
     this.headerName = headerName;
   }
@@ -978,17 +1096,17 @@ export class MCPJamAgent implements ChatLoopProvider, ToolCaller {
   private findServersWithCapability<T>(
     items: { serverName: string; [key: string]: unknown }[],
     itemsKey: string,
-    checkFn: (items: T[]) => boolean
+    checkFn: (items: T[]) => boolean,
   ): string[] {
     const matchingServers: string[] = [];
-    
+
     for (const serverData of items) {
       const itemsArray = serverData[itemsKey] as T[];
       if (itemsArray && checkFn(itemsArray)) {
         matchingServers.push(serverData.serverName);
       }
     }
-    
+
     return matchingServers;
   }
 
@@ -999,13 +1117,13 @@ export class MCPJamAgent implements ChatLoopProvider, ToolCaller {
    */
   private async findServerWithTool(toolName: string): Promise<string | null> {
     const allServerTools = await this.getAllTools();
-    
+
     const matchingServers = this.findServersWithCapability(
       allServerTools,
-      'tools',
-      (tools: Tool[]) => tools.some(t => t.name === toolName)
+      "tools",
+      (tools: Tool[]) => tools.some((t) => t.name === toolName),
     );
-    
+
     return matchingServers.length > 0 ? matchingServers[0] : null;
   }
 
@@ -1016,11 +1134,11 @@ export class MCPJamAgent implements ChatLoopProvider, ToolCaller {
    */
   async findServersWithResource(resourceUri: string): Promise<string[]> {
     const allServerResources = await this.getAllResources();
-    
+
     return this.findServersWithCapability(
       allServerResources,
-      'resources',
-      (resources: Resource[]) => resources.some(r => r.uri === resourceUri)
+      "resources",
+      (resources: Resource[]) => resources.some((r) => r.uri === resourceUri),
     );
   }
 
@@ -1031,11 +1149,11 @@ export class MCPJamAgent implements ChatLoopProvider, ToolCaller {
    */
   async findServersWithPrompt(promptName: string): Promise<string[]> {
     const allServerPrompts = await this.getAllPrompts();
-    
+
     return this.findServersWithCapability(
       allServerPrompts,
-      'prompts',
-      (prompts: Prompt[]) => prompts.some(p => p.name === promptName)
+      "prompts",
+      (prompts: Prompt[]) => prompts.some((p) => p.name === promptName),
     );
   }
 
@@ -1046,19 +1164,22 @@ export class MCPJamAgent implements ChatLoopProvider, ToolCaller {
    * @returns Tool execution result
    * @throws Error if tool not found on any connected server
    */
-  async callTool(params: { name: string; arguments?: Record<string, unknown> }): Promise<unknown> {
+  async callTool(params: {
+    name: string;
+    arguments?: Record<string, unknown>;
+  }): Promise<unknown> {
     // Find which server has this tool
     const serverName = await this.findServerWithTool(params.name);
-    
+
     if (serverName) {
       // Call the tool on the specific server
       return await this.callToolOnServer(
-        serverName, 
-        params.name, 
-        params.arguments || {}
+        serverName,
+        params.name,
+        params.arguments || {},
       );
     }
-    
+
     throw new Error(`Tool ${params.name} not found on any connected server`);
   }
 
@@ -1080,7 +1201,14 @@ export class MCPJamAgent implements ChatLoopProvider, ToolCaller {
     provider?: SupportedProvider,
     signal?: AbortSignal,
   ): Promise<string> {
-    return this.queryProcessor.processQuery(query, tools, onUpdate, model, provider, signal);
+    return this.queryProcessor.processQuery(
+      query,
+      tools,
+      onUpdate,
+      model,
+      provider,
+      signal,
+    );
   }
 
   /**
@@ -1091,8 +1219,8 @@ export class MCPJamAgent implements ChatLoopProvider, ToolCaller {
     // If no tools provided, get all tools from all servers
     if (!tools) {
       const allServerTools = await this.getAllTools();
-      const allTools = allServerTools.flatMap(serverTools => 
-        mappedTools(serverTools.tools)
+      const allTools = allServerTools.flatMap((serverTools) =>
+        mappedTools(serverTools.tools),
       );
       tools = allTools;
     }

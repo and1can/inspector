@@ -7,14 +7,18 @@ export function useDraggablePane(initialHeight: number, storageKey?: string) {
       const stored = localStorage.getItem(storageKey);
       if (stored) {
         const parsedHeight = parseInt(stored, 10);
-        if (!isNaN(parsedHeight) && parsedHeight >= 100 && parsedHeight <= 800) {
+        if (
+          !isNaN(parsedHeight) &&
+          parsedHeight >= 100 &&
+          parsedHeight <= 800
+        ) {
           return parsedHeight;
         }
       }
     }
     return initialHeight;
   });
-  
+
   const [isDragging, setIsDragging] = useState(false);
   const dragStartY = useRef<number>(0);
   const dragStartHeight = useRef<number>(0);
@@ -38,10 +42,13 @@ export function useDraggablePane(initialHeight: number, storageKey?: string) {
       const deltaY = dragStartY.current - e.clientY;
       const newHeight = Math.max(
         100, // Minimum height
-        Math.min(Math.floor(window.innerHeight * 0.7), dragStartHeight.current + deltaY), // Maximum height (70% of viewport)
+        Math.min(
+          Math.floor(window.innerHeight * 0.7),
+          dragStartHeight.current + deltaY,
+        ), // Maximum height (70% of viewport)
       );
       setHeight(newHeight);
-      
+
       // Persist to localStorage if storageKey is provided
       if (storageKey) {
         localStorage.setItem(storageKey, newHeight.toString());
@@ -63,13 +70,19 @@ export function useDraggablePane(initialHeight: number, storageKey?: string) {
     }
   }, [initialHeight, storageKey]);
 
-  const setCustomHeight = useCallback((newHeight: number) => {
-    const clampedHeight = Math.max(100, Math.min(Math.floor(window.innerHeight * 0.7), newHeight));
-    setHeight(clampedHeight);
-    if (storageKey) {
-      localStorage.setItem(storageKey, clampedHeight.toString());
-    }
-  }, [storageKey]);
+  const setCustomHeight = useCallback(
+    (newHeight: number) => {
+      const clampedHeight = Math.max(
+        100,
+        Math.min(Math.floor(window.innerHeight * 0.7), newHeight),
+      );
+      setHeight(clampedHeight);
+      if (storageKey) {
+        localStorage.setItem(storageKey, clampedHeight.toString());
+      }
+    },
+    [storageKey],
+  );
 
   // Sync height with initialHeight changes when not dragging and no stored value
   useEffect(() => {

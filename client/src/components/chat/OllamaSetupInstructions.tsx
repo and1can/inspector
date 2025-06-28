@@ -22,9 +22,9 @@ export const OllamaSetupInstructions: React.FC = () => (
             </p>
             <p>
               Visit{" "}
-              <a 
-                href="https://ollama.com/download" 
-                target="_blank" 
+              <a
+                href="https://ollama.com/download"
+                target="_blank"
                 rel="noopener noreferrer"
                 className="text-blue-600 dark:text-blue-400 hover:underline"
               >
@@ -39,15 +39,18 @@ export const OllamaSetupInstructions: React.FC = () => (
             </p>
             <p>
               Browse{" "}
-              <a 
-                href="https://ollama.com/search?c=tools" 
-                target="_blank" 
+              <a
+                href="https://ollama.com/search?c=tools"
+                target="_blank"
                 rel="noopener noreferrer"
                 className="text-blue-600 dark:text-blue-400 hover:underline"
               >
                 tool-calling models
               </a>{" "}
-              and run: <code className="bg-slate-200 dark:bg-slate-700 px-1 py-0.5 rounded text-xs">ollama pull model-name</code>
+              and run:{" "}
+              <code className="bg-slate-200 dark:bg-slate-700 px-1 py-0.5 rounded text-xs">
+                ollama pull model-name
+              </code>
             </p>
           </div>
           <div className="p-3 bg-slate-50 dark:bg-slate-800/50 rounded-lg border border-slate-200 dark:border-slate-700">
@@ -55,11 +58,12 @@ export const OllamaSetupInstructions: React.FC = () => (
               🔄 Step 3: Refresh Models
             </p>
             <p>
-              Your downloaded models will appear automatically, or click the refresh button above
+              Your downloaded models will appear automatically, or click the
+              refresh button above
             </p>
           </div>
         </div>
       </div>
     </div>
   </div>
-); 
+);

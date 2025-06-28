@@ -1,4 +1,9 @@
-import { AIProvider, ProviderConfig, SupportedProvider, ProviderFactory } from "./types";
+import {
+  AIProvider,
+  ProviderConfig,
+  SupportedProvider,
+  ProviderFactory,
+} from "./types";
 import { AnthropicProvider } from "./anthropicProvider";
 import { OpenAIProvider } from "./openaiProvider";
 import { OllamaProvider } from "./ollamaProvider";
@@ -19,4 +24,4 @@ export class DefaultProviderFactory implements ProviderFactory {
 }
 
 // Export singleton instance
-export const providerFactory = new DefaultProviderFactory(); 
+export const providerFactory = new DefaultProviderFactory();

@@ -17,7 +17,10 @@ interface MessageBubbleProps {
   selectedProvider: SupportedProvider;
 }
 
-export const MessageBubble: React.FC<MessageBubbleProps> = ({ message, selectedProvider }) => {
+export const MessageBubble: React.FC<MessageBubbleProps> = ({
+  message,
+  selectedProvider,
+}) => {
   const isUser = message.role === "user";
   const parsedContent = parseToolCallContent(message.content);
   console.log("parsedContent", parsedContent.toolCalls);
@@ -84,4 +87,4 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({ message, selectedP
       )}
     </div>
   );
-}; 
+};

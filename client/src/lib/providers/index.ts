@@ -10,4 +10,4 @@ export * from "./ollamaProvider";
 export * from "./providerFactory";
 
 // Export ProviderManager
-export * from "./providerManager"; 
+export * from "./providerManager";
