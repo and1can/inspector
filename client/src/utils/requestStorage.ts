@@ -1,4 +1,7 @@
-import { McpJamRequest, McpJamRequestCollection } from "@/lib/requestTypes";
+import {
+  McpJamRequest,
+  McpJamRequestCollection,
+} from "@/lib/types/requestTypes";
 import {
   exportRequestCollection,
   importRequestCollection,

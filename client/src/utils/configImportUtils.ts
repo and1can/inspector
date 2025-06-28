@@ -1,4 +1,4 @@
-import { MCPJamServerConfig } from "@/lib/serverTypes";
+import { MCPJamServerConfig } from "@/lib/types/serverTypes";
 import { StreamableHTTPClientTransportOptions } from "@modelcontextprotocol/sdk/client/streamableHttp.js";
 import { SSEClientTransportOptions } from "@modelcontextprotocol/sdk/client/sse.js";
 import { ClientCapabilities } from "@modelcontextprotocol/sdk/types.js";

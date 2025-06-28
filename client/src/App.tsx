@@ -14,7 +14,7 @@ import React, {
   useRef,
   useState,
 } from "react";
-import { StdErrNotification } from "./lib/notificationTypes";
+import { StdErrNotification } from "./lib/types/notificationTypes";
 import { Activity } from "lucide-react";
 import { z } from "zod";
 import "./App.css";
@@ -61,8 +61,8 @@ import {
   MCPJamServerConfig,
   StdioServerDefinition,
   HttpServerDefinition,
-} from "./lib/serverTypes";
-import { ConnectionStatus } from "./lib/constants";
+} from "./lib/types/serverTypes";
+import { ConnectionStatus } from "./lib/types/constants";
 
 const App = () => {
   const serverState = useServerState();

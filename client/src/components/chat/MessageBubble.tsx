@@ -1,6 +1,6 @@
 import React from "react";
 import { User } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { cn } from "@/lib/utils/utils";
 import { ToolCallMessage } from "./ToolCallMessage";
 import { parseToolCallContent } from "@/utils/toolCallHelpers";
 import { ProviderLogo } from "../ProviderLogo";

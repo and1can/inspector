@@ -18,7 +18,7 @@ import {
 import { z } from "zod";
 import { Prompt } from "../components/PromptsTab";
 import { PendingRequest } from "../components/SamplingTab";
-import { StdErrNotification } from "../lib/notificationTypes";
+import { StdErrNotification } from "../lib/types/notificationTypes";
 import { ElicitationRequest } from "@/components/ElicitationModal";
 
 // Types for function dependencies

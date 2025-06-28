@@ -19,13 +19,13 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { StdErrNotification } from "@/lib/notificationTypes";
+import { StdErrNotification } from "@/lib/types/notificationTypes";
 import {
   LoggingLevel,
   LoggingLevelSchema,
 } from "@modelcontextprotocol/sdk/types.js";
-import { InspectorConfig } from "@/lib/configurationTypes";
-import { ConnectionStatus } from "@/lib/constants";
+import { InspectorConfig } from "@/lib/types/configurationTypes";
+import { ConnectionStatus } from "@/lib/types/constants";
 import {
   Tooltip,
   TooltipTrigger,

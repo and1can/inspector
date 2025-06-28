@@ -1,8 +1,8 @@
-import { InspectorConfig } from "@/lib/configurationTypes";
+import { InspectorConfig } from "@/lib/types/configurationTypes";
 import {
   DEFAULT_MCP_PROXY_LISTEN_PORT,
   DEFAULT_INSPECTOR_CONFIG,
-} from "@/lib/constants";
+} from "@/lib/types/constants";
 
 // Cache for the actual port to avoid repeated fetches
 let cachedActualPort: string | null = null;

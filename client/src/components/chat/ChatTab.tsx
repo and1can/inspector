@@ -1,6 +1,6 @@
 import React from "react";
-import { MCPJamAgent } from "@/mcpjamAgent";
-import { createChatConfig } from "@/lib/utils";
+import { MCPJamAgent } from "@/lib/mcpjamAgent";
+import { createChatConfig } from "@/lib/utils/utils";
 import Chat from "./Chat";
 
 interface ChatTabProps {

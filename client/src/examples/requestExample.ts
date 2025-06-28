@@ -1,5 +1,8 @@
 import { Tool } from "@modelcontextprotocol/sdk/types.js";
-import { McpJamRequest, CreateMcpJamRequestInput } from "@/lib/requestTypes";
+import {
+  McpJamRequest,
+  CreateMcpJamRequestInput,
+} from "@/lib/types/requestTypes";
 import {
   createMcpJamRequest,
   validateRequestParameters,

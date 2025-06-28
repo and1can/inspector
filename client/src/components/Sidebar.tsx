@@ -20,7 +20,7 @@ import {
 } from "lucide-react";
 import useTheme from "../lib/hooks/useTheme";
 import { version } from "../../../package.json";
-import { MCPJamAgent, ServerConnectionInfo } from "../mcpjamAgent";
+import { MCPJamAgent, ServerConnectionInfo } from "@/lib/mcpjamAgent";
 import {
   Tooltip,
   TooltipContent,

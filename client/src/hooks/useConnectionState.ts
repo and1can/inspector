@@ -1,15 +1,15 @@
 import { useState, useCallback } from "react";
-import { MCPJamAgent, MCPClientOptions } from "@/mcpjamAgent";
-import { MCPJamServerConfig } from "@/lib/serverTypes";
-import { InspectorConfig } from "@/lib/configurationTypes";
+import { MCPJamAgent, MCPClientOptions } from "@/lib/mcpjamAgent";
+import { MCPJamServerConfig } from "@/lib/types/serverTypes";
+import { InspectorConfig } from "@/lib/types/configurationTypes";
 import {
   CreateMessageRequest,
   CreateMessageResult,
   ElicitRequest,
   Root,
 } from "@modelcontextprotocol/sdk/types.js";
-import { StdErrNotification } from "@/lib/notificationTypes";
-import { ConnectionStatus } from "@/lib/constants";
+import { StdErrNotification } from "@/lib/types/notificationTypes";
+import { ConnectionStatus } from "@/lib/types/constants";
 import { ClientLogLevels } from "@/hooks/helpers/types";
 import { ElicitationResponse } from "@/components/ElicitationModal";
 

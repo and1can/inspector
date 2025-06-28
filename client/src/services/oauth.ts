@@ -1,7 +1,10 @@
 import { OAuthTokensSchema } from "@modelcontextprotocol/sdk/shared/auth.js";
-import { SESSION_KEYS, getServerSpecificKey } from "../lib/constants";
-import { AuthDebuggerState } from "../lib/auth-types";
-import { MCPJamServerConfig, HttpServerDefinition } from "../lib/serverTypes";
+import { SESSION_KEYS, getServerSpecificKey } from "../lib/types/constants";
+import { AuthDebuggerState } from "../lib/types/auth-types";
+import {
+  MCPJamServerConfig,
+  HttpServerDefinition,
+} from "../lib/types/serverTypes";
 import { SetStateAction } from "react";
 
 export const loadOAuthTokens = async (

@@ -5,7 +5,7 @@ import {
   CreateMcpJamRequestInput,
   UpdateMcpJamRequestInput,
   McpJamRequestCollection,
-} from "@/lib/requestTypes";
+} from "@/lib/types/requestTypes";
 import { generateDefaultValue } from "./schemaUtils";
 
 /**

@@ -3,8 +3,8 @@ import {
   MCPJamServerConfig,
   StdioServerDefinition,
   HttpServerDefinition,
-} from "../lib/serverTypes";
-import { InspectorConfig } from "../lib/configurationTypes";
+} from "../lib/types/serverTypes";
+import { InspectorConfig } from "../lib/types/configurationTypes";
 import ConnectionSection from "./ConnectionSection";
 import { ParsedServerConfig } from "@/utils/configImportUtils";
 import { useToast } from "@/lib/hooks/useToast";

@@ -17,7 +17,7 @@ import {
   CreateMcpJamRequestInput,
   McpJamRequest,
   UpdateMcpJamRequestInput,
-} from "@/lib/requestTypes";
+} from "@/lib/types/requestTypes";
 import { tryParseJson } from "@/utils/jsonUtils";
 
 const BUTTON_STYLES = {

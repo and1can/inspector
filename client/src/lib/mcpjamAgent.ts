@@ -1,5 +1,5 @@
 import { MCPJamClient } from "./mcpjamClient";
-import { InspectorConfig } from "./lib/configurationTypes";
+import { InspectorConfig } from "@/lib/types/configurationTypes";
 import {
   Tool,
   Resource,
@@ -7,19 +7,19 @@ import {
   ServerCapabilities,
   ElicitRequest,
 } from "@modelcontextprotocol/sdk/types.js";
-import { MCPJamServerConfig } from "./lib/serverTypes";
-import { createDefaultConfig } from "./utils/configUtils";
-import { StdErrNotification } from "./lib/notificationTypes";
+import { MCPJamServerConfig } from "@/lib/types/serverTypes";
+import { createDefaultConfig } from "@/utils/configUtils";
+import { StdErrNotification } from "@/lib/types/notificationTypes";
 import {
   CreateMessageRequest,
   CreateMessageResult,
 } from "@modelcontextprotocol/sdk/types.js";
-import { ConnectionStatus } from "./lib/constants";
-import { ClientLogLevels } from "./hooks/helpers/types";
-import { ElicitationResponse } from "./components/ElicitationModal";
-import * as chatHelpers from "./lib/agentChat";
+import { ConnectionStatus } from "@/lib/types/constants";
+import { ClientLogLevels } from "@/hooks/helpers/types";
+import { ElicitationResponse } from "@/components/ElicitationModal";
+import * as chatHelpers from "@/lib/utils/agentChat";
 import { Tool as AnthropicTool } from "@anthropic-ai/sdk/resources/messages/messages.mjs";
-import { SupportedProvider } from "./lib/providers";
+import { SupportedProvider } from "@/lib/providers";
 
 /**
  * Configuration options for MCP agent

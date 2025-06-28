@@ -13,8 +13,8 @@ import {
   CreateMessageResult,
 } from "@modelcontextprotocol/sdk/types.js";
 import { Prompt } from "@/components/PromptsTab";
-import { StdErrNotification } from "@/lib/notificationTypes";
-import { MCPJamAgent } from "@/mcpjamAgent";
+import { StdErrNotification } from "@/lib/types/notificationTypes";
+import { MCPJamAgent } from "@/lib/mcpjamAgent";
 import { z } from "zod";
 import {
   ClientLogInfo,

@@ -19,7 +19,7 @@ import {
   ElicitRequestSchema,
 } from "@modelcontextprotocol/sdk/types.js";
 import { AIProvider, providerManager } from "@/lib/providers";
-import packageJson from "../package.json";
+import packageJson from "@/../package.json";
 import {
   getMCPProxyAddress,
   getMCPProxyAddressAsync,
@@ -27,7 +27,7 @@ import {
   getMCPServerRequestTimeout,
   resetRequestTimeoutOnProgress,
 } from "@/utils/configUtils";
-import { InspectorConfig } from "./lib/configurationTypes";
+import { InspectorConfig } from "@/lib/types/configurationTypes";
 import { Transport } from "@modelcontextprotocol/sdk/shared/transport.js";
 import {
   SSEClientTransport,
@@ -38,20 +38,23 @@ import {
   StreamableHTTPClientTransport,
   StreamableHTTPClientTransportOptions,
 } from "@modelcontextprotocol/sdk/client/streamableHttp.js";
-import { InspectorOAuthClientProvider } from "./lib/auth";
+import { InspectorOAuthClientProvider } from "@/lib/utils/auth";
 import { z } from "zod";
-import { ConnectionStatus } from "./lib/constants";
+import { ConnectionStatus } from "@/lib/types/constants";
 import { RequestOptions } from "@modelcontextprotocol/sdk/shared/protocol.js";
-import { toast } from "./lib/hooks/useToast";
+import { toast } from "@/lib/hooks/useToast";
 import {
   StdErrNotificationSchema,
   StdErrNotification,
-} from "./lib/notificationTypes";
+} from "@/lib/types/notificationTypes";
 import { auth } from "@modelcontextprotocol/sdk/client/auth.js";
-import { HttpServerDefinition, MCPJamServerConfig } from "@/lib/serverTypes";
-import { ClientLogLevels } from "./hooks/helpers/types";
+import {
+  HttpServerDefinition,
+  MCPJamServerConfig,
+} from "@/lib/types/serverTypes";
+import { ClientLogLevels } from "@/hooks/helpers/types";
 // Chat functionality has been moved to MCPJamAgent
-import { ElicitationResponse } from "./components/ElicitationModal";
+import { ElicitationResponse } from "@/components/ElicitationModal";
 
 /**
  * Extended MCP client interface adding AI provider capabilities

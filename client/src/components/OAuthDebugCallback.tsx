@@ -1,5 +1,5 @@
 import { useEffect } from "react";
-import { SESSION_KEYS } from "../lib/constants";
+import { SESSION_KEYS } from "../lib/types/constants";
 import {
   generateOAuthErrorDescription,
   parseOAuthCallbackParams,
