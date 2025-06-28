@@ -18,12 +18,7 @@ import {
   ElicitRequest,
   ElicitRequestSchema,
 } from "@modelcontextprotocol/sdk/types.js";
-import {
-  AIProvider,
-  providerManager,
-  SupportedProvider,
-} from "@/lib/providers";
-import { Tool } from "@anthropic-ai/sdk/resources/messages/messages.mjs";
+import { AIProvider, providerManager } from "@/lib/providers";
 import packageJson from "../package.json";
 import {
   getMCPProxyAddress,
@@ -55,12 +50,7 @@ import {
 import { auth } from "@modelcontextprotocol/sdk/client/auth.js";
 import { HttpServerDefinition, MCPJamServerConfig } from "@/lib/serverTypes";
 import { ClientLogLevels } from "./hooks/helpers/types";
-import {
-  ChatLoopProvider,
-  ChatLoop,
-  QueryProcessor,
-  ToolCaller,
-} from "./lib/chatLoop";
+// Chat functionality has been moved to MCPJamAgent
 import { ElicitationResponse } from "./components/ElicitationModal";
 
 /**
@@ -68,30 +58,18 @@ import { ElicitationResponse } from "./components/ElicitationModal";
  */
 export interface ExtendedMcpClient extends Client {
   aiProvider: AIProvider;
-  processQuery: (
-    query: string,
-    tools: Tool[],
-    onUpdate?: (content: string) => void,
-    model?: string,
-    provider?: SupportedProvider,
-  ) => Promise<string>;
-  chatLoop: (tools: Tool[]) => Promise<void>;
   cleanup: () => Promise<void>;
 }
 
 /**
  * Implementation of MCP client for connecting to MCP servers
  */
-export class MCPJamClient
-  extends Client<Request, Notification, Result>
-  implements ChatLoopProvider, ToolCaller
-{
+export class MCPJamClient extends Client<Request, Notification, Result> {
   private clientTransport: Transport | undefined;
   private serverConfig: MCPJamServerConfig;
   private headers: HeadersInit;
   private mcpProxyServerUrl: URL;
   private inspectorConfig: InspectorConfig;
-  private queryProcessor: QueryProcessor;
 
   public connectionStatus: ConnectionStatus;
   public serverCapabilities: ServerCapabilities | null;
@@ -178,9 +156,6 @@ export class MCPJamClient
     this.getRoots = getRoots;
     this.addRequestHistory = addRequestHistory;
     this.addClientLog = addClientLog;
-
-    // Initialize query processor
-    this.queryProcessor = new QueryProcessor(this);
   }
 
   // Get AI provider from ProviderManager
@@ -920,46 +895,6 @@ export class MCPJamClient
     this.addClientLog("Server capabilities updated", "debug");
   }
 
-  /**
-   * Process a query using the specified model and tools
-   * @param query The query text
-   * @param tools Tools available for the model to use
-   * @param onUpdate Optional callback for streaming updates
-   * @param model Model name to use
-   * @param provider Optional AI provider to use
-   * @param signal Optional abort signal
-   * @returns The model's response
-   */
-  async processQuery(
-    query: string,
-    tools: Tool[],
-    onUpdate?: (content: string) => void,
-    model: string = "claude-3-5-sonnet-latest",
-    provider?: SupportedProvider,
-    signal?: AbortSignal,
-  ): Promise<string> {
-    return this.queryProcessor.processQuery(
-      query,
-      tools,
-      onUpdate,
-      model,
-      provider,
-      signal,
-    );
-  }
-
-  /**
-   * Start an interactive chat loop with tools
-   * @param tools Tools available for the chat
-   */
-  async chatLoop(tools: Tool[]): Promise<void> {
-    const chatLoop = new ChatLoop(this);
-    return await chatLoop.start(tools);
-  }
-
-  /**
-   * Clean up resources used by this client
-   */
   async cleanup(): Promise<void> {
     this.addClientLog("Cleaning up MCP client", "info");
     await this.close();
