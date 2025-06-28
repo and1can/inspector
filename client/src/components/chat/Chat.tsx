@@ -6,18 +6,14 @@ import { cn } from "@/lib/utils";
 import { ProviderLogo } from "../ProviderLogo";
 import { providerManager, SupportedProvider } from "@/lib/providers";
 import { MCPJamAgent } from "@/mcpjamAgent";
-import { MCPJamClient } from "@/mcpjamClient";
-import { ChatLoopProvider, ToolCaller, QueryProcessor } from "@/lib/chatLoop";
 import { MessageBubble, Message } from "./MessageBubble";
 import { LoadingDots } from "./LoadingDots";
 import { ApiKeyRequiredState } from "./ApiKeyRequiredState";
 import { EmptyChatsState, ChatConfig } from "./EmptyChatsState";
 import { ToolCallApproval, PendingToolCall } from "./ToolCallApproval";
 
-interface ChatProvider extends ChatLoopProvider, ToolCaller {}
-
 interface ChatProps {
-  provider: ChatProvider | null;
+  provider: MCPJamAgent | null;
   config: ChatConfig;
   getServersCount?: () => number;
   updateTrigger?: number;
@@ -97,13 +93,8 @@ const Chat: React.FC<ChatProps> = ({
     try {
       let tools: Tool[] = [];
 
-      if (config.mode === "global" && "getAllTools" in provider) {
-        const allServerTools = await (provider as MCPJamAgent).getAllTools();
-        tools = allServerTools.flatMap((serverTools) => serverTools.tools);
-      } else if (config.mode === "single" && "listTools" in provider) {
-        const response = await (provider as MCPJamClient).listTools();
-        tools = response.tools || [];
-      }
+      const allServerTools = await provider.getAllTools();
+      tools = allServerTools.flatMap((serverTools) => serverTools.tools);
 
       setTools(tools);
       setToolsCount(tools.length);
@@ -115,7 +106,6 @@ const Chat: React.FC<ChatProps> = ({
     }
   }, [
     provider,
-    config,
     getServersCount,
     setTools,
     setToolsCount,
@@ -222,23 +212,15 @@ const Chat: React.FC<ChatProps> = ({
         input_schema: tool.inputSchema || { type: "object", properties: {} },
       }));
 
-      // Pass to the tool call processing
-      // If the provider is already a QueryProcessor, it would have been instantiated
-      // with a tool call approver in the component that created it
-      const queryProcessor =
-        provider instanceof QueryProcessor
-          ? provider
-          : new QueryProcessor(provider, {
-              requestToolCallApproval, // Use our approval implementation
-            });
-
-      await queryProcessor.processQuery(
+      // Pass to the agent for processing
+      await provider.processQuery(
         userMessage,
         convertedTools,
         onUpdate,
         selectedModel,
         selectedProvider,
         controller.signal,
+        { requestToolCallApproval }, // Pass the tool call approver
       );
     } catch (error) {
       const errorMessage =

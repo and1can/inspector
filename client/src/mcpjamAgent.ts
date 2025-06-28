@@ -17,13 +17,7 @@ import {
 import { ConnectionStatus } from "./lib/constants";
 import { ClientLogLevels } from "./hooks/helpers/types";
 import { ElicitationResponse } from "./components/ElicitationModal";
-import {
-  ChatLoopProvider,
-  ChatLoop,
-  mappedTools,
-  QueryProcessor,
-  ToolCaller,
-} from "./lib/chatLoop";
+import * as chatHelpers from "./lib/agentChat";
 import { Tool as AnthropicTool } from "@anthropic-ai/sdk/resources/messages/messages.mjs";
 import { SupportedProvider } from "./lib/providers";
 
@@ -66,7 +60,7 @@ export interface ServerConnectionInfo {
 /**
  * Agent that manages multiple MCP server connections
  */
-export class MCPJamAgent implements ChatLoopProvider, ToolCaller {
+export class MCPJamAgent {
   // Client and server management
   private mcpClientsById = new Map<string, MCPJamClient>();
   private serverConfigs: Record<string, MCPJamServerConfig>;
@@ -93,8 +87,7 @@ export class MCPJamAgent implements ChatLoopProvider, ToolCaller {
   // Public methods
   public addClientLog: (message: string, level: ClientLogLevels) => void;
 
-  // Processing components
-  private queryProcessor: QueryProcessor;
+  // Chat processing functionality is imported from chatHelpers
 
   // Performance optimization: cache data and timestamps for each server
   private toolsCache = new Map<string, { tools: Tool[]; timestamp: number }>();
@@ -132,8 +125,7 @@ export class MCPJamAgent implements ChatLoopProvider, ToolCaller {
     this.addRequestHistory = options.addRequestHistory;
     this.addClientLog = options.addClientLog;
 
-    // Initialize query processor
-    this.queryProcessor = new QueryProcessor(this);
+    // Chat processing functionality is imported from chatHelpers
   }
 
   /**
@@ -1200,32 +1192,17 @@ export class MCPJamAgent implements ChatLoopProvider, ToolCaller {
     model: string = "claude-3-5-sonnet-latest",
     provider?: SupportedProvider,
     signal?: AbortSignal,
+    toolCallApprover?: chatHelpers.ToolCallApprover,
   ): Promise<string> {
-    return this.queryProcessor.processQuery(
+    return chatHelpers.processQuery(
       query,
       tools,
+      this,
+      toolCallApprover,
       onUpdate,
       model,
       provider,
       signal,
     );
-  }
-
-  /**
-   * Start an interactive chat loop with tools from all servers
-   * @param tools Optional tools to use (gets all tools if not provided)
-   */
-  async chatLoop(tools?: AnthropicTool[]): Promise<void> {
-    // If no tools provided, get all tools from all servers
-    if (!tools) {
-      const allServerTools = await this.getAllTools();
-      const allTools = allServerTools.flatMap((serverTools) =>
-        mappedTools(serverTools.tools),
-      );
-      tools = allTools;
-    }
-
-    const chatLoop = new ChatLoop(this);
-    return await chatLoop.start(tools);
   }
 }
