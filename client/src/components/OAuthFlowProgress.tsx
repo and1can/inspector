@@ -1,10 +1,10 @@
-import { AuthDebuggerState, OAuthStep } from "@/lib/auth-types";
+import { AuthDebuggerState, OAuthStep } from "@/lib/types/auth-types";
 import { CheckCircle2, Circle, ExternalLink } from "lucide-react";
 import { Button } from "./ui/button";
-import { DebugInspectorOAuthClientProvider } from "@/lib/auth";
+import { DebugInspectorOAuthClientProvider } from "@/lib/utils/auth/auth";
 import { useEffect, useMemo, useState } from "react";
 import { OAuthClientInformation } from "@modelcontextprotocol/sdk/shared/auth.js";
-import { oauthAuthServerMetadataUrl } from "@/utils/oauthUtils.ts";
+import { oauthAuthServerMetadataUrl } from "@/lib/utils/auth/oauthUtils";
 
 interface OAuthStepProps {
   label: string;

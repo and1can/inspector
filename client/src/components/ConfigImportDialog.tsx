@@ -22,7 +22,7 @@ import {
   generateExampleConfig,
   ConfigImportResult,
   ParsedServerConfig,
-} from "@/utils/configImportUtils";
+} from "@/lib/utils/json/configImportUtils";
 import { useToast } from "@/lib/hooks/useToast";
 
 interface ConfigImportDialogProps {

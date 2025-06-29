@@ -16,9 +16,9 @@ import {
   LoggingLevel,
 } from "@modelcontextprotocol/sdk/types.js";
 import { z } from "zod";
-import { Prompt } from "../components/PromptsTab";
-import { PendingRequest } from "../components/SamplingTab";
-import { StdErrNotification } from "../lib/notificationTypes";
+import { Prompt } from "../../../components/PromptsTab";
+import { PendingRequest } from "../../../components/SamplingTab";
+import { StdErrNotification } from "../../types/notificationTypes";
 import { ElicitationRequest } from "@/components/ElicitationModal";
 
 // Types for function dependencies

@@ -1,4 +1,8 @@
-import type { JsonValue, JsonSchemaType, JsonObject } from "./jsonUtils";
+import type {
+  JsonValue,
+  JsonSchemaType,
+  JsonObject,
+} from "@/lib/utils/json/jsonUtils";
 
 /**
  * Generates a default value based on a JSON schema type

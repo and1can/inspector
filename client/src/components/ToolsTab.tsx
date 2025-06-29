@@ -5,9 +5,9 @@ import {
 } from "@modelcontextprotocol/sdk/types.js";
 import { useEffect, useState } from "react";
 import ListPane from "./ListPane";
-import { ConnectionStatus } from "@/lib/constants";
+import { ConnectionStatus } from "@/lib/types/constants";
 import ToolRunCard from "./ToolRunCard";
-import { McpJamRequest } from "@/lib/requestTypes";
+import { McpJamRequest } from "@/lib/types/requestTypes";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -18,12 +18,12 @@ import {
   Edit2,
   CopyPlus,
 } from "lucide-react";
-import { RequestStorage } from "@/utils/requestStorage";
+import { RequestStorage } from "@/lib/utils/request/requestStorage";
 import {
   sortRequests,
   createMcpJamRequest,
   getRequestsForClient,
-} from "@/utils/requestUtils";
+} from "@/lib/utils/json/requestUtils";
 
 const ToolsTab = ({
   tools,

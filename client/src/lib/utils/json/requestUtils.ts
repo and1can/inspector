@@ -1,11 +1,11 @@
 import { Tool } from "@modelcontextprotocol/sdk/types.js";
-import { JsonValue, JsonSchemaType } from "./jsonUtils";
+import { JsonValue, JsonSchemaType } from "@/lib/utils/json/jsonUtils";
 import {
   McpJamRequest,
   CreateMcpJamRequestInput,
   UpdateMcpJamRequestInput,
   McpJamRequestCollection,
-} from "@/lib/requestTypes";
+} from "@/lib/types/requestTypes";
 import { generateDefaultValue } from "./schemaUtils";
 
 /**

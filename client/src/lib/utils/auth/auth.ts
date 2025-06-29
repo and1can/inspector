@@ -7,7 +7,7 @@ import {
   OAuthClientMetadata,
   OAuthMetadata,
 } from "@modelcontextprotocol/sdk/shared/auth.js";
-import { SESSION_KEYS, getServerSpecificKey } from "./constants";
+import { SESSION_KEYS, getServerSpecificKey } from "../../types/constants";
 
 export class InspectorOAuthClientProvider implements OAuthClientProvider {
   constructor(public serverUrl: string) {

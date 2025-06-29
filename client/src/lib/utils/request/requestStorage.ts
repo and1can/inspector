@@ -1,8 +1,11 @@
-import { McpJamRequest, McpJamRequestCollection } from "@/lib/requestTypes";
+import {
+  McpJamRequest,
+  McpJamRequestCollection,
+} from "@/lib/types/requestTypes";
 import {
   exportRequestCollection,
   importRequestCollection,
-} from "./requestUtils";
+} from "@/lib/utils/json/requestUtils";
 
 const STORAGE_KEY = "mcpjam_saved_requests";
 

@@ -3,22 +3,22 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import DynamicJsonForm from "./DynamicJsonForm";
-import type { JsonValue, JsonSchemaType } from "@/utils/jsonUtils";
-import { generateDefaultValue } from "@/utils/schemaUtils";
+import type { JsonValue, JsonSchemaType } from "@/lib/utils/json/jsonUtils";
+import { generateDefaultValue } from "@/lib/utils/json/schemaUtils";
 import { Tool } from "@modelcontextprotocol/sdk/types.js";
 import { Loader2, Send, Code2, Save, X, ClipboardPaste } from "lucide-react";
 import { useEffect, useState } from "react";
 import {
   createMcpJamRequest,
   generateDefaultRequestName,
-} from "@/utils/requestUtils";
-import { RequestStorage } from "@/utils/requestStorage";
+} from "@/lib/utils/json/requestUtils";
+import { RequestStorage } from "@/lib/utils/request/requestStorage";
 import {
   CreateMcpJamRequestInput,
   McpJamRequest,
   UpdateMcpJamRequestInput,
-} from "@/lib/requestTypes";
-import { tryParseJson } from "@/utils/jsonUtils";
+} from "@/lib/types/requestTypes";
+import { tryParseJson } from "@/lib/utils/json/jsonUtils";
 
 const BUTTON_STYLES = {
   save: "flex-1 h-8 bg-gradient-to-r from-secondary/20 to-secondary/10 hover:from-secondary/30 hover:to-secondary/20 text-foreground font-medium rounded-lg border-border/40 hover:border-border/60 transition-all duration-300 text-xs",

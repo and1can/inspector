@@ -1,9 +1,9 @@
 import { useEffect } from "react";
-import { SESSION_KEYS } from "../lib/constants";
+import { SESSION_KEYS } from "../lib/types/constants";
 import {
   generateOAuthErrorDescription,
   parseOAuthCallbackParams,
-} from "@/utils/oauthUtils.ts";
+} from "@/lib/utils/auth/oauthUtils";
 
 interface OAuthCallbackProps {
   onConnect: ({

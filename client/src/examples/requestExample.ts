@@ -1,12 +1,15 @@
 import { Tool } from "@modelcontextprotocol/sdk/types.js";
-import { McpJamRequest, CreateMcpJamRequestInput } from "@/lib/requestTypes";
+import {
+  McpJamRequest,
+  CreateMcpJamRequestInput,
+} from "@/lib/types/requestTypes";
 import {
   createMcpJamRequest,
   validateRequestParameters,
   generateDefaultRequestName,
   createDefaultParameters,
-} from "@/utils/requestUtils";
-import { RequestStorage } from "@/utils/requestStorage";
+} from "@/lib/utils/json/requestUtils";
+import { RequestStorage } from "@/lib/utils/request/requestStorage";
 
 /**
  * Example of how to create and save a McpJamRequest

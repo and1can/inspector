@@ -11,7 +11,7 @@ import {
   TextBlock,
   ToolUseBlock,
 } from "@anthropic-ai/sdk/resources/messages/messages.mjs";
-import { MCPJamAgent } from "@/mcpjamAgent";
+import { MCPJamAgent } from "@/lib/utils/mcp/mcpjamAgent";
 
 /**
  * Interface for objects that can approve tool calls

@@ -1,4 +1,4 @@
-import { escapeUnicode } from "../escapeUnicode";
+import { escapeUnicode } from "@/lib/utils/json/escapeUnicode";
 
 describe("escapeUnicode", () => {
   it("should escape Unicode characters in a string", () => {

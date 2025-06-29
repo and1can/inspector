@@ -1,7 +1,7 @@
 import { useState, useCallback, useEffect } from "react";
-import { InspectorConfig } from "@/lib/configurationTypes";
-import { AuthDebuggerState } from "@/lib/auth-types";
-import { initializeInspectorConfig } from "@/utils/configUtils";
+import { InspectorConfig } from "@/lib/types/configurationTypes";
+import { AuthDebuggerState } from "@/lib/types/auth-types";
+import { initializeInspectorConfig } from "@/lib/utils/json/configUtils";
 
 const CONFIG_LOCAL_STORAGE_KEY = "inspectorConfig_v1";
 

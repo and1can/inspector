@@ -1,5 +1,8 @@
 import { useState, useCallback, useEffect } from "react";
-import { MCPJamServerConfig, StdioServerDefinition } from "@/lib/serverTypes";
+import {
+  MCPJamServerConfig,
+  StdioServerDefinition,
+} from "@/lib/types/serverTypes";
 
 const SERVER_CONFIGS_STORAGE_KEY = "mcpServerConfigs_v1";
 const SELECTED_SERVER_STORAGE_KEY = "selectedServerName_v1";

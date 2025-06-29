@@ -1,10 +1,10 @@
 import { useState, memo, useMemo, useCallback, useEffect } from "react";
-import type { JsonValue } from "@/utils/jsonUtils";
+import type { JsonValue } from "@/lib/utils/json/jsonUtils";
 import clsx from "clsx";
 import { Copy, CheckCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/lib/hooks/useToast";
-import { getDataType, tryParseJson } from "@/utils/jsonUtils";
+import { getDataType, tryParseJson } from "@/lib/utils/json/jsonUtils";
 
 interface JsonViewProps {
   data: unknown;
