@@ -11,6 +11,7 @@ import { LoadingDots } from "./LoadingDots";
 import { ApiKeyRequiredState } from "./ApiKeyRequiredState";
 import { EmptyChatsState, ChatConfig } from "./EmptyChatsState";
 import { ToolCallApproval, PendingToolCall } from "./ToolCallApproval";
+import { ToolSelector, ToolSelection, ServerInfo } from "./ToolSelector";
 
 interface ChatProps {
   provider: MCPJamAgent | null;
@@ -43,6 +44,13 @@ const Chat: React.FC<ChatProps> = ({
   const [tools, setTools] = useState<Tool[]>([]);
   const [toolsCount, setToolsCount] = useState(0);
   const [serversCount, setServersCount] = useState(0);
+  const [serverToolsData, setServerToolsData] = useState<
+    { serverName: string; tools: Tool[] }[]
+  >([]);
+  const [toolSelection, setToolSelection] = useState<ToolSelection>({
+    enabledTools: new Set(),
+    enabledServers: new Set(),
+  });
 
   // Provider and model state
   const [selectedProvider, setSelectedProvider] =
@@ -86,32 +94,38 @@ const Chat: React.FC<ChatProps> = ({
     setChat((prev) => [...prev, message]);
   };
 
-  // Tool fetching
-  const fetchTools = React.useCallback(async () => {
-    if (!provider) return;
+  // Helper function to group tools by server
+  const getServerInfo = React.useCallback(
+    (allServerTools: { serverName: string; tools: Tool[] }[]): ServerInfo[] => {
+      return allServerTools.map(({ serverName, tools: serverTools }) => ({
+        name: serverName,
+        tools: serverTools,
+        toolCount: serverTools.length,
+      }));
+    },
+    [],
+  );
 
-    try {
-      let tools: Tool[] = [];
+  // Helper function to initialize tool selection on first load only
+  const initializeToolSelection = React.useCallback(
+    (allServerTools: { serverName: string; tools: Tool[] }[]) => {
+      setToolSelection((prev) => {
+        // Only initialize if selection is empty (first load)
+        if (prev.enabledServers.size === 0) {
+          return {
+            enabledServers: new Set(allServerTools.map((st) => st.serverName)),
+            enabledTools: new Set(
+              allServerTools.flatMap((st) => st.tools.map((t) => t.name)),
+            ),
+          };
+        }
 
-      const allServerTools = await provider.getAllTools();
-      tools = allServerTools.flatMap((serverTools) => serverTools.tools);
-
-      setTools(tools);
-      setToolsCount(tools.length);
-      setServersCount(getServersCount?.() || 0);
-    } catch (error) {
-      setError(
-        error instanceof Error ? error.message : "Failed to fetch tools",
-      );
-    }
-  }, [
-    provider,
-    getServersCount,
-    setTools,
-    setToolsCount,
-    setServersCount,
-    setError,
-  ]);
+        // Otherwise, preserve existing selection completely
+        return prev;
+      });
+    },
+    [],
+  );
 
   // Message processing
   // Tool call approval handlers
@@ -206,7 +220,12 @@ const Chat: React.FC<ChatProps> = ({
     };
 
     try {
-      const convertedTools: AnthropicTool[] = tools.map((tool) => ({
+      // Filter tools based on selection
+      const filteredTools = tools.filter((tool) => {
+        return toolSelection.enabledTools.has(tool.name);
+      });
+
+      const convertedTools: AnthropicTool[] = filteredTools.map((tool) => ({
         name: tool.name,
         description: tool.description || "",
         input_schema: tool.inputSchema || { type: "object", properties: {} },
@@ -311,8 +330,37 @@ const Chat: React.FC<ChatProps> = ({
   }, []);
 
   useEffect(() => {
-    fetchTools();
-  }, [provider, updateTrigger, config, fetchTools]);
+    const runFetchTools = async () => {
+      if (!provider) return;
+
+      try {
+        const allServerTools = await provider.getAllTools();
+        const tools = allServerTools.flatMap(
+          (serverTools) => serverTools.tools,
+        );
+
+        setTools(tools);
+        setToolsCount(tools.length);
+        setServersCount(getServersCount?.() || 0);
+        setServerToolsData(allServerTools);
+
+        // Initialize tool selection only if empty
+        initializeToolSelection(allServerTools);
+      } catch (error) {
+        setError(
+          error instanceof Error ? error.message : "Failed to fetch tools",
+        );
+      }
+    };
+
+    runFetchTools();
+  }, [
+    provider,
+    updateTrigger,
+    config,
+    getServersCount,
+    initializeToolSelection,
+  ]);
 
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -378,7 +426,7 @@ const Chat: React.FC<ChatProps> = ({
                 </h1>
                 <p className="text-xs text-slate-500 dark:text-slate-400">
                   {hasApiKey
-                    ? `${serversCount} servers • ${toolsCount} tools`
+                    ? `${serversCount} servers • ${toolSelection.enabledTools.size}/${toolsCount} tools`
                     : "API key required"}
                 </p>
               </div>
@@ -386,6 +434,15 @@ const Chat: React.FC<ChatProps> = ({
 
             {hasApiKey && (
               <div className="flex items-center gap-2">
+                {/* Tool Selector */}
+                <ToolSelector
+                  tools={tools}
+                  toolSelection={toolSelection}
+                  onSelectionChange={setToolSelection}
+                  serverInfo={getServerInfo(serverToolsData)}
+                  loading={loading}
+                />
+
                 {/* Provider Selector */}
                 <div className="relative" ref={providerSelectorRef}>
                   <button
@@ -596,7 +653,7 @@ const Chat: React.FC<ChatProps> = ({
               <div className="text-xs text-slate-400 dark:text-slate-500 mt-3 px-1">
                 <span className="hidden sm:inline">
                   Press Enter to send • Shift+Enter for new line
-                  {` • ${toolsCount} tools from ${serversCount} servers`}
+                  {` • ${toolSelection.enabledTools.size}/${toolsCount} tools from ${serversCount} servers`}
                 </span>
               </div>
             )}
