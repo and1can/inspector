@@ -193,13 +193,13 @@ const Sidebar: React.FC<SidebarProps> = ({
     <div className="p-4 text-center">
       <div className="py-8">
         <Server className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
-        <h3 className="text-sm font-medium mb-2">No clients connected</h3>
+        <h3 className="text-sm font-medium mb-2">No connections</h3>
         <p className="text-xs text-muted-foreground mb-4">
-          Create your first MCP client to get started
+          Create your first MCP connection to get started
         </p>
         <Button onClick={onCreateClient} size="sm" className="w-full">
           <Plus className="w-4 h-4 mr-2" />
-          Create Client
+          Create Connection
         </Button>
       </div>
     </div>

@@ -358,8 +358,6 @@ const App = () => {
         failed: [],
       };
 
-      console.log(`🔄 Creating ${clients.length} client(s)...`);
-
       // Create clients individually to handle failures gracefully
       for (const client of clients) {
         try {

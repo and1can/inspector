@@ -295,14 +295,14 @@ const ClientFormSection: React.FC<ClientFormSectionProps> = ({
       if (result.success.length > 0) {
         toast({
           title: "Clients created successfully",
-          description: `Successfully created ${result.success.length} client(s).`,
+          description: `Successfully created ${result.success.length} connection(s).`,
         });
       }
 
       if (result.failed.length > 0) {
         toast({
           title: "Some clients failed to create",
-          description: `${result.failed.length} client(s) failed to create. Check the console for details.`,
+          description: `${result.failed.length} connection(s) failed to create. Check the console for details.`,
           variant: "destructive",
         });
       }
@@ -560,7 +560,7 @@ const ClientFormSection: React.FC<ClientFormSectionProps> = ({
                   Create {
                     multipleClients.filter((c) => c.name.trim()).length
                   }{" "}
-                  Client(s)
+                  Connection(s)
                 </Button>
               </div>
             </div>
@@ -763,7 +763,7 @@ const ClientFormSection: React.FC<ClientFormSectionProps> = ({
             className="min-w-[180px] h-12 text-base font-semibold bg-primary hover:bg-primary/90 shadow-lg hover:shadow-xl transition-all duration-200 border-2 border-primary/20"
           >
             <CheckCircle2 className="h-5 w-5 mr-2" />
-            {isCreating ? "Create Client" : "Update Client"}
+            {isCreating ? "Create Connection" : "Update Connection"}
           </Button>
           <button
             onClick={onCancel}
