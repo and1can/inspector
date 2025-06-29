@@ -2,14 +2,11 @@ import React from "react";
 import { ProviderLogo } from "../ProviderLogo";
 import { SupportedProvider } from "@/lib/providers";
 
-// Config for different chat modes
+// Config for chat
 interface ChatConfig {
-  mode: "global" | "single";
   title: string;
   subtitle?: string;
   suggestions: string[];
-  showToolsCount?: boolean;
-  showServersCount?: boolean;
 }
 
 interface EmptyChatsStateProps {
@@ -44,11 +41,9 @@ export const EmptyChatsState: React.FC<EmptyChatsStateProps> = ({
           <p className="text-sm text-slate-500 dark:text-slate-400">
             {config.subtitle || "Ask me anything - I'm here to help!"}
           </p>
-          {config.mode === "global" && (
-            <p className="text-xs text-slate-400 dark:text-slate-500">
-              {serversCount} connected servers • {toolsCount} tools available
-            </p>
-          )}
+          <p className="text-xs text-slate-400 dark:text-slate-500">
+            {serversCount} connected servers • {toolsCount} tools available
+          </p>
           {selectedProvider === "ollama" && (
             <p className="text-xs text-slate-400 dark:text-slate-500 mt-2">
               💡 New to Ollama? Download from{" "}

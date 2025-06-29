@@ -20,14 +20,12 @@ export function getProviderDisplayName(): string {
 
 // Chat configuration utilities
 export interface ChatConfig {
-  mode: "global" | "single";
   title: string;
   subtitle?: string;
   suggestions: string[];
 }
 
 export function createChatConfig(
-  mode: "global" | "single",
   options: {
     subtitle?: string;
     additionalSuggestions?: string[];
@@ -41,11 +39,7 @@ export function createChatConfig(
   ];
 
   const config: ChatConfig = {
-    mode,
-    title:
-      mode === "global"
-        ? `Global Chat - ${providerName}`
-        : `${providerName} Chat`,
+    title: `Chat - ${providerName}`,
     suggestions: [...baseSuggestions, ...(options.additionalSuggestions || [])],
   };
 

@@ -378,9 +378,7 @@ const Chat: React.FC<ChatProps> = ({
                 </h1>
                 <p className="text-xs text-slate-500 dark:text-slate-400">
                   {hasApiKey
-                    ? config.mode === "global"
-                      ? `${serversCount} servers • ${toolsCount} tools`
-                      : `${toolsCount} tools available`
+                    ? `${serversCount} servers • ${toolsCount} tools`
                     : "API key required"}
                 </p>
               </div>
@@ -598,8 +596,7 @@ const Chat: React.FC<ChatProps> = ({
               <div className="text-xs text-slate-400 dark:text-slate-500 mt-3 px-1">
                 <span className="hidden sm:inline">
                   Press Enter to send • Shift+Enter for new line
-                  {config.mode === "global" &&
-                    ` • ${toolsCount} tools from ${serversCount} servers`}
+                  {` • ${toolsCount} tools from ${serversCount} servers`}
                 </span>
               </div>
             )}

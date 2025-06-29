@@ -9,7 +9,7 @@ interface ChatTabProps {
 }
 
 const ChatTab: React.FC<ChatTabProps> = ({ mcpAgent, updateTrigger }) => {
-  const config = createChatConfig("global", {
+  const config = createChatConfig({
     subtitle: "Chat with access to tools from all connected servers",
     additionalSuggestions: ["What tools do you have access to?"],
   });
