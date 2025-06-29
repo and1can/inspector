@@ -106,22 +106,14 @@ const Chat: React.FC<ChatProps> = ({
     [],
   );
 
-  // Helper function to initialize tool selection on first load only
+  // Helper function to initialize tool selection and enable all servers/tools
   const initializeToolSelection = React.useCallback(
     (allServerTools: { serverName: string; tools: Tool[] }[]) => {
-      setToolSelection((prev) => {
-        // Only initialize if selection is empty (first load)
-        if (prev.enabledServers.size === 0) {
-          return {
-            enabledServers: new Set(allServerTools.map((st) => st.serverName)),
-            enabledTools: new Set(
-              allServerTools.flatMap((st) => st.tools.map((t) => t.name)),
-            ),
-          };
-        }
-
-        // Otherwise, preserve existing selection completely
-        return prev;
+      setToolSelection({
+        enabledServers: new Set(allServerTools.map((st) => st.serverName)),
+        enabledTools: new Set(
+          allServerTools.flatMap((st) => st.tools.map((t) => t.name)),
+        ),
       });
     },
     [],
