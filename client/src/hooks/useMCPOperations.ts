@@ -14,7 +14,7 @@ import {
 } from "@modelcontextprotocol/sdk/types.js";
 import { Prompt } from "@/components/PromptsTab";
 import { StdErrNotification } from "@/lib/types/notificationTypes";
-import { MCPJamAgent } from "@/lib/mcpjamAgent";
+import { MCPJamAgent } from "@/lib/utils/mcp/mcpjamAgent";
 import { z } from "zod";
 import {
   ClientLogInfo,

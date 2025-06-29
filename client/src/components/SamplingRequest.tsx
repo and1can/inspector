@@ -8,7 +8,7 @@ import {
 import { PendingRequest } from "./SamplingTab";
 import DynamicJsonForm from "./DynamicJsonForm";
 import { useToast } from "@/lib/hooks/useToast";
-import { JsonSchemaType, JsonValue } from "@/utils/jsonUtils";
+import { JsonSchemaType, JsonValue } from "@/lib/utils/json/jsonUtils";
 
 export type SamplingRequestProps = {
   request: PendingRequest;

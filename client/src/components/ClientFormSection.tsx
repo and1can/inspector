@@ -6,7 +6,7 @@ import {
 } from "../lib/types/serverTypes";
 import { InspectorConfig } from "../lib/types/configurationTypes";
 import ConnectionSection from "./ConnectionSection";
-import { ParsedServerConfig } from "@/utils/configImportUtils";
+import { ParsedServerConfig } from "@/lib/utils/json/configImportUtils";
 import { useToast } from "@/lib/hooks/useToast";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";

@@ -18,12 +18,12 @@ import {
   Edit2,
   CopyPlus,
 } from "lucide-react";
-import { RequestStorage } from "@/utils/requestStorage";
+import { RequestStorage } from "@/lib/utils/request/requestStorage";
 import {
   sortRequests,
   createMcpJamRequest,
   getRequestsForClient,
-} from "@/utils/requestUtils";
+} from "@/lib/utils/json/requestUtils";
 
 const ToolsTab = ({
   tools,

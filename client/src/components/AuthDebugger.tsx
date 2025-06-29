@@ -1,10 +1,10 @@
 import { useCallback, useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
-import { DebugInspectorOAuthClientProvider } from "../lib/utils/auth";
+import { DebugInspectorOAuthClientProvider } from "../lib/utils/auth/auth";
 import { AlertCircle, Eye, EyeOff } from "lucide-react";
 import { AuthDebuggerState } from "../lib/types/auth-types";
 import { OAuthFlowProgress } from "./OAuthFlowProgress";
-import { OAuthStateMachine } from "../lib/utils/oauth-state-machine";
+import { OAuthStateMachine } from "../lib/utils/auth/oauth-state-machine";
 
 export interface AuthDebuggerProps {
   serverUrl: string;

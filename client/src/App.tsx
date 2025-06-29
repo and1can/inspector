@@ -49,8 +49,11 @@ import { useConfigState } from "./hooks/useConfigState";
 import { loadOAuthTokens, handleOAuthDebugConnect } from "./services/oauth";
 
 // Utils
-import { getMCPProxyAddressAsync } from "./utils/configUtils";
-import { handleRootsChange, MCPHelperDependencies } from "./utils/mcpHelpers";
+import { getMCPProxyAddressAsync } from "./lib/utils/json/configUtils";
+import {
+  handleRootsChange,
+  MCPHelperDependencies,
+} from "./lib/utils/mcp/mcpHelpers";
 
 import ElicitationModal, {
   ElicitationResponse,

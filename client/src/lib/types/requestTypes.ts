@@ -1,5 +1,5 @@
 import { Tool } from "@modelcontextprotocol/sdk/types.js";
-import { JsonValue } from "@/utils/jsonUtils";
+import { JsonValue } from "@/lib/utils/json/jsonUtils";
 
 /**
  * Represents a saved MCP tool request that can be stored and replayed

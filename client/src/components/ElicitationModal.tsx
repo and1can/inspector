@@ -9,8 +9,8 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import DynamicJsonForm from "./DynamicJsonForm";
-import { JsonSchemaType, JsonValue } from "@/utils/jsonUtils";
-import { generateDefaultValue } from "@/utils/schemaUtils";
+import { JsonSchemaType, JsonValue } from "@/lib/utils/json/jsonUtils";
+import { generateDefaultValue } from "@/lib/utils/json/schemaUtils";
 import Ajv from "ajv";
 
 // TODO: This is a temporary type for the elicitation request. Move this elsewhere.

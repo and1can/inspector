@@ -1,5 +1,5 @@
 import { useState, useCallback } from "react";
-import { MCPJamAgent, MCPClientOptions } from "@/lib/mcpjamAgent";
+import { MCPJamAgent, MCPClientOptions } from "@/lib/utils/mcp/mcpjamAgent";
 import { MCPJamServerConfig } from "@/lib/types/serverTypes";
 import { InspectorConfig } from "@/lib/types/configurationTypes";
 import {

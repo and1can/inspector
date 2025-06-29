@@ -1,12 +1,12 @@
 import { useEffect, useRef } from "react";
-import { InspectorOAuthClientProvider } from "../lib/utils/auth";
+import { InspectorOAuthClientProvider } from "../lib/utils/auth/auth";
 import { SESSION_KEYS } from "../lib/types/constants";
 import { auth } from "@modelcontextprotocol/sdk/client/auth.js";
 import { useToast } from "@/lib/hooks/useToast";
 import {
   generateOAuthErrorDescription,
   parseOAuthCallbackParams,
-} from "@/utils/oauthUtils.ts";
+} from "@/lib/utils/auth/oauthUtils";
 
 interface OAuthCallbackProps {
   onConnect: (serverUrl: string) => void;

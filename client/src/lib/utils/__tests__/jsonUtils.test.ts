@@ -3,8 +3,8 @@ import {
   tryParseJson,
   updateValueAtPath,
   getValueAtPath,
-} from "../jsonUtils";
-import type { JsonValue } from "../jsonUtils";
+} from "@/lib/utils/json/jsonUtils";
+import type { JsonValue } from "@/lib/utils/json/jsonUtils";
 
 describe("getDataType", () => {
   test("should return 'string' for string values", () => {

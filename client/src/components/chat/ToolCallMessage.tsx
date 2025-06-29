@@ -1,6 +1,6 @@
 import React from "react";
 import { Wrench, AlertTriangle, Clock, CheckCircle } from "lucide-react";
-import { cn } from "@/lib/utils/utils";
+import { cn } from "@/lib/utils/request/utils";
 
 // Tool call message types
 export interface ToolCallInfo {

@@ -1,4 +1,4 @@
-import { OAuthStep, AuthDebuggerState } from "../types/auth-types";
+import { OAuthStep, AuthDebuggerState } from "../../types/auth-types";
 import { DebugInspectorOAuthClientProvider } from "./auth";
 import {
   discoverOAuthMetadata,

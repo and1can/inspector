@@ -1,5 +1,8 @@
-import { generateDefaultValue, formatFieldLabel } from "../schemaUtils";
-import type { JsonSchemaType } from "../jsonUtils";
+import {
+  generateDefaultValue,
+  formatFieldLabel,
+} from "@/lib/utils/json/schemaUtils";
+import type { JsonSchemaType } from "@/lib/utils/json/jsonUtils";
 
 describe("generateDefaultValue", () => {
   test("generates default string", () => {

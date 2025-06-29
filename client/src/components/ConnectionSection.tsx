@@ -33,7 +33,7 @@ import {
 } from "@/components/ui/tooltip";
 import { useToast } from "../lib/hooks/useToast";
 import ConfigImportDialog from "./ConfigImportDialog";
-import { ParsedServerConfig } from "@/utils/configImportUtils";
+import { ParsedServerConfig } from "@/lib/utils/json/configImportUtils";
 
 interface ConnectionSectionProps {
   connectionStatus: ConnectionStatus;

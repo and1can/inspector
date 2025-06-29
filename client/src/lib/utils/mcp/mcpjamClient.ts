@@ -26,7 +26,7 @@ import {
   getMCPServerRequestMaxTotalTimeout,
   getMCPServerRequestTimeout,
   resetRequestTimeoutOnProgress,
-} from "@/utils/configUtils";
+} from "@/lib/utils/json/configUtils";
 import { InspectorConfig } from "@/lib/types/configurationTypes";
 import { Transport } from "@modelcontextprotocol/sdk/shared/transport.js";
 import {
@@ -38,7 +38,7 @@ import {
   StreamableHTTPClientTransport,
   StreamableHTTPClientTransportOptions,
 } from "@modelcontextprotocol/sdk/client/streamableHttp.js";
-import { InspectorOAuthClientProvider } from "@/lib/utils/auth";
+import { InspectorOAuthClientProvider } from "@/lib/utils/auth/auth";
 import { z } from "zod";
 import { ConnectionStatus } from "@/lib/types/constants";
 import { RequestOptions } from "@modelcontextprotocol/sdk/shared/protocol.js";

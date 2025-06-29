@@ -5,7 +5,7 @@ import {
 import {
   exportRequestCollection,
   importRequestCollection,
-} from "./requestUtils";
+} from "@/lib/utils/json/requestUtils";
 
 const STORAGE_KEY = "mcpjam_saved_requests";
 

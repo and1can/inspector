@@ -1,4 +1,4 @@
-import { MCPJamClient } from "./mcpjamClient";
+import { MCPJamClient } from "@/lib/utils/mcp/mcpjamClient";
 import { InspectorConfig } from "@/lib/types/configurationTypes";
 import {
   Tool,
@@ -8,7 +8,7 @@ import {
   ElicitRequest,
 } from "@modelcontextprotocol/sdk/types.js";
 import { MCPJamServerConfig } from "@/lib/types/serverTypes";
-import { createDefaultConfig } from "@/utils/configUtils";
+import { createDefaultConfig } from "@/lib/utils/json/configUtils";
 import { StdErrNotification } from "@/lib/types/notificationTypes";
 import {
   CreateMessageRequest,
@@ -17,7 +17,7 @@ import {
 import { ConnectionStatus } from "@/lib/types/constants";
 import { ClientLogLevels } from "@/hooks/helpers/types";
 import { ElicitationResponse } from "@/components/ElicitationModal";
-import * as chatHelpers from "@/lib/utils/agentChat";
+import * as chatHelpers from "@/lib/utils/mcp/agentChat";
 import { Tool as AnthropicTool } from "@anthropic-ai/sdk/resources/messages/messages.mjs";
 import { SupportedProvider } from "@/lib/providers";
 

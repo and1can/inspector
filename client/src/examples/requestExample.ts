@@ -8,8 +8,8 @@ import {
   validateRequestParameters,
   generateDefaultRequestName,
   createDefaultParameters,
-} from "@/utils/requestUtils";
-import { RequestStorage } from "@/utils/requestStorage";
+} from "@/lib/utils/json/requestUtils";
+import { RequestStorage } from "@/lib/utils/request/requestStorage";
 
 /**
  * Example of how to create and save a McpJamRequest
