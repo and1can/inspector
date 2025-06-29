@@ -31,7 +31,6 @@ export function createChatConfig(
     additionalSuggestions?: string[];
   } = {},
 ): ChatConfig {
-  const providerName = getProviderDisplayName();
   const baseSuggestions = [
     "Hello! How can you help me?",
     "Help me write some code",
@@ -39,7 +38,7 @@ export function createChatConfig(
   ];
 
   const config: ChatConfig = {
-    title: `Chat - ${providerName}`,
+    title: `Chat`,
     suggestions: [...baseSuggestions, ...(options.additionalSuggestions || [])],
   };
 
