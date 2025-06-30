@@ -1,12 +1,15 @@
 import React from "react";
 import { ProviderLogo } from "../ProviderLogo";
 import { SupportedProvider } from "@/lib/providers";
+import { OllamaSetupGuide } from "./OllamaSetupGuide";
 
-// Config for chat
+// Config for different chat modes
 interface ChatConfig {
   title: string;
   subtitle?: string;
   suggestions: string[];
+  showToolsCount?: boolean;
+  showServersCount?: boolean;
 }
 
 interface EmptyChatsStateProps {
@@ -25,8 +28,8 @@ export const EmptyChatsState: React.FC<EmptyChatsStateProps> = ({
   serversCount = 0,
 }) => {
   return (
-    <div className="flex items-center justify-center h-full p-8">
-      <div className="text-center max-w-md space-y-6">
+    <div className="flex justify-center min-h-full p-8 pt-12">
+      <div className="text-center max-w-2xl space-y-6 my-auto">
         <div className="w-12 h-12 mx-auto rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center">
           <ProviderLogo
             className="text-slate-600 dark:text-slate-300"
@@ -41,32 +44,15 @@ export const EmptyChatsState: React.FC<EmptyChatsStateProps> = ({
           <p className="text-sm text-slate-500 dark:text-slate-400">
             {config.subtitle || "Ask me anything - I'm here to help!"}
           </p>
-          <p className="text-xs text-slate-400 dark:text-slate-500">
-            {serversCount} connected servers • {toolsCount} tools available
-          </p>
-          {selectedProvider === "ollama" && (
-            <p className="text-xs text-slate-400 dark:text-slate-500 mt-2">
-              💡 New to Ollama? Download from{" "}
-              <a
-                href="https://ollama.com/download"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-blue-500 hover:underline"
-              >
-                ollama.com/download
-              </a>{" "}
-              and pull{" "}
-              <a
-                href="https://ollama.com/search?c=tools"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-blue-500 hover:underline"
-              >
-                tool-calling models
-              </a>
+          {config.showServersCount && (
+            <p className="text-xs text-slate-400 dark:text-slate-500">
+              {serversCount} connected servers • {toolsCount} tools available
             </p>
           )}
         </div>
+
+        {selectedProvider === "ollama" && <OllamaSetupGuide />}
+
         <div className="grid grid-cols-1 gap-2 pt-2">
           {config.suggestions.map((suggestion) => (
             <button

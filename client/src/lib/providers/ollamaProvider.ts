@@ -121,10 +121,18 @@ export class OllamaProvider extends AIProvider {
       const response = await fetch(`${host}/api/tags`);
 
       if (!response.ok) {
+        if (response.status === 404) {
+          throw new Error("Ollama server not found. Please ensure Ollama is running.");
+        }
         throw new Error(`HTTP ${response.status}: ${response.statusText}`);
       }
 
       const data: OllamaTagsResponse = await response.json();
+
+      // Return empty array if no models, don't fall back to static models
+      if (!data.models || data.models.length === 0) {
+        return [];
+      }
 
       return data.models.map((model: OllamaModel): ProviderModel => {
         // Extract model name and format it nicely
@@ -140,8 +148,8 @@ export class OllamaProvider extends AIProvider {
       });
     } catch (error) {
       console.warn("Failed to fetch local Ollama models:", error);
-      // Return fallback static models if fetch fails
-      return this.getStaticModels();
+      // Return empty array instead of static models
+      return [];
     }
   }
 
@@ -246,7 +254,7 @@ export class OllamaProvider extends AIProvider {
       return this.cachedModels;
     }
 
-    // If no cache, return static models and trigger async fetch
+    // If no cache, trigger async fetch and return empty array initially
     if (!this.cachedModels) {
       // Trigger async fetch in background
       this.fetchLocalModels()
@@ -256,10 +264,12 @@ export class OllamaProvider extends AIProvider {
         })
         .catch((error) => {
           console.warn("Background model fetch failed:", error);
+          this.cachedModels = []; // Set empty array on error
+          this.lastFetchTime = Date.now();
         });
 
-      // Return static models for immediate use
-      return this.getStaticModels();
+      // Return empty array while fetching
+      return [];
     }
 
     return this.cachedModels;
