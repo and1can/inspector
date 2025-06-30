@@ -43,6 +43,7 @@
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.52.0",
+    "@heroicons/react": "^2.2.0",
     "@mcpjam/inspector-cli": "^0.1.6",
     "@mcpjam/inspector-client": "^0.1.6",
     "@mcpjam/inspector-server": "^0.1.6",

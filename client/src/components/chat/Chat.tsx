@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import { Tool } from "@modelcontextprotocol/sdk/types.js";
 import { Tool as AnthropicTool } from "@anthropic-ai/sdk/resources/messages/messages.mjs";
-import { Send, ChevronDown, Square } from "lucide-react";
+import { Send, ChevronDown, Square, RefreshCw } from "lucide-react";
 import { cn } from "@/lib/utils/request/utils";
 import { ProviderLogo } from "../ProviderLogo";
 import { providerManager, SupportedProvider } from "@/lib/providers";
@@ -60,6 +60,8 @@ const Chat: React.FC<ChatProps> = ({
   );
   const [showProviderSelector, setShowProviderSelector] = useState(false);
   const [showModelSelector, setShowModelSelector] = useState(false);
+  const [isRefreshingModels, setIsRefreshingModels] = useState(false);
+  const [isLoadingModels, setIsLoadingModels] = useState(false);
 
   // Refs
   const chatEndRef = useRef<HTMLDivElement>(null);
@@ -293,17 +295,81 @@ const Chat: React.FC<ChatProps> = ({
     setSelectedProvider(provider);
     setShowProviderSelector(false);
 
-    // Update model to first available for this provider
-    const models =
-      providerManager.getProvider(provider)?.getSupportedModels() || [];
-    if (models.length > 0) {
-      setSelectedModel(models[0].id);
+    // Get current models for the new provider
+    const models = providerManager.getProvider(provider)?.getSupportedModels() || [];
+    
+    if (provider === 'ollama') {
+      if (models.length === 0) {
+        // For Ollama, clear the selected model and wait for async fetch
+        setIsLoadingModels(true);
+        setSelectedModel('');
+        
+        // Set up a polling mechanism to check for models with timeout
+        let attempts = 0;
+        const maxAttempts = 20; // 10 seconds total (20 attempts * 500ms)
+        
+        const checkForModels = () => {
+          attempts++;
+          const updatedModels = providerManager.getProvider('ollama')?.getSupportedModels() || [];
+          if (updatedModels.length > 0) {
+            setSelectedModel(updatedModels[0].id);
+            setIsLoadingModels(false);
+          } else if (attempts < maxAttempts) {
+            // Continue checking for a reasonable amount of time
+            setTimeout(checkForModels, 500);
+          } else {
+            // Timeout reached, stop loading
+            setIsLoadingModels(false);
+          }
+        };
+        
+        // Start checking after a short delay
+        setTimeout(checkForModels, 200);
+      } else {
+        setSelectedModel(models[0].id);
+        setIsLoadingModels(false);
+      }
+    } else {
+      // For other providers, set immediately
+      setIsLoadingModels(false);
+      if (models.length > 0) {
+        setSelectedModel(models[0].id);
+      }
     }
   };
 
   const selectModel = (modelId: string) => {
     setSelectedModel(modelId);
     setShowModelSelector(false);
+  };
+
+  const handleRefreshModels = async () => {
+    if (selectedProvider !== "ollama") return;
+
+    const provider = providerManager.getProvider(selectedProvider);
+
+    // Check if provider exists and supports refreshModels
+    if (!provider || typeof provider.refreshModels !== "function") {
+      console.warn("Provider does not support model refreshing");
+      return;
+    }
+
+    setIsRefreshingModels(true);
+    try {
+      await provider.refreshModels();
+      // Force re-render to get updated models
+      const updatedModels = provider.getSupportedModels();
+      if (
+        updatedModels.length > 0 &&
+        (!selectedModel || !updatedModels.find((m) => m.id === selectedModel))
+      ) {
+        setSelectedModel(updatedModels[0].id);
+      }
+    } catch (error) {
+      console.error("Failed to refresh models:", error);
+    } finally {
+      setIsRefreshingModels(false);
+    }
   };
 
   // Effects
@@ -481,8 +547,13 @@ const Chat: React.FC<ChatProps> = ({
                     disabled={loading}
                   >
                     <span className="text-slate-700 dark:text-slate-200 font-medium">
-                      {availableModels.find((m) => m.id === selectedModel)
-                        ?.name || selectedModel}
+                      {selectedProvider === 'ollama' && isLoadingModels
+                        ? 'Loading models...'
+                        : selectedProvider === 'ollama' && availableModels.length === 0 && selectedModel === ''
+                        ? 'No models found'
+                        : availableModels.find((m) => m.id === selectedModel)?.name || 
+                          (selectedProvider === 'ollama' ? 'Select model' : selectedModel)
+                      }
                     </span>
                     <ChevronDown className="w-3 h-3 text-slate-400" />
                   </button>
@@ -490,24 +561,60 @@ const Chat: React.FC<ChatProps> = ({
                   {showModelSelector && (
                     <div className="absolute right-0 top-full mt-2 w-72 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl shadow-lg z-50">
                       <div className="py-2">
-                        {availableModels.map((model) => (
-                          <button
-                            key={model.id}
-                            onClick={() => selectModel(model.id)}
-                            className={cn(
-                              "w-full px-4 py-3 text-left hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors",
-                              selectedModel === model.id &&
-                                "bg-slate-50 dark:bg-slate-800",
+                        {selectedProvider === "ollama" && (
+                          <div className="px-4 py-2 border-b border-slate-200 dark:border-slate-700">
+                            <button
+                              onClick={handleRefreshModels}
+                              disabled={isRefreshingModels}
+                              className="text-sm text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 flex items-center gap-2 disabled:opacity-50"
+                            >
+                              <RefreshCw
+                                className={cn(
+                                  "w-3 h-3",
+                                  isRefreshingModels && "animate-spin",
+                                )}
+                              />
+                              {isRefreshingModels
+                                ? "Refreshing..."
+                                : "Refresh Models"}
+                            </button>
+                          </div>
+                        )}
+
+                        {availableModels.length === 0 ? (
+                          <div className="px-4 py-3 text-center">
+                            <div className="text-sm text-slate-500 dark:text-slate-400 mb-2">
+                              {selectedProvider === "ollama"
+                                ? "No Ollama models found"
+                                : "No models available"}
+                            </div>
+                            {selectedProvider === "ollama" && (
+                              <div className="text-xs text-slate-400 dark:text-slate-500">
+                                Make sure Ollama is running and models are
+                                installed
+                              </div>
                             )}
-                          >
-                            <div className="text-sm font-medium text-slate-900 dark:text-slate-100">
-                              {model.name}
-                            </div>
-                            <div className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-                              {model.description}
-                            </div>
-                          </button>
-                        ))}
+                          </div>
+                        ) : (
+                          availableModels.map((model) => (
+                            <button
+                              key={model.id}
+                              onClick={() => selectModel(model.id)}
+                              className={cn(
+                                "w-full px-4 py-3 text-left hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors",
+                                selectedModel === model.id &&
+                                  "bg-slate-50 dark:bg-slate-800",
+                              )}
+                            >
+                              <div className="text-sm font-medium text-slate-900 dark:text-slate-100">
+                                {model.name}
+                              </div>
+                              <div className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                                {model.description}
+                              </div>
+                            </button>
+                          ))
+                        )}
                       </div>
                     </div>
                   )}
