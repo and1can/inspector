@@ -122,7 +122,9 @@ export class OllamaProvider extends AIProvider {
 
       if (!response.ok) {
         if (response.status === 404) {
-          throw new Error("Ollama server not found. Please ensure Ollama is running.");
+          throw new Error(
+            "Ollama server not found. Please ensure Ollama is running.",
+          );
         }
         throw new Error(`HTTP ${response.status}: ${response.statusText}`);
       }
@@ -185,66 +187,6 @@ export class OllamaProvider extends AIProvider {
     }
 
     return description;
-  }
-
-  // Fallback static models (kept as backup)
-  private getStaticModels(): ProviderModel[] {
-    return [
-      {
-        id: "llama3.1",
-        name: "Llama 3.1",
-        description: "Meta's Llama 3.1 model (if available locally)",
-      },
-      {
-        id: "llama3.1:8b",
-        name: "Llama 3.1 8B",
-        description:
-          "Llama 3.1 8 billion parameter model (if available locally)",
-      },
-      {
-        id: "llama3.1:70b",
-        name: "Llama 3.1 70B",
-        description:
-          "Llama 3.1 70 billion parameter model (if available locally)",
-      },
-      {
-        id: "llama3.2",
-        name: "Llama 3.2",
-        description: "Meta's Llama 3.2 model (if available locally)",
-      },
-      {
-        id: "llama3.2:3b",
-        name: "Llama 3.2 3B",
-        description:
-          "Llama 3.2 3 billion parameter model (if available locally)",
-      },
-      {
-        id: "qwen2.5",
-        name: "Qwen 2.5",
-        description: "Alibaba's Qwen 2.5 model (if available locally)",
-      },
-      {
-        id: "mistral",
-        name: "Mistral",
-        description: "Mistral 7B model (if available locally)",
-      },
-      {
-        id: "codellama",
-        name: "Code Llama",
-        description:
-          "Code generation model based on Llama (if available locally)",
-      },
-      {
-        id: "phi3",
-        name: "Phi-3",
-        description: "Microsoft's Phi-3 model (if available locally)",
-      },
-      {
-        id: "gemma2",
-        name: "Gemma 2",
-        description: "Google's Gemma 2 model (if available locally)",
-      },
-    ];
   }
 
   getSupportedModels(): ProviderModel[] {
