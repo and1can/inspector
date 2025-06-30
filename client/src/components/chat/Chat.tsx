@@ -403,7 +403,9 @@ const Chat: React.FC<ChatProps> = ({
         setServerToolsData(allServerTools);
 
         // Initialize tool selection only if empty
-        initializeToolSelection(allServerTools);
+        if (toolSelection.enabledTools.size === 0) {
+          initializeToolSelection(allServerTools);
+        }
       } catch (error) {
         setError(
           error instanceof Error ? error.message : "Failed to fetch tools",
