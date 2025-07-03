@@ -44,8 +44,8 @@ const defaultPort = process.env.PORT || 6274;
 let port = Number(defaultPort);
 
 // Try ports sequentially until one works
-server.on('error', (err) => {
-  if (err.code === 'EADDRINUSE') {
+server.on("error", (err) => {
+  if (err.code === "EADDRINUSE") {
     console.log(`⚠️  Port ${port} was in use, trying ${port + 1}`);
     port++;
     server.listen(port);
@@ -57,7 +57,7 @@ server.on('error', (err) => {
 server.on("listening", () => {
   const url = `http://127.0.0.1:${port}`;
   console.log(`🔍 MCPJam Inspector is up and running at ${url} 🚀`);
-  
+
   if (process.env.MCP_AUTO_OPEN_ENABLED !== "false") {
     console.log(`🌐 Opening browser at ${url}`);
     open(url);

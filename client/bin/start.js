@@ -86,7 +86,7 @@ async function main() {
     abort.abort();
     console.log("\n\x1b[31m%s\x1b[0m", "⚠️  Shutting down MCP Inspector..."); // Red color
   });
-  
+
   let server, serverOk;
   try {
     server = spawnPromise(
@@ -119,10 +119,10 @@ async function main() {
       console.log("\x1b[33m%s\x1b[0m", "🖥️  Starting client interface...");
 
       await spawnPromise("node", [inspectorClientPath], {
-        env: { 
-          ...process.env, 
+        env: {
+          ...process.env,
           PORT: CLIENT_PORT,
-          MCP_AUTO_OPEN_ENABLED: process.env.MCP_AUTO_OPEN_ENABLED ?? "true"
+          MCP_AUTO_OPEN_ENABLED: process.env.MCP_AUTO_OPEN_ENABLED ?? "true",
         },
         signal: abort.signal,
         echoOutput: true,
