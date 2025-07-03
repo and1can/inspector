@@ -123,21 +123,14 @@ async function runWebClient(args: Args): Promise<void> {
   if (serverOk) {
     try {
       console.log("\x1b[32m%s\x1b[0m", "✅ Server initialized successfully"); // Green color
-      console.log(
-        "\x1b[36m%s\x1b[0m",
-        `🌐 Opening browser at http://127.0.0.1:${CLIENT_PORT}`,
-      );
-
-      if (process.env.MCP_AUTO_OPEN_ENABLED !== "false") {
-        // Note: We need to import 'open' if we want to auto-open browser
-        // import open from "open";
-        // open(`http://127.0.0.1:${CLIENT_PORT}`);
-      }
-
       console.log("\x1b[33m%s\x1b[0m", "🖥️  Starting client interface...");
 
       await spawnPromise("node", [inspectorClientPath], {
-        env: { ...process.env, PORT: CLIENT_PORT },
+        env: { 
+          ...process.env, 
+          PORT: CLIENT_PORT,
+          MCP_AUTO_OPEN_ENABLED: process.env.MCP_AUTO_OPEN_ENABLED ?? "true"
+        },
         signal: abort.signal,
         echoOutput: true,
       });
