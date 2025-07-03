@@ -116,7 +116,7 @@ const ClientFormSection: React.FC<ClientFormSectionProps> = ({
 
   useEffect(() => {
     if (!isNameTouched) return;
-    
+
     if (clientFormName.trim()) {
       setNameError("");
     } else {
@@ -661,7 +661,7 @@ const ClientFormSection: React.FC<ClientFormSectionProps> = ({
               {/* Client Name */}
               <div className="space-y-2">
                 <Label htmlFor="client-name" className="text-sm font-medium">
-                  Name
+                  Name*
                 </Label>
                 <Input
                   id="client-name"
