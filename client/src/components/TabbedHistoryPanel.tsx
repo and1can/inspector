@@ -5,8 +5,7 @@ import ActivityTab from "./ActivityTab";
 import ResultsTab from "./ResultsTab";
 import ClientLogsTab from "./ClientLogsTab";
 import { ClientLogInfo } from "@/hooks/helpers/types";
-
-type TabType = "activity" | "results" | "logs";
+import { TabType } from "./History";
 
 interface TabbedHistoryPanelProps {
   requestHistory: Array<{

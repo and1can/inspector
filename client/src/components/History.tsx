@@ -5,7 +5,7 @@ import { useDraggablePane } from "../lib/hooks/useDraggablePane";
 import TabbedHistoryPanel from "./TabbedHistoryPanel";
 import { ClientLogInfo } from "@/hooks/helpers/types";
 
-type TabType = "activity" | "results" | "logs";
+export type TabType = "activity" | "results" | "logs";
 
 const HistoryAndNotifications = ({
   requestHistory,
