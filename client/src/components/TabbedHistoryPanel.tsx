@@ -4,16 +4,11 @@ import { Activity, ScrollText, ChevronDown, Bug, Trash2 } from "lucide-react";
 import ActivityTab from "./ActivityTab";
 import ResultsTab from "./ResultsTab";
 import ClientLogsTab from "./ClientLogsTab";
-import { ClientLogInfo } from "@/hooks/helpers/types";
+import { ClientLogInfo, RequestHistoryInfo } from "@/hooks/helpers/types";
 import { TabType } from "./History";
 
 interface TabbedHistoryPanelProps {
-  requestHistory: Array<{
-    request: string;
-    response?: string;
-    timestamp: string;
-    latency?: number;
-  }>;
+  requestHistory: RequestHistoryInfo[];
   toolResult: CompatibilityCallToolResult | null;
   clientLogs: ClientLogInfo[];
   onClearHistory: () => void;
