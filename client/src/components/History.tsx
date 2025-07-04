@@ -3,7 +3,7 @@ import { useEffect, useState, useCallback } from "react";
 import { History, ChevronDown, GripHorizontal } from "lucide-react";
 import { useDraggablePane } from "../lib/hooks/useDraggablePane";
 import TabbedHistoryPanel from "./TabbedHistoryPanel";
-import { ClientLogInfo } from "@/hooks/helpers/types";
+import { ClientLogInfo, RequestHistoryInfo } from "@/hooks/helpers/types";
 
 export type TabType = "activity" | "results" | "logs";
 
@@ -14,12 +14,7 @@ const HistoryAndNotifications = ({
   onClearHistory,
   onClearLogs,
 }: {
-  requestHistory: Array<{
-    request: string;
-    response?: string;
-    timestamp: string;
-    latency?: number;
-  }>;
+  requestHistory: RequestHistoryInfo[];
   toolResult: CompatibilityCallToolResult | null;
   clientLogs: ClientLogInfo[];
   onClearHistory: () => void;
