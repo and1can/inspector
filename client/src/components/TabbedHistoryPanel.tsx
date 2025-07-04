@@ -5,6 +5,7 @@ import ActivityTab from "./ActivityTab";
 import ResultsTab from "./ResultsTab";
 import ClientLogsTab from "./ClientLogsTab";
 import { ClientLogInfo } from "@/hooks/helpers/types";
+import { TabType } from "./History";
 
 interface TabbedHistoryPanelProps {
   requestHistory: Array<{
@@ -18,9 +19,9 @@ interface TabbedHistoryPanelProps {
   onClearHistory: () => void;
   onClearLogs: () => void;
   onToggleCollapse: () => void;
+  activeTab: TabType;
+  setActiveTab: (tab: TabType) => void;
 }
-
-type TabType = "activity" | "results" | "logs";
 
 const TabbedHistoryPanel = ({
   requestHistory,
@@ -29,14 +30,14 @@ const TabbedHistoryPanel = ({
   onClearHistory,
   onClearLogs,
   onToggleCollapse,
+  activeTab,
+  setActiveTab,
 }: TabbedHistoryPanelProps) => {
-  const [activeTab, setActiveTab] = useState<TabType>("activity");
   const [isToolResultError, setIsToolResultError] = useState(false);
 
   useEffect(() => {
     if (toolResult) {
       setIsToolResultError(toolResult.isError === true);
-      setActiveTab("results");
     }
   }, [toolResult]);
 
@@ -53,7 +54,7 @@ const TabbedHistoryPanel = ({
         setActiveTab("logs");
       }
     }
-  }, [clientLogs]);
+  }, [clientLogs, setActiveTab]);
 
   const renderActivityTabButton = () => {
     return (

@@ -5,6 +5,8 @@ import { useDraggablePane } from "../lib/hooks/useDraggablePane";
 import TabbedHistoryPanel from "./TabbedHistoryPanel";
 import { ClientLogInfo } from "@/hooks/helpers/types";
 
+export type TabType = "activity" | "results" | "logs";
+
 const HistoryAndNotifications = ({
   requestHistory,
   toolResult,
@@ -24,7 +26,7 @@ const HistoryAndNotifications = ({
   onClearLogs: () => void;
 }) => {
   const [isHistoryCollapsed, setIsHistoryCollapsed] = useState(true);
-
+  const [activeTab, setActiveTab] = useState<TabType>("activity");
   const {
     height: historyPaneHeight,
     isDragging,
@@ -82,6 +84,7 @@ const HistoryAndNotifications = ({
     if (toolResult) {
       // Only expand if collapsed, but don't reset the height
       setIsHistoryCollapsed(false);
+      setActiveTab("results");
     }
   }, [toolResult]);
 
@@ -139,6 +142,8 @@ const HistoryAndNotifications = ({
             onClearHistory={onClearHistory}
             onClearLogs={onClearLogs}
             onToggleCollapse={toggleCollapse}
+            activeTab={activeTab}
+            setActiveTab={setActiveTab}
           />
         ) : (
           <div
