@@ -1,16 +1,14 @@
 import { ClientLogInfo } from "@/hooks/helpers/types";
-import { Trash2, AlertCircle, Info, AlertTriangle, Bug } from "lucide-react";
+import { AlertCircle, Info, AlertTriangle, Bug } from "lucide-react";
 import CopyIcon from "./CopyIcon";
 
 interface ClientLogsTabProps {
   clientLogs: ClientLogInfo[];
-  onClearLogs: () => void;
   showHeader?: boolean;
 }
 
 const ClientLogsTab = ({
   clientLogs,
-  onClearLogs,
   showHeader = true,
 }: ClientLogsTabProps) => {
   const reversedClientLogs = [...clientLogs].reverse();
@@ -110,13 +108,6 @@ const ClientLogsTab = ({
             {clientLogs.length} log
             {clientLogs.length !== 1 ? "s" : ""}
           </span>
-          <button
-            onClick={onClearLogs}
-            className="p-2 transition-all duration-200 rounded-lg hover:bg-destructive/10 hover:text-destructive group"
-            title="Clear all activity"
-          >
-            <Trash2 className="w-4 h-4 text-muted-foreground group-hover:text-destructive" />
-          </button>
         </div>
       )}
 
