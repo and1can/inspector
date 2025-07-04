@@ -91,10 +91,11 @@ const ClientFormSection: React.FC<ClientFormSectionProps> = ({
   const [sseUrlString, setSseUrlString] = useState<string>("");
   const [multipleClients, setMultipleClients] = useState<ClientConfig[]>([]);
   const [isMultipleMode, setIsMultipleMode] = useState(false);
-  const [isManualConfigExpanded, setIsManualConfigExpanded] = useState(false);
+  const [isManualConfigExpanded, setIsManualConfigExpanded] = useState(true);
   const { toast } = useToast();
   const [showImportDialog, setShowImportDialog] = useState(false);
   const [nameError, setNameError] = useState<string>("");
+  const [isNameTouched, setIsNameTouched] = useState(false);
 
   // Initialize argsString when clientFormConfig changes
   useEffect(() => {
@@ -114,12 +115,14 @@ const ClientFormSection: React.FC<ClientFormSectionProps> = ({
   }, [clientFormConfig]);
 
   useEffect(() => {
+    if (!isNameTouched) return;
+
     if (clientFormName.trim()) {
       setNameError("");
     } else {
       setNameError("Client name is required");
     }
-  }, [clientFormName]);
+  }, [clientFormName, isNameTouched]);
 
   // Handler for args changes that preserves input while typing
   const handleArgsChange = (newArgsString: string) => {
@@ -658,12 +661,13 @@ const ClientFormSection: React.FC<ClientFormSectionProps> = ({
               {/* Client Name */}
               <div className="space-y-2">
                 <Label htmlFor="client-name" className="text-sm font-medium">
-                  Name
+                  Name*
                 </Label>
                 <Input
                   id="client-name"
                   value={clientFormName}
                   onChange={(e) => setClientFormName(e.target.value)}
+                  onBlur={() => setIsNameTouched(true)}
                   placeholder="Enter client name"
                   className={`max-w-md ${nameError ? "border-red-500 focus:border-red-500 focus:ring-red-500" : ""}`}
                 />

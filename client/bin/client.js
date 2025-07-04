@@ -56,10 +56,14 @@ server.on("error", (err) => {
 
 server.on("listening", () => {
   const url = `http://127.0.0.1:${port}`;
-  console.log(`🔍 MCPJam Inspector is up and running at ${url} 🚀`);
+  console.log(
+    `🔍 MCPJam Inspector is up and running at \u001B]8;;${url}\u0007${url}\u001B]8;;\u0007 🚀`,
+  );
 
   if (process.env.MCP_AUTO_OPEN_ENABLED !== "false") {
-    console.log(`🌐 Opening browser at ${url}`);
+    console.log(
+      `🌐 Opening browser at \u001B]8;;${url}\u0007${url}\u001B]8;;\u0007`,
+    );
     open(url);
   }
 });
