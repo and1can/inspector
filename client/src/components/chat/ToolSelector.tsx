@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from "react";
 import { Tool } from "@modelcontextprotocol/sdk/types.js";
-import { ChevronDown, Settings, Check } from "lucide-react";
+import { ChevronDown, Wrench, Check } from "lucide-react";
 import { cn } from "@/lib/utils/request/utils";
 
 export interface ToolSelection {
@@ -120,7 +120,7 @@ export const ToolSelector: React.FC<ToolSelectorProps> = ({
         )}
         disabled={loading}
       >
-        <Settings className="w-3 h-3 text-slate-400" />
+        <Wrench className="w-3 h-3 text-slate-400" />
         <span className="text-slate-700 dark:text-slate-200 font-medium">
           Tools
         </span>
