@@ -123,9 +123,10 @@ async function runWebClient(args: Args): Promise<void> {
   if (serverOk) {
     try {
       console.log("\x1b[32m%s\x1b[0m", "✅ Server initialized successfully"); // Green color
+      const url = `http://127.0.0.1:${CLIENT_PORT}`;
       console.log(
         "\x1b[36m%s\x1b[0m",
-        `🌐 Opening browser at http://127.0.0.1:${CLIENT_PORT}`,
+        `🌐 Opening browser at \u001B]8;;${url}\u0007${url}\u001B]8;;\u0007`,
       );
 
       if (process.env.MCP_AUTO_OPEN_ENABLED !== "false") {

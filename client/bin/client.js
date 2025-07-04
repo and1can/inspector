@@ -40,15 +40,16 @@ const server = http.createServer((request, response) => {
 });
 
 const port = process.env.PORT || 6274;
+const url = `http://127.0.0.1:${port}`;
 server.on("listening", () => {
   console.log(
-    `🔍 MCPJam Inspector is up and running at http://127.0.0.1:${port} 🚀`,
+    `🔍 MCPJam Inspector is up and running at \u001B]8;;${url}\u0007${url}\u001B]8;;\u0007 🚀`,
   );
 });
 server.on("error", (err) => {
   if (err.message.includes(`EADDRINUSE`)) {
     console.error(
-      `❌  MCPJam Inspector PORT IS IN USE at http://127.0.0.1:${port} ❌ `,
+      `❌  MCPJam Inspector PORT IS IN USE at \u001B]8;;${url}\u0007${url}\u001B]8;;\u0007 ❌ `,
     );
   } else {
     throw err;
