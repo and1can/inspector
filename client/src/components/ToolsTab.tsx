@@ -25,7 +25,7 @@ import {
   createMcpJamRequest,
   getRequestsForClient,
 } from "@/lib/utils/json/requestUtils";
-
+import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip"
 const ToolsTab = ({
   tools,
   listTools,
@@ -230,43 +230,57 @@ const ToolsTab = ({
                     <div className="flex items-center space-x-1">
                       {request.isFavorite && (
                         <Star className="w-3 h-3 text-yellow-500 fill-current" />
-                      )}
-                      <Button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleRenameRequest(request.id, request.name);
-                        }}
-                        size="sm"
-                        variant="ghost"
-                        className="h-6 w-6 p-0 hover:bg-primary/20 hover:text-primary opacity-0 group-hover:opacity-100 transition-opacity"
-                        title="Rename request"
-                      >
-                        <Edit2 className="w-3 h-3" />
-                      </Button>
-                      <Button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleDuplicateRequest(request);
-                        }}
-                        size="sm"
-                        variant="ghost"
-                        className="h-6 w-6 p-0 hover:bg-blue-500/20 hover:text-blue-500 opacity-0 group-hover:opacity-100 transition-opacity"
-                        title="Duplicate request"
-                      >
-                        <CopyPlus className="w-3 h-3" />
-                      </Button>
-                      <Button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleDeleteRequest(request.id);
-                        }}
-                        size="sm"
-                        variant="ghost"
-                        className="h-6 w-6 p-0 hover:bg-destructive/20 hover:text-destructive opacity-0 group-hover:opacity-100 transition-opacity"
-                        title="Delete request"
-                      >
-                        <Trash2 className="w-3 h-3" />
-                      </Button>
+                      )}            
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleRenameRequest(request.id, request.name);
+                            }}
+                            size="sm"
+                            variant="ghost"
+                            className="h-6 w-6 p-0 hover:bg-primary/20 hover:text-primary opacity-0 group-hover:opacity-100 transition-opacity"
+                          >
+                            <Edit2 className="w-3 h-3" />
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent side="top">Rename</TooltipContent>
+                      </Tooltip>
+
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleDuplicateRequest(request);
+                            }}
+                            size="sm"
+                            variant="ghost"
+                            className="h-6 w-6 p-0 hover:bg-blue-500/20 hover:text-blue-500 opacity-0 group-hover:opacity-100 transition-opacity"
+                          >
+                            <CopyPlus className="w-3 h-3" />
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent side="top">Duplicate</TooltipContent>
+                      </Tooltip>
+
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleDeleteRequest(request.id);
+                            }}
+                            size="sm"
+                            variant="ghost"
+                            className="h-6 w-6 p-0 hover:bg-destructive/20 hover:text-destructive opacity-0 group-hover:opacity-100 transition-opacity"
+                          >
+                            <Trash2 className="w-3 h-3" />
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent side="top">Delete</TooltipContent>
+                      </Tooltip>
                     </div>
                   </div>
 
