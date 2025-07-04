@@ -1,6 +1,6 @@
 import { CompatibilityCallToolResult } from "@modelcontextprotocol/sdk/types.js";
 import { useEffect, useState } from "react";
-import { Activity, ScrollText, ChevronDown, Bug } from "lucide-react";
+import { Activity, ScrollText, ChevronDown, Bug, Trash2 } from "lucide-react";
 import ActivityTab from "./ActivityTab";
 import ResultsTab from "./ResultsTab";
 import ClientLogsTab from "./ClientLogsTab";
@@ -147,15 +147,32 @@ const TabbedHistoryPanel = ({
       case "logs":
         return (
           <div className="h-full overflow-y-auto p-6">
-            <ClientLogsTab
-              clientLogs={clientLogs}
-              onClearLogs={onClearLogs}
-              showHeader={false}
-            />
+            <ClientLogsTab clientLogs={clientLogs} showHeader={false} />
           </div>
         );
       default:
         return null;
+    }
+  };
+
+  // Component for the clear history button
+  const ClearHistoryButton = ({
+    onClick,
+    count,
+  }: {
+    onClick: () => void;
+    count: number;
+  }) => {
+    if (count > 0) {
+      return (
+        <button
+          onClick={onClick}
+          className="p-2 rounded-lg hover:bg-destructive/10 hover:text-destructive transition-all duration-200 group"
+          title="Clear all activity"
+        >
+          <Trash2 className="w-5 h-5 text-muted-foreground group-hover:text-destructive" />
+        </button>
+      );
     }
   };
 
@@ -168,12 +185,29 @@ const TabbedHistoryPanel = ({
           {renderResultsTabButton()}
           {renderLogsTabButton()}
         </div>
-        <button
-          onClick={onToggleCollapse}
-          className="p-2 rounded-lg hover:bg-accent/50 transition-all duration-200"
-        >
-          <ChevronDown className="w-5 h-5 text-muted-foreground hover:text-foreground" />
-        </button>
+        <div>
+          <button>
+            {activeTab == "activity" ? (
+              <ClearHistoryButton
+                onClick={onClearHistory}
+                count={requestHistory.length}
+              />
+            ) : (
+              activeTab == "logs" && (
+                <ClearHistoryButton
+                  onClick={onClearLogs}
+                  count={clientLogs.length}
+                />
+              )
+            )}
+          </button>
+          <button
+            onClick={onToggleCollapse}
+            className="p-2 rounded-lg hover:bg-accent/50 transition-all duration-200"
+          >
+            <ChevronDown className="w-5 h-5 text-muted-foreground hover:text-foreground" />
+          </button>
+        </div>
       </div>
 
       {/* Tab Content */}
