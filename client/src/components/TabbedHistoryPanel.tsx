@@ -14,7 +14,7 @@ interface TabbedHistoryPanelProps {
   onClearHistory: () => void;
   onClearLogs: () => void;
   onToggleCollapse: () => void;
-  activeTab: TabType;
+  activeTab: TabType | null;
   setActiveTab: (tab: TabType) => void;
 }
 

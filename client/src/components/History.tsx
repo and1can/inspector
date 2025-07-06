@@ -27,13 +27,21 @@ const HistoryAndNotifications = ({
   onClearLogs: () => void;
 }) => {
   const [isCollapsed, setIsCollapsed] = useState(true);
-  const [activeTab, setActiveTab] = useState<TabType>("activity");
+  // allow null so no tab is selected initially
+  const [activeTab, setActiveTab] = useState<TabType | null>(null);
   const { height, isDragging, handleDragStart, resetHeight, setCustomHeight } =
     useDraggablePane(500, "historyPaneHeight");
 
-  // Toggle collapse/expand
+  // Toggle collapse/expand and clear selection on collapse
   const toggleCollapse = useCallback(() => {
-    setIsCollapsed((c) => !c);
+    setIsCollapsed((c) => {
+      const next = !c;
+      if (next) {
+        // about to collapse: clear tab selection
+        setActiveTab(null);
+      }
+      return next;
+    });
   }, []);
 
   // Double‑click to reset height
@@ -63,7 +71,7 @@ const HistoryAndNotifications = ({
     return () => window.removeEventListener("keydown", onKey);
   }, [isCollapsed, height, setCustomHeight, resetHeight]);
 
-  // Auto‑expand when new result or error log arrives
+  // Auto‑expand on new result or error log, and select appropriate tab
   useEffect(() => {
     if (toolResult) {
       setActiveTab("results");
@@ -120,7 +128,7 @@ const HistoryAndNotifications = ({
               key={key}
               onClick={() => {
                 setActiveTab(key);
-                setIsCollapsed(false); // <-- expand on tab click
+                setIsCollapsed(false);
               }}
               className={`flex items-center h-full px-4 text-sm font-medium transition-colors duration-200 ${
                 activeTab === key
