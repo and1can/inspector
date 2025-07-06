@@ -36,7 +36,7 @@ const HistoryAndNotifications = ({
     setIsCollapsed((c) => !c);
   }, []);
 
-  // Double‑click handle to reset height
+  // Double‑click to reset height
   const handleDoubleClick = useCallback(() => {
     if (!isCollapsed) resetHeight();
   }, [isCollapsed, resetHeight]);
@@ -113,12 +113,15 @@ const HistoryAndNotifications = ({
 
       {/* Content */}
       {isCollapsed ? (
-        // ——— Collapsed: Postman‑style tab bar ———
+        // Collapsed: tab bar
         <div className="h-full flex items-center">
           {TAB_CONFIG.map(({ key, label }) => (
             <button
               key={key}
-              onClick={() => setActiveTab(key)}
+              onClick={() => {
+                setActiveTab(key);
+                setIsCollapsed(false); // <-- expand on tab click
+              }}
               className={`flex items-center h-full px-4 text-sm font-medium transition-colors duration-200 ${
                 activeTab === key
                   ? "border-b-2 border-primary text-foreground"
@@ -143,7 +146,7 @@ const HistoryAndNotifications = ({
           </div>
         </div>
       ) : (
-        // ——— Expanded: full TabbedHistoryPanel ———
+        // Expanded: full panel
         <TabbedHistoryPanel
           requestHistory={requestHistory}
           toolResult={toolResult}
