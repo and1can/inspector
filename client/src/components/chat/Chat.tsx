@@ -657,9 +657,6 @@ const Chat: React.FC<ChatProps> = ({
             {/* Pending Tool Calls */}
             {hasPendingToolCalls && (
               <div className="px-6 mb-2">
-                <div className="mb-2 text-sm text-amber-600 dark:text-amber-400 font-medium">
-                  Pending Tool Calls:
-                </div>
                 {Array.from(pendingToolCalls.values()).map((toolCall) => (
                   <ToolCallApproval
                     key={toolCall.id}
