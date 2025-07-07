@@ -1,6 +1,13 @@
 import { CompatibilityCallToolResult } from "@modelcontextprotocol/sdk/types.js";
 import { useEffect, useState } from "react";
-import { Activity, ScrollText, ChevronDown, Bug, Trash2, Copy } from "lucide-react";
+import {
+  Activity,
+  ScrollText,
+  ChevronDown,
+  Bug,
+  Trash2,
+  Copy,
+} from "lucide-react";
 import ActivityTab from "./ActivityTab";
 import ResultsTab from "./ResultsTab";
 import ClientLogsTab from "./ClientLogsTab";
@@ -47,16 +54,16 @@ const TabbedHistoryPanel = ({
           const timestamp = new Date(log.timestamp).toISOString();
           return `[${timestamp}] ${log.level.toUpperCase()}: ${log.message}`;
         })
-        .join('\n');
+        .join("\n");
 
       await navigator.clipboard.writeText(logsText);
-      
+
       toast({
         title: "Logs copied to clipboard",
         description: `Successfully copied ${clientLogs.length} log entries to clipboard`,
       });
     } catch (err) {
-      console.error('Failed to copy logs to clipboard:', err);
+      console.error("Failed to copy logs to clipboard:", err);
       toast({
         title: "Failed to copy logs",
         description: "Could not copy logs to clipboard. Please try again.",
