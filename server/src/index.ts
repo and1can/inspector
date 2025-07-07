@@ -21,6 +21,8 @@ import express from "express";
 import { findActualExecutable } from "spawn-rx";
 import mcpProxy from "./mcpProxy.js";
 import { randomUUID } from "node:crypto";
+import { DatabaseManager } from "./database/DatabaseManager.js";
+import { createDatabaseRoutes } from "./database/routes.js";
 
 const SSE_HEADERS_PASSTHROUGH = ["authorization"];
 const STREAMABLE_HTTP_HEADERS_PASSTHROUGH = [
@@ -52,6 +54,36 @@ app.use((req, res, next) => {
   res.header("Access-Control-Expose-Headers", "mcp-session-id");
   next();
 });
+
+// Initialize database
+let databaseManager: DatabaseManager | null = null;
+const initializeDatabase = async () => {
+  try {
+    databaseManager = new DatabaseManager();
+    await databaseManager.initialize();
+    
+    // Add database routes after successful initialization
+    app.use('/api/db', 
+      express.json({ limit: '10mb' }), // JSON middleware only for database routes
+      (req, res, next) => {
+        if (!databaseManager) {
+          res.status(503).json({
+            success: false,
+            error: 'Database not available'
+          });
+          return;
+        }
+        next();
+      }, 
+      createDatabaseRoutes(databaseManager)
+    );
+    
+    console.log('✅ Database API routes registered');
+  } catch (error) {
+    console.error('❌ Failed to initialize database:', error);
+    // Don't exit the process - continue without database functionality
+  }
+};
 
 const webAppTransports: Map<string, Transport> = new Map<string, Transport>(); // Transports by sessionId
 const backingServerTransports = new Map<string, Transport>();
@@ -374,6 +406,8 @@ app.get("/config", (req, res) => {
   }
 });
 
+// Database API routes - will be added after database initialization
+
 // Function to find an available port
 const findAvailablePort = async (startPort: number): Promise<number> => {
   return new Promise((resolve, reject) => {
@@ -414,6 +448,9 @@ app.get("/port", (req, res) => {
 // Start server with dynamic port finding
 const startServer = async () => {
   try {
+    // Initialize database first
+    await initializeDatabase();
+    
     const availablePort = await findAvailablePort(Number(PORT));
     actualPort = availablePort;
 
@@ -433,6 +470,17 @@ const startServer = async () => {
     server.on("error", (err) => {
       console.error(`❌ Server error: ${err.message}`);
       process.exit(1);
+    });
+
+    // Graceful shutdown
+    process.on('SIGINT', async () => {
+      console.log('\n🔄 Shutting down server...');
+      server.close();
+      if (databaseManager) {
+        await databaseManager.close();
+        console.log('✅ Database connection closed');
+      }
+      process.exit(0);
     });
   } catch (error) {
     console.error(`❌ Failed to start server: ${error}`);
