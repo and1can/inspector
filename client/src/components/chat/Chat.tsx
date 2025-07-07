@@ -12,6 +12,7 @@ import { ApiKeyRequiredState } from "./ApiKeyRequiredState";
 import { EmptyChatsState, ChatConfig } from "./EmptyChatsState";
 import { ToolCallApproval, PendingToolCall } from "./ToolCallApproval";
 import { ToolSelector, ToolSelection, ServerInfo } from "./ToolSelector";
+import { formatPlural } from "@/utils/pluralizeUtil";
 
 interface ChatProps {
   provider: MCPJamAgent | null;
@@ -488,7 +489,7 @@ const Chat: React.FC<ChatProps> = ({
                 </h1>
                 <p className="text-xs text-slate-500 dark:text-slate-400">
                   {hasApiKey
-                    ? `${serversCount} servers • ${toolSelection.enabledTools.size}/${toolsCount} tools`
+                    ? `${formatPlural(serversCount, "server")} • ${toolSelection.enabledTools.size}/${formatPlural(toolsCount, "tool")}`
                     : "API key required"}
                 </p>
               </div>
