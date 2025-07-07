@@ -160,16 +160,30 @@ export const useAppEffects = (
             }
           }
           
-          // Only update if we have valid configurations and no existing ones
-          if (Object.keys(convertedConfigs).length > 0 && Object.keys(serverState.serverConfigs).length === 0) {
+          // Merge CLI configs with existing localStorage configs
+          if (Object.keys(convertedConfigs).length > 0) {
+            const existingConfigs = serverState.serverConfigs;
+            const hasExistingConfigs = Object.keys(existingConfigs).length > 0;
+            
+            // Merge configs: localStorage servers take priority for conflicts
+            const mergedConfigs = { ...convertedConfigs, ...existingConfigs };
+            
             console.log(`✅ Loading ${Object.keys(convertedConfigs).length} servers from CLI config`);
-            serverState.setServerConfigs(convertedConfigs);
+            if (hasExistingConfigs) {
+              console.log(`📦 Merging with ${Object.keys(existingConfigs).length} existing localStorage servers`);
+            }
             
-            // Set the first server as selected
-            const firstServerName = Object.keys(convertedConfigs)[0];
-            serverState.setSelectedServerName(firstServerName);
+            serverState.setServerConfigs(mergedConfigs);
             
-            addClientLog(`Loaded ${Object.keys(convertedConfigs).length} servers from CLI configuration`, "info");
+            // Set the first CLI server as selected if no server is currently selected
+            if (!serverState.selectedServerName || !mergedConfigs[serverState.selectedServerName]) {
+              const firstServerName = Object.keys(convertedConfigs)[0];
+              serverState.setSelectedServerName(firstServerName);
+            }
+            
+            const totalServers = Object.keys(mergedConfigs).length;
+            const cliServers = Object.keys(convertedConfigs).length;
+            addClientLog(`Loaded ${cliServers} servers from CLI configuration (${totalServers} total)`, "info");
           }
         } else {
           // Handle single server environment update (existing behavior)
