@@ -72,9 +72,11 @@ MCPJAM_DB_PATH=/custom/path/to/data.db
 
 ### Local Database
 
-The database is stored locally at:
-- `~/.mcpjam/data.db` (created automatically)
-- Custom path via `MCPJAM_DB_PATH` environment variable
+The database path is resolved using a **single source of truth**:
+1. `MCPJAM_DB_PATH` environment variable (if set)
+2. `~/.mcpjam/data.db` (default fallback)
+
+This eliminates confusion between multiple path resolution methods.
 
 ## Database Schema
 

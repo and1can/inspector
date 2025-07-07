@@ -7,7 +7,7 @@ import { createClient, Client as LibSQLClient } from '@libsql/client';
 import { readFileSync } from 'fs';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
-import { ensureDirectoryExists, ensureMCPJamDirectory, getDefaultDatabasePath } from './utils.js';
+import { ensureDirectoryExists, ensureMCPJamDirectory, getResolvedDatabasePath } from './utils.js';
 import {
   DatabaseConfig,
   AppMetadata,
@@ -21,13 +21,13 @@ export class DatabaseManager {
   private client: LibSQLClient;
   private initialized = false;
 
-  constructor(private config: DatabaseConfig) {
+  constructor() {
     this.client = this.createClient();
   }
 
   private createClient(): LibSQLClient {
-    // Local SQLite database only
-    const dbPath = this.config.localPath || getDefaultDatabasePath();
+    // Use the single source of truth for database path
+    const dbPath = getResolvedDatabasePath();
     return createClient({
       url: `file:${dbPath}`
     });
@@ -39,9 +39,9 @@ export class DatabaseManager {
     try {
       console.log('🔄 Initializing database...');
       
-      // Ensure .mcpjam directory exists
+      // Ensure .mcpjam directory exists and database directory
       await ensureMCPJamDirectory();
-      const dbPath = this.config.localPath || getDefaultDatabasePath();
+      const dbPath = getResolvedDatabasePath();
       await ensureDirectoryExists(dbPath);
       
       // Read and execute schema

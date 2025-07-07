@@ -19,7 +19,7 @@ export interface AppMetadata {
 // ============================================================================
 
 export interface DatabaseConfig {
-  localPath?: string; // For local SQLite files
+  localPath: string; // Resolved path to local SQLite file
 }
 
 // ============================================================================

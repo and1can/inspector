@@ -23,7 +23,6 @@ import mcpProxy from "./mcpProxy.js";
 import { randomUUID } from "node:crypto";
 import { DatabaseManager } from "./database/DatabaseManager.js";
 import { createDatabaseRoutes } from "./database/routes.js";
-import { getDatabaseConfig } from "./database/utils.js";
 
 const SSE_HEADERS_PASSTHROUGH = ["authorization"];
 const STREAMABLE_HTTP_HEADERS_PASSTHROUGH = [
@@ -60,8 +59,7 @@ app.use((req, res, next) => {
 let databaseManager: DatabaseManager | null = null;
 const initializeDatabase = async () => {
   try {
-    const dbConfig = getDatabaseConfig();
-    databaseManager = new DatabaseManager(dbConfig);
+    databaseManager = new DatabaseManager();
     await databaseManager.initialize();
     
     // Add database routes after successful initialization

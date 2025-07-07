@@ -38,10 +38,11 @@ export async function ensureDirectoryExists(filePath: string): Promise<void> {
 }
 
 /**
- * Gets the default database path
+ * Gets the resolved database path - THE SINGLE SOURCE OF TRUTH
+ * Priority: MCPJAM_DB_PATH env var > default ~/.mcpjam/data.db
  */
-export function getDefaultDatabasePath(): string {
-  return join(homedir(), '.mcpjam', 'data.db');
+export function getResolvedDatabasePath(): string {
+  return process.env.MCPJAM_DB_PATH || join(homedir(), '.mcpjam', 'data.db');
 }
 
 /**
@@ -49,7 +50,7 @@ export function getDefaultDatabasePath(): string {
  */
 export function getDatabaseConfig() {
   return {
-    localPath: process.env.MCPJAM_DB_PATH || getDefaultDatabasePath()
+    localPath: getResolvedDatabasePath()
   };
 }
 
@@ -68,13 +69,16 @@ export async function databaseExists(databasePath: string): Promise<boolean> {
 /**
  * Database connection test
  */
-export async function testDatabaseConnection(config: any): Promise<{ success: boolean; error?: string }> {
+export async function testDatabaseConnection(config?: any): Promise<{ success: boolean; error?: string }> {
   try {
     const { createClient } = await import('@libsql/client');
     
-    await ensureDirectoryExists(config.localPath);
+    // Use the single source of truth for database path
+    const dbPath = config?.localPath || getResolvedDatabasePath();
+    
+    await ensureDirectoryExists(dbPath);
     const client = createClient({
-      url: `file:${config.localPath}`
+      url: `file:${dbPath}`
     });
 
     // Test the connection with a simple query
