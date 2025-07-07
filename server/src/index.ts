@@ -51,7 +51,6 @@ const { values } = parseArgs({
 
 const app = express();
 app.use(cors());
-app.use(express.json({ limit: '10mb' })); // Add JSON parsing middleware
 app.use((req, res, next) => {
   res.header("Access-Control-Expose-Headers", "mcp-session-id");
   next();
@@ -66,16 +65,20 @@ const initializeDatabase = async () => {
     await databaseManager.initialize();
     
     // Add database routes after successful initialization
-    app.use('/api/db', (req, res, next) => {
-      if (!databaseManager) {
-        res.status(503).json({
-          success: false,
-          error: 'Database not available'
-        });
-        return;
-      }
-      next();
-    }, createDatabaseRoutes(databaseManager));
+    app.use('/api/db', 
+      express.json({ limit: '10mb' }), // JSON middleware only for database routes
+      (req, res, next) => {
+        if (!databaseManager) {
+          res.status(503).json({
+            success: false,
+            error: 'Database not available'
+          });
+          return;
+        }
+        next();
+      }, 
+      createDatabaseRoutes(databaseManager)
+    );
     
     console.log('✅ Database API routes registered');
   } catch (error) {
