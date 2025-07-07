@@ -34,6 +34,10 @@ const defaultEnvironment = {
   ...(process.env.MCP_ENV_VARS ? JSON.parse(process.env.MCP_ENV_VARS) : {}),
 };
 
+const serverConfigs = process.env.MCP_SERVER_CONFIGS 
+  ? JSON.parse(process.env.MCP_SERVER_CONFIGS) 
+  : null;
+
 const { values } = parseArgs({
   args: process.argv.slice(2),
   options: {
@@ -362,6 +366,7 @@ app.get("/config", (req, res) => {
       defaultEnvironment,
       defaultCommand: values.env,
       defaultArgs: values.args,
+      serverConfigs,
     });
   } catch (error) {
     console.error("❌ Error in /config route:", error);

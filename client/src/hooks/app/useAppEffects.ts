@@ -115,23 +115,75 @@ export const useAppEffects = (
     configState.updateAuthState,
   ]);
 
-  // Fetch default environment
+  // Fetch default environment and handle CLI server configs
   useEffect(() => {
     const fetchConfig = async () => {
       try {
         const proxyAddress = await getMCPProxyAddressAsync(configState.config);
         const response = await fetch(`${proxyAddress}/config`);
         const data = await response.json();
-        const currentConfig =
-          serverState.serverConfigs[serverState.selectedServerName];
-        if (currentConfig?.transportType === "stdio") {
-          serverState.setServerConfigs((prev) => ({
-            ...prev,
-            [serverState.selectedServerName]: {
-              ...prev[serverState.selectedServerName],
-              env: data.defaultEnvironment || {},
-            } as StdioServerDefinition,
-          }));
+        
+        // Handle CLI-provided server configurations
+        if (data.serverConfigs && Object.keys(data.serverConfigs).length > 0) {
+          console.log("📡 Found CLI server configurations, loading...");
+          
+          // Convert CLI config format to internal format
+          const convertedConfigs: Record<string, any> = {};
+          
+          for (const [serverName, cliConfig] of Object.entries(data.serverConfigs)) {
+            const config = cliConfig as any;
+            
+            // Convert different transport types
+            if (config.type === "sse" && config.url) {
+              // SSE configuration
+              convertedConfigs[serverName] = {
+                transportType: "sse",
+                url: new URL(config.url),
+                name: serverName,
+              };
+            } else if (config.command) {
+              // STDIO configuration
+              convertedConfigs[serverName] = {
+                transportType: "stdio",
+                command: config.command,
+                args: config.args || [],
+                env: { ...(data.defaultEnvironment || {}), ...(config.env || {}) },
+                name: serverName,
+              };
+            } else if (config.url) {
+              // Default to SSE for URL-based configs
+              convertedConfigs[serverName] = {
+                transportType: "sse", 
+                url: new URL(config.url),
+                name: serverName,
+              };
+            }
+          }
+          
+          // Only update if we have valid configurations and no existing ones
+          if (Object.keys(convertedConfigs).length > 0 && Object.keys(serverState.serverConfigs).length === 0) {
+            console.log(`✅ Loading ${Object.keys(convertedConfigs).length} servers from CLI config`);
+            serverState.setServerConfigs(convertedConfigs);
+            
+            // Set the first server as selected
+            const firstServerName = Object.keys(convertedConfigs)[0];
+            serverState.setSelectedServerName(firstServerName);
+            
+            addClientLog(`Loaded ${Object.keys(convertedConfigs).length} servers from CLI configuration`, "info");
+          }
+        } else {
+          // Handle single server environment update (existing behavior)
+          const currentConfig =
+            serverState.serverConfigs[serverState.selectedServerName];
+          if (currentConfig?.transportType === "stdio") {
+            serverState.setServerConfigs((prev) => ({
+              ...prev,
+              [serverState.selectedServerName]: {
+                ...prev[serverState.selectedServerName],
+                env: data.defaultEnvironment || {},
+              } as StdioServerDefinition,
+            }));
+          }
         }
       } catch (error) {
         console.error("Error fetching default environment:", error);
