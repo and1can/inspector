@@ -16,12 +16,10 @@ const STREAMABLE_HTTP_HEADERS_PASSTHROUGH = [
 
 export class TransportFactory {
   private logger: Logger;
-  private defaultTimeout: number;
   private defaultEnvironment: Record<string, string>;
   
   constructor(options: TransportFactoryOptions = {}) {
     this.logger = options.logger || new ConsoleLogger();
-    this.defaultTimeout = options.defaultTimeout || 10000;
     this.defaultEnvironment = {
       ...getDefaultEnvironment(),
       ...(process.env.MCP_ENV_VARS ? JSON.parse(process.env.MCP_ENV_VARS) : {}),
@@ -143,30 +141,20 @@ export class TransportFactory {
   }
   
   private async setupTransportLifecycle(transport: Transport, configId: string): Promise<void> {
-    // Set up connection timeout
-    const timeoutId = setTimeout(() => {
-      this.logger.warn(`Connection timeout for ${configId}`);
-      transport.close?.();
-    }, this.defaultTimeout);
+    // Set up event handlers without aggressive timeouts
+    // The original server didn't have connection timeouts, so we preserve that behavior
     
-    // Store original handlers to avoid overwriting them
     const originalOnClose = transport.onclose;
-    const originalOnError = transport.onerror;
-    
-    // Set up lifecycle handlers
     transport.onclose = () => {
-      clearTimeout(timeoutId);
       this.logger.info(`Transport closed for ${configId}`);
-      // Call original handler if it exists
       if (originalOnClose) {
         originalOnClose();
       }
     };
     
+    const originalOnError = transport.onerror;
     transport.onerror = (error) => {
-      clearTimeout(timeoutId);
       this.logger.error(`Transport error for ${configId}:`, error);
-      // Call original handler if it exists
       if (originalOnError) {
         originalOnError(error);
       }

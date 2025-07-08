@@ -2,6 +2,7 @@ import { EventEmitter } from 'events';
 import { Transport } from '@modelcontextprotocol/sdk/shared/transport.js';
 import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/streamableHttp.js';
 import { SSEServerTransport } from '@modelcontextprotocol/sdk/server/sse.js';
+import { StdioClientTransport } from '@modelcontextprotocol/sdk/client/stdio.js';
 import { TransportFactory } from './TransportFactory.js';
 import { ServerConfig, MCPProxyOptions, ConnectionStatus, Logger } from './types.js';
 import { generateSessionId, ConsoleLogger } from './utils.js';
@@ -11,21 +12,17 @@ export class MCPProxyService extends EventEmitter {
   private webAppTransports = new Map<string, Transport>();
   private backingServerTransports = new Map<string, Transport>();
   private connectionStatus = new Map<string, ConnectionStatus>();
+  private cleanupInProgress = new Set<string>();
   private transportFactory: TransportFactory;
   private logger: Logger;
   private maxConnections: number;
-  private connectionTimeout: number;
-  private retryAttempts: number;
   
   constructor(options: MCPProxyOptions = {}) {
     super();
     this.logger = options.logger || new ConsoleLogger();
     this.maxConnections = options.maxConnections || 50;
-    this.connectionTimeout = options.connectionTimeout || 30000;
-    this.retryAttempts = options.retryAttempts || 3;
     this.transportFactory = new TransportFactory({ 
-      logger: this.logger,
-      defaultTimeout: this.connectionTimeout 
+      logger: this.logger
     });
   }
 
@@ -116,12 +113,21 @@ export class MCPProxyService extends EventEmitter {
   }
 
   async closeConnection(sessionId: string): Promise<void> {
-    const transport = this.backingServerTransports.get(sessionId);
-    if (transport) {
-      try {
-        await transport.close();
-      } catch (error) {
-        this.logger.error(`Error closing connection ${sessionId}:`, error);
+    // Prevent duplicate cleanup calls
+    if (this.cleanupInProgress.has(sessionId)) {
+      return;
+    }
+    
+    this.cleanupInProgress.add(sessionId);
+    
+    try {
+      const transport = this.backingServerTransports.get(sessionId);
+      if (transport) {
+        try {
+          await transport.close();
+        } catch (error) {
+          this.logger.error(`Error closing connection ${sessionId}:`, error);
+        }
       }
       
       this.backingServerTransports.delete(sessionId);
@@ -129,7 +135,9 @@ export class MCPProxyService extends EventEmitter {
       this.connectionStatus.delete(sessionId);
       
       this.emit('disconnection', sessionId);
-      this.logger.info(`Connection ${sessionId} closed and cleaned up`);
+      this.logger.info(`🧹 Cleaning up transports for session ${sessionId}`);
+    } finally {
+      this.cleanupInProgress.delete(sessionId);
     }
   }
 
@@ -166,12 +174,6 @@ export class MCPProxyService extends EventEmitter {
     transport.onclose = () => {
       this.logger.info(`Transport closed for session ${sessionId}`);
       this.updateConnectionStatus(sessionId, 'disconnected');
-      
-      // Clean up the connection automatically
-      this.backingServerTransports.delete(sessionId);
-      this.webAppTransports.delete(sessionId);
-      this.connectionStatus.delete(sessionId);
-      
       this.emit('disconnection', sessionId);
       
       // Call original handler if it exists
@@ -214,7 +216,6 @@ export class MCPProxyService extends EventEmitter {
 
         // Set up cleanup handler
         webAppTransport.onclose = () => {
-          this.logger.info(`🧹 Cleaning up transports for session ${newSessionId}`);
           this.closeConnection(newSessionId);
         };
       },
@@ -234,7 +235,6 @@ export class MCPProxyService extends EventEmitter {
 
     // Set up cleanup handler
     webAppTransport.onclose = () => {
-      this.logger.info(`🧹 Cleaning up transports for session ${sessionId}`);
       this.closeConnection(connectionId);
     };
 
@@ -243,6 +243,19 @@ export class MCPProxyService extends EventEmitter {
     // Set up proxy between web app transport and backing server transport
     const backingTransport = this.getTransport(connectionId);
     if (backingTransport) {
+      // Special handling for STDIO stderr
+      if (backingTransport instanceof StdioClientTransport) {
+        backingTransport.stderr?.on("data", (chunk) => {
+          webAppTransport.send({
+            jsonrpc: "2.0",
+            method: "stderr",
+            params: {
+              data: chunk.toString(),
+            },
+          });
+        });
+      }
+
       mcpProxy({
         transportToClient: webAppTransport,
         transportToServer: backingTransport,
