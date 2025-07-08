@@ -17,7 +17,12 @@
     "build": "tsc",
     "start": "node build/index.js",
     "dev": "tsx watch --clear-screen=false src/index.ts",
-    "dev:windows": "tsx watch --clear-screen=false src/index.ts < NUL"
+    "dev:windows": "tsx watch --clear-screen=false src/index.ts < NUL",
+    "test:server": "npm run build && node build/test-server.js",
+    "test:server:dev": "tsx watch --clear-screen=false src/test-server.ts",
+    "test:server:debug": "DEBUG=* npm run test:server",
+    "build-test-server": "tsc -p tsconfig.json",
+    "clean:test": "rm -rf build/testing"
   },
   "devDependencies": {
     "@types/cors": "^2.8.17",
