@@ -89,6 +89,14 @@ const HistoryAndNotifications = ({
     }
   }, [clientLogs]);
 
+  useEffect(() => {
+    const lastRequest = requestHistory[requestHistory.length - 1].request;
+    const lastRequestMethod = JSON.parse(lastRequest).method;
+    if (lastRequestMethod && lastRequestMethod === "ping") {
+      setIsCollapsed(false);
+    }
+  }, [requestHistory]);
+
   // Counts for display
   const counts = {
     activity: requestHistory.length,
