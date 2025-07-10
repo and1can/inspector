@@ -121,15 +121,15 @@ const Sidebar: React.FC<SidebarProps> = ({
               size="sm"
               variant="ghost"
               className="h-7 w-7 p-0 hover:bg-primary/20 hover:text-primary"
-              title="Create new client"
+              title="Create new connection"
             >
               <Plus className="w-4 h-4" />
             </Button>
           </TooltipTrigger>
           <TooltipContent>
             {mcpAgent?.hasConnectedRemoteServer()
-              ? "Note: Creating a remote client will disconnect the current remote connection"
-              : "Create new client"}
+              ? "Note: Creating a remote connection will disconnect the current remote connection"
+              : "Create new connection"}
           </TooltipContent>
         </Tooltip>
       </div>
@@ -314,7 +314,7 @@ const Sidebar: React.FC<SidebarProps> = ({
                 <Plus className="w-4 h-4" />
               </Button>
             </TooltipTrigger>
-            <TooltipContent side="right">Create new client</TooltipContent>
+            <TooltipContent side="right">Create new connection</TooltipContent>
           </Tooltip>
         </div>
       </div>
