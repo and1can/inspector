@@ -8,6 +8,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { AlertCircle } from "lucide-react";
 import DynamicJsonForm from "./DynamicJsonForm";
 import { JsonSchemaType, JsonValue } from "@/lib/utils/json/jsonUtils";
 import { generateDefaultValue } from "@/lib/utils/json/schemaUtils";
@@ -158,13 +159,15 @@ const ElicitationModal = ({ request, onClose }: ElicitationModalProps) => {
     <Dialog open={true} onOpenChange={handleCancel}>
       <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>{schemaTitle}</DialogTitle>
-          <DialogDescription className="space-y-2">
-            <span className="block">{request.message}</span>
+          <DialogTitle className="text-lg font-semibold">
+            {schemaTitle}
+          </DialogTitle>
+          <DialogDescription className="text-sm">
+            {request.message}
             {schemaDescription && (
-              <span className="block text-sm text-muted-foreground">
+              <div className="mt-2 text-xs text-muted-foreground">
                 {schemaDescription}
-              </span>
+              </div>
             )}
           </DialogDescription>
         </DialogHeader>
@@ -180,9 +183,12 @@ const ElicitationModal = ({ request, onClose }: ElicitationModalProps) => {
           />
 
           {validationError && (
-            <div className="mt-4 p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-md">
-              <div className="text-sm text-red-600 dark:text-red-400">
-                <strong>Validation Error:</strong> {validationError}
+            <div className="mt-4 p-3 bg-destructive/10 border border-destructive/20 rounded-md">
+              <div className="flex items-start gap-2">
+                <AlertCircle className="h-4 w-4 text-destructive mt-0.5 flex-shrink-0" />
+                <div className="text-sm text-destructive">
+                  {validationError}
+                </div>
               </div>
             </div>
           )}
@@ -195,7 +201,9 @@ const ElicitationModal = ({ request, onClose }: ElicitationModalProps) => {
           <Button variant="outline" onClick={handleReject}>
             Decline
           </Button>
-          <Button onClick={handleAccept}>Submit</Button>
+          <Button onClick={handleAccept}>
+            Submit
+          </Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
