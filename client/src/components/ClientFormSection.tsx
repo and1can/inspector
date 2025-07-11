@@ -7,7 +7,6 @@ import { useToast } from "@/lib/hooks/useToast";
 import {
   configToDisplayStrings,
   updateConfigFromStrings,
-  validateAndBuildConfig,
   createDefaultStdioConfig,
   createDefaultHttpConfig,
   isStdioConfig,
@@ -263,21 +262,38 @@ const ClientFormSection: React.FC<ClientFormSectionProps> = ({
     const configErrors = [];
 
     for (const client of validClients) {
-      const { argsString, urlString } = configToDisplayStrings(client.config);
-      const { config: configToSave, error } = validateAndBuildConfig(
-        client.config,
-        argsString,
-        urlString,
-      );
-
-      if (error) {
-        configErrors.push(`${client.name}: ${error}`);
-      } else {
-        clientsToSave.push({
-          name: client.name,
-          config: configToSave,
-        });
+      // For HTTP configs, validate URL if it exists
+      if (isHttpConfig(client.config)) {
+        if (!client.config.url) {
+          configErrors.push(
+            `${client.name}: URL is required for HTTP connections`,
+          );
+          continue;
+        }
+        try {
+          // Validate the URL by creating a new URL object
+          new URL(client.config.url.toString());
+        } catch {
+          configErrors.push(`${client.name}: Invalid URL format`);
+          continue;
+        }
       }
+
+      // For stdio configs, validate command
+      if (isStdioConfig(client.config)) {
+        if (!client.config.command?.trim()) {
+          configErrors.push(
+            `${client.name}: Command is required for stdio connections`,
+          );
+          continue;
+        }
+      }
+
+      // Use the client config directly - it already contains all the changes
+      clientsToSave.push({
+        name: client.name,
+        config: client.config,
+      });
     }
 
     if (configErrors.length > 0) {
@@ -288,7 +304,7 @@ const ClientFormSection: React.FC<ClientFormSectionProps> = ({
       });
       return;
     }
-
+    console.log("🔧 clientsToSave", clientsToSave);
     try {
       const result = await onSave(clientsToSave);
 
