@@ -40,7 +40,7 @@ export function ChatTab({ serverConfig, systemPrompt = "" }: ChatTabProps) {
       toast.error(error);
     },
   });
-
+  console.log("messages", messages);
   const hasMessages = messages.length > 0;
 
   // Auto-scroll to bottom when new messages arrive

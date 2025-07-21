@@ -143,7 +143,61 @@ export function useChat(options: UseChatOptions = {}) {
                 try {
                   const parsed = JSON.parse(data);
 
-                  if (parsed.content) {
+                  // Handle different event types
+                  if (parsed.type === "text" && parsed.content) {
+                    assistantContent += parsed.content;
+                    setState((prev) => ({
+                      ...prev,
+                      messages: prev.messages.map((msg) =>
+                        msg.id === assistantMessage.id
+                          ? { ...msg, content: assistantContent }
+                          : msg,
+                      ),
+                    }));
+                  } else if (parsed.type === "tool_call" && parsed.toolCall) {
+                    toolCalls.push(parsed.toolCall);
+                    setState((prev) => ({
+                      ...prev,
+                      messages: prev.messages.map((msg) =>
+                        msg.id === assistantMessage.id
+                          ? { ...msg, toolCalls: [...toolCalls] }
+                          : msg,
+                      ),
+                    }));
+                  } else if (
+                    parsed.type === "tool_result" &&
+                    parsed.toolResult
+                  ) {
+                    toolResults.push(parsed.toolResult);
+                    // Update the corresponding tool call status
+                    toolCalls = toolCalls.map((tc) =>
+                      tc.id === parsed.toolResult.toolCallId
+                        ? {
+                            ...tc,
+                            status: parsed.toolResult.error
+                              ? "error"
+                              : "completed",
+                          }
+                        : tc,
+                    );
+                    setState((prev) => ({
+                      ...prev,
+                      messages: prev.messages.map((msg) =>
+                        msg.id === assistantMessage.id
+                          ? {
+                              ...msg,
+                              toolCalls: [...toolCalls],
+                              toolResults: [...toolResults],
+                            }
+                          : msg,
+                      ),
+                    }));
+                  } else if (parsed.type === "error" && parsed.error) {
+                    throw new Error(parsed.error);
+                  }
+
+                  // Backward compatibility for old format
+                  if (parsed.content && !parsed.type) {
                     assistantContent += parsed.content;
                     setState((prev) => ({
                       ...prev,
@@ -155,7 +209,7 @@ export function useChat(options: UseChatOptions = {}) {
                     }));
                   }
 
-                  if (parsed.toolCall) {
+                  if (parsed.toolCall && !parsed.type) {
                     toolCalls.push(parsed.toolCall);
                     setState((prev) => ({
                       ...prev,
@@ -167,7 +221,7 @@ export function useChat(options: UseChatOptions = {}) {
                     }));
                   }
 
-                  if (parsed.toolResult) {
+                  if (parsed.toolResult && !parsed.type) {
                     toolResults.push(parsed.toolResult);
                     // Update the corresponding tool call status
                     toolCalls = toolCalls.map((tc) =>
@@ -194,7 +248,7 @@ export function useChat(options: UseChatOptions = {}) {
                     }));
                   }
 
-                  if (parsed.error) {
+                  if (parsed.error && !parsed.type) {
                     throw new Error(parsed.error);
                   }
                 } catch (parseError) {
