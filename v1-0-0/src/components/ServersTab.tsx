@@ -3,11 +3,12 @@
 import { useState, useEffect } from "react";
 import { Card } from "./ui/card";
 import { Button } from "./ui/button";
-import { Plus, Server, Database } from "lucide-react";
+import { Plus, Database } from "lucide-react";
 import { ServerWithName } from "@/hooks/useAppState";
 import { ServerConnectionCard } from "./connection/ServerConnectionCard";
 import { AddServerModal } from "./connection/AddServerModal";
 import { ServerFormData } from "@/lib/types";
+import { MCPIcon } from "./ui/mcp-icon";
 
 interface ServersTabProps {
   connectedServerConfigs: Record<string, ServerWithName>;
@@ -78,7 +79,7 @@ export function ServersTab({
       ) : (
         <Card className="p-12 text-center">
           <div className="mx-auto max-w-sm">
-            <Server className="mx-auto h-12 w-12 text-muted-foreground" />
+            <MCPIcon className="mx-auto h-12 w-12 text-muted-foreground" />
             <h3 className="mt-4 text-lg font-semibold">No servers connected</h3>
             <p className="mt-2 text-sm text-muted-foreground">
               Get started by connecting to your first MCP server
