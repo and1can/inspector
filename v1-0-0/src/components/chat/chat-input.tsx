@@ -7,7 +7,7 @@ import { Button } from "../ui/button";
 import { Textarea } from "../ui/textarea";
 import { ArrowUp, Paperclip, Square } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
-import { ArrowDown, Zap, X } from "lucide-react";
+import { ArrowDown, X } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -15,6 +15,7 @@ import {
   DropdownMenuTrigger,
 } from "../ui/dropdown-menu";
 import { Tooltip, TooltipContent, TooltipTrigger } from "../ui/tooltip";
+import { getProviderLogoFromProvider } from "./chat-helpers";
 
 interface ModelOption {
   id: string;
@@ -80,12 +81,6 @@ export function ChatInput({
       default:
         return "text-blue-600 dark:text-blue-400";
     }
-  };
-
-  const getModelLetter = (modelName: string) => {
-    if (modelName.toLowerCase().includes("claude")) return "C";
-    if (modelName.toLowerCase().includes("gpt")) return "G";
-    return modelName.charAt(0).toUpperCase();
   };
 
   useEffect(() => {
@@ -335,9 +330,18 @@ export function ChatInput({
                 disabled={disabled || isLoading}
                 className="h-8 px-2 rounded-full hover:bg-muted/80 transition-colors text-xs cursor-pointer"
               >
-                <span className="text-[10px] font-medium">
-                  {currentModelData.name}
-                </span>
+                <>
+                  <img
+                    src={
+                      getProviderLogoFromProvider(currentModelData.provider)!
+                    }
+                    alt={`${currentModelData.provider} logo`}
+                    className="h-3 w-3 object-contain"
+                  />
+                  <span className="text-[10px] font-medium">
+                    {currentModelData.name}
+                  </span>
+                </>
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="start" className="min-w-[200px]">
@@ -350,9 +354,20 @@ export function ChatInput({
                   }}
                   className="flex items-center gap-3 text-sm cursor-pointer"
                 >
-                  <Zap
-                    className={cn("h-3 w-3", getProviderColor(model.provider))}
-                  />
+                  {getProviderLogoFromProvider(model.provider) ? (
+                    <img
+                      src={getProviderLogoFromProvider(model.provider)!}
+                      alt={`${model.provider} logo`}
+                      className="h-3 w-3 object-contain"
+                    />
+                  ) : (
+                    <div
+                      className={cn(
+                        "h-3 w-3 rounded-sm",
+                        getProviderColor(model.provider),
+                      )}
+                    />
+                  )}
                   <div className="flex flex-col">
                     <span className="font-medium">{model.name}</span>
                     <span className="text-xs text-muted-foreground capitalize">
