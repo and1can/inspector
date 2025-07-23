@@ -16,18 +16,18 @@ import {
   SidebarTrigger,
 } from "@/components/ui/sidebar";
 import { ThemeSwitcher } from "@/components/sidebar/theme-switcher";
-import { AccountSwitcher } from "@/components/sidebar/account-switcher";
+// import { AccountSwitcher } from "@/components/sidebar/account-switcher";
 import { useAppState } from "@/hooks/useAppState";
 
-const users = [
-  {
-    id: "1",
-    name: "MCP Inspector",
-    email: "inspector@example.com",
-    avatar: "/avatars/shadcn.jpg",
-    role: "Inspector",
-  },
-] as const;
+// const users = [
+//   {
+//     id: "1",
+//     name: "MCP Inspector",
+//     email: "inspector@example.com",
+//     avatar: "/avatars/shadcn.jpg",
+//     role: "Inspector",
+//   },
+// ] as const;
 
 export default function Home() {
   const [activeTab, setActiveTab] = useState("servers");
@@ -71,7 +71,7 @@ export default function Home() {
             </div>
             <div className="flex items-center gap-2">
               <ThemeSwitcher />
-              <AccountSwitcher users={users} />
+              {/* <AccountSwitcher users={users} /> */}
             </div>
           </div>
         </header>
