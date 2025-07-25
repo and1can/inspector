@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useLogger } from "@/hooks/use-logger";
 import { Card, CardContent } from "./ui/card";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
@@ -58,6 +59,7 @@ interface ElicitationRequest {
 }
 
 export function ToolsTab({ serverConfig }: ToolsTabProps) {
+  const logger = useLogger("ToolsTab");
   const [tools, setTools] = useState<Record<string, Tool>>({});
   const [selectedTool, setSelectedTool] = useState<string>("");
   const [formFields, setFormFields] = useState<FormField[]>([]);
@@ -81,13 +83,13 @@ export function ToolsTab({ serverConfig }: ToolsTabProps) {
         eventSource.close();
       }
     };
-  }, [serverConfig]);
+  }, [serverConfig, logger]);
 
   useEffect(() => {
     if (selectedTool && tools[selectedTool]) {
       generateFormFields(tools[selectedTool].inputSchema);
     }
-  }, [selectedTool, tools]);
+  }, [selectedTool, tools, logger]);
 
   const getServerConfig = (): MastraMCPServerDefinition | null => {
     if (!serverConfig) return null;
@@ -96,7 +98,14 @@ export function ToolsTab({ serverConfig }: ToolsTabProps) {
 
   const fetchTools = async () => {
     const config = getServerConfig();
-    if (!config) return;
+    if (!config) {
+      logger.warn("Cannot fetch tools: no server config available");
+      return;
+    }
+
+    logger.info("Starting tool fetch", {
+      serverConfig: config,
+    });
 
     // Close existing EventSource if any
     if (eventSource) {
@@ -107,6 +116,8 @@ export function ToolsTab({ serverConfig }: ToolsTabProps) {
     setFetchingTools(true);
     setError("");
     setTools({});
+
+    const fetchStartTime = Date.now();
 
     try {
       const response = await fetch("/api/mcp/tools", {
@@ -119,19 +130,27 @@ export function ToolsTab({ serverConfig }: ToolsTabProps) {
       });
 
       if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
+        const errorMsg = `HTTP error! status: ${response.status}`;
+        logger.error("Tools fetch HTTP error", { status: response.status });
+        throw new Error(errorMsg);
       }
 
       const reader = response.body?.getReader();
       const decoder = new TextDecoder();
 
       if (!reader) {
-        throw new Error("No response body");
+        const errorMsg = "No response body";
+        logger.error("Tools fetch error: no response body");
+        throw new Error(errorMsg);
       }
+
+      let toolCount = 0;
 
       while (true) {
         const { done, value } = await reader.read();
-        if (done) break;
+        if (done) {
+          break;
+        }
 
         const chunk = decoder.decode(value);
         const lines = chunk.split("\n");
@@ -146,22 +165,40 @@ export function ToolsTab({ serverConfig }: ToolsTabProps) {
 
             try {
               const parsed = JSON.parse(data);
-
               if (parsed.type === "tools_list") {
+                toolCount = Object.keys(parsed.tools || {}).length;
                 setTools(parsed.tools || {});
+                const fetchDuration = Date.now() - fetchStartTime;
+                logger.info("Tools fetch completed successfully", {
+                  serverConfig: config,
+                  toolCount,
+                  duration: fetchDuration,
+                  tools: parsed.tools,
+                });
               } else if (parsed.type === "tool_error") {
+                logger.error("Tools fetch error from server", {
+                  error: parsed.error,
+                });
                 setError(parsed.error);
                 setFetchingTools(false);
                 return;
               }
             } catch (parseError) {
-              console.warn("Failed to parse SSE data:", parseError);
+              logger.warn("Failed to parse SSE data", {
+                data,
+                error: parseError,
+              });
             }
           }
         }
       }
     } catch (err) {
-      console.error("Error fetching tools:", err);
+      const errorMsg = err instanceof Error ? err.message : "Unknown error";
+      logger.error(
+        "Tools fetch network error",
+        { error: errorMsg },
+        err instanceof Error ? err : undefined,
+      );
       setError("Network error fetching tools");
     } finally {
       setFetchingTools(false);
@@ -225,6 +262,9 @@ export function ToolsTab({ serverConfig }: ToolsTabProps) {
 
   const buildParameters = (): Record<string, any> => {
     const params: Record<string, any> = {};
+    let processedFields = 0;
+    let validationErrors = 0;
+
     formFields.forEach((field) => {
       if (
         field.value !== "" &&
@@ -232,37 +272,66 @@ export function ToolsTab({ serverConfig }: ToolsTabProps) {
         field.value !== undefined
       ) {
         let processedValue = field.value;
+        processedFields++;
 
-        if (field.type === "number" || field.type === "integer") {
-          processedValue = Number(field.value);
-        } else if (field.type === "boolean") {
-          processedValue = Boolean(field.value);
-        } else if (field.type === "array" || field.type === "object") {
-          try {
+        try {
+          if (field.type === "number" || field.type === "integer") {
+            processedValue = Number(field.value);
+            if (isNaN(processedValue)) {
+              logger.warn("Invalid number value for field", {
+                fieldName: field.name,
+                value: field.value,
+              });
+              validationErrors++;
+            }
+          } else if (field.type === "boolean") {
+            processedValue = Boolean(field.value);
+          } else if (field.type === "array" || field.type === "object") {
             processedValue = JSON.parse(field.value);
-          } catch {
-            processedValue = field.value;
           }
-        }
 
-        params[field.name] = processedValue;
+          params[field.name] = processedValue;
+        } catch (parseError) {
+          logger.warn("Failed to process field value", {
+            fieldName: field.name,
+            type: field.type,
+            value: field.value,
+            error: parseError,
+          });
+          validationErrors++;
+          // Use raw value as fallback
+          params[field.name] = field.value;
+        }
       }
     });
+
     return params;
   };
 
   const executeTool = async () => {
-    if (!selectedTool) return;
+    if (!selectedTool) {
+      logger.warn("Cannot execute tool: no tool selected");
+      return;
+    }
 
     const config = getServerConfig();
-    if (!config) return;
+    if (!config) {
+      logger.warn("Cannot execute tool: no server config available");
+      return;
+    }
 
     setLoading(true);
     setError("");
     setResult(null);
 
+    const executionStartTime = Date.now();
+
     try {
       const params = buildParameters();
+      logger.info("Starting tool execution", {
+        toolName: selectedTool,
+        parameters: params,
+      });
       const response = await fetch("/api/mcp/tools", {
         method: "POST",
         headers: {
@@ -277,19 +346,30 @@ export function ToolsTab({ serverConfig }: ToolsTabProps) {
       });
 
       if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
+        const errorMsg = `HTTP error! status: ${response.status}`;
+        logger.error("Tool execution HTTP error", {
+          toolName: selectedTool,
+          status: response.status,
+        });
+        throw new Error(errorMsg);
       }
 
       const reader = response.body?.getReader();
       const decoder = new TextDecoder();
 
       if (!reader) {
-        throw new Error("No response body");
+        const errorMsg = "No response body";
+        logger.error("Tool execution error: no response body", {
+          toolName: selectedTool,
+        });
+        throw new Error(errorMsg);
       }
 
       while (true) {
         const { done, value } = await reader.read();
-        if (done) break;
+        if (done) {
+          break;
+        }
 
         const chunk = decoder.decode(value);
         const lines = chunk.split("\n");
@@ -306,8 +386,19 @@ export function ToolsTab({ serverConfig }: ToolsTabProps) {
               const parsed = JSON.parse(data);
 
               if (parsed.type === "tool_result") {
-                setResult(parsed.result);
+                const result = parsed.result;
+                const executionDuration = Date.now() - executionStartTime;
+                logger.info("Tool execution completed successfully", {
+                  toolName: selectedTool,
+                  duration: executionDuration,
+                  result: result,
+                });
+                setResult(result);
               } else if (parsed.type === "tool_error") {
+                logger.error("Tool execution error from server", {
+                  toolName: selectedTool,
+                  error: parsed.error,
+                });
                 setError(parsed.error);
                 setLoading(false);
                 return;
@@ -322,13 +413,25 @@ export function ToolsTab({ serverConfig }: ToolsTabProps) {
                 setElicitationRequest(null);
               }
             } catch (parseError) {
-              console.warn("Failed to parse SSE data:", parseError);
+              logger.warn("Failed to parse tool execution SSE data", {
+                toolName: selectedTool,
+                data,
+                error: parseError,
+              });
             }
           }
         }
       }
     } catch (err) {
-      console.error("Error executing tool:", err);
+      const errorMsg = err instanceof Error ? err.message : "Unknown error";
+      logger.error(
+        "Tool execution network error",
+        {
+          toolName: selectedTool,
+          error: errorMsg,
+        },
+        err instanceof Error ? err : undefined,
+      );
       setError("Error executing tool");
     } finally {
       setLoading(false);
@@ -339,7 +442,10 @@ export function ToolsTab({ serverConfig }: ToolsTabProps) {
     action: "accept" | "decline" | "cancel",
     parameters?: Record<string, any>,
   ) => {
-    if (!elicitationRequest) return;
+    if (!elicitationRequest) {
+      logger.warn("Cannot handle elicitation response: no active request");
+      return;
+    }
 
     setElicitationLoading(true);
 
@@ -356,7 +462,7 @@ export function ToolsTab({ serverConfig }: ToolsTabProps) {
         };
       }
 
-      await fetch("/api/mcp/tools", {
+      const response = await fetch("/api/mcp/tools", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -368,9 +474,28 @@ export function ToolsTab({ serverConfig }: ToolsTabProps) {
         }),
       });
 
+      if (!response.ok) {
+        const errorMsg = `HTTP error! status: ${response.status}`;
+        logger.error("Elicitation response HTTP error", {
+          requestId: elicitationRequest.requestId,
+          action,
+          status: response.status,
+        });
+        throw new Error(errorMsg);
+      }
+
       setElicitationRequest(null);
     } catch (err) {
-      console.error("Error responding to elicitation:", err);
+      const errorMsg = err instanceof Error ? err.message : "Unknown error";
+      logger.error(
+        "Error responding to elicitation request",
+        {
+          requestId: elicitationRequest.requestId,
+          action,
+          error: errorMsg,
+        },
+        err instanceof Error ? err : undefined,
+      );
       setError("Error responding to elicitation request");
     } finally {
       setElicitationLoading(false);
@@ -455,7 +580,9 @@ export function ToolsTab({ serverConfig }: ToolsTabProps) {
                                   ? "bg-muted/50 dark:bg-muted/50 shadow-sm border border-border ring-1 ring-ring/20"
                                   : "hover:shadow-sm"
                               }`}
-                              onClick={() => setSelectedTool(name)}
+                              onClick={() => {
+                                setSelectedTool(name);
+                              }}
                             >
                               <div className="flex items-start gap-3">
                                 <div className="flex-1 min-w-0">

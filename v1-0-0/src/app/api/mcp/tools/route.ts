@@ -21,10 +21,14 @@ export async function POST(request: NextRequest) {
   let client: any = null;
   let encoder: TextEncoder | null = null;
   let streamController: ReadableStreamDefaultController | null = null;
+  let action: string | undefined;
+  let toolName: string | undefined;
 
   try {
-    const { action, serverConfig, toolName, parameters, requestId, response } =
-      await request.json();
+    const requestData = await request.json();
+    action = requestData.action;
+    toolName = requestData.toolName;
+    const { serverConfig, parameters, requestId, response } = requestData;
 
     if (!action || !["list", "execute", "respond"].includes(action)) {
       return createErrorResponse(
@@ -70,10 +74,8 @@ export async function POST(request: NextRequest) {
         streamController = controller;
 
         try {
-          client = createMCPClient(
-            validation.config!,
-            `tools-${action}-${Date.now()}`,
-          );
+          const clientId = `tools-${action}-${Date.now()}`;
+          client = createMCPClient(validation.config!, clientId);
 
           if (action === "list") {
             // Stream tools list
@@ -90,15 +92,17 @@ export async function POST(request: NextRequest) {
 
             // Convert from Zod to JSON Schema
             const toolsWithJsonSchema: Record<string, any> = Object.fromEntries(
-              Object.entries(tools).map(([toolName, tool]) => [
-                toolName,
-                {
-                  ...tool,
-                  inputSchema: zodToJsonSchema(
-                    tool.inputSchema as unknown as z.ZodType<any>,
-                  ),
-                },
-              ]),
+              Object.entries(tools).map(([toolName, tool]) => {
+                return [
+                  toolName,
+                  {
+                    ...tool,
+                    inputSchema: zodToJsonSchema(
+                      tool.inputSchema as unknown as z.ZodType<any>,
+                    ),
+                  },
+                ];
+              }),
             );
 
             controller.enqueue(
@@ -218,23 +222,19 @@ export async function POST(request: NextRequest) {
 
           controller.enqueue(encoder!.encode(`data: [DONE]\n\n`));
         } catch (error) {
-          console.error(`Error in tools ${action}:`, error);
+          const errorMsg =
+            error instanceof Error ? error.message : "Unknown error";
+
           controller.enqueue(
             encoder!.encode(
               `data: ${JSON.stringify({
                 type: "tool_error",
-                error: error instanceof Error ? error.message : "Unknown error",
+                error: errorMsg,
               })}\n\n`,
             ),
           );
         } finally {
-          if (client) {
-            try {
-              await client.disconnect();
-            } catch (cleanupError) {
-              console.warn("Error cleaning up MCP client:", cleanupError);
-            }
-          }
+          await client.disconnect();
           controller.close();
         }
       },
@@ -248,20 +248,17 @@ export async function POST(request: NextRequest) {
       },
     });
   } catch (error) {
-    console.error("Error in tools stream API:", error);
+    const errorMsg = error instanceof Error ? error.message : "Unknown error";
 
     // Clean up client on error
     if (client) {
       try {
         await client.disconnect();
       } catch (cleanupError) {
-        console.warn("Error cleaning up MCP client after error:", cleanupError);
+        // Ignore cleanup errors
       }
     }
 
-    return createErrorResponse(
-      "Failed to process tools request",
-      error instanceof Error ? error.message : "Unknown error",
-    );
+    return createErrorResponse("Failed to process tools request", errorMsg);
   }
 }
