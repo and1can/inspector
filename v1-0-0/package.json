@@ -1,6 +1,6 @@
 {
   "name": "@mcpjam/inspector-v1",
-  "version": "0.1.8",
+  "version": "0.2.0",
   "type": "module",
   "description": "MCPJam inspector",
   "license": "Apache-2.0",
@@ -23,6 +23,7 @@
     "start": "next start",
     "lint": "next lint",
     "publish": "npm publish --access public",
+    "publish-all": "npm publish --workspaces --access public && npm publish --access public",
     "prettier-fix": "prettier --write ."
   },
   "dependencies": {
@@ -35,6 +36,7 @@
     "@hookform/resolvers": "^3.10.0",
     "@mastra/core": "^0.10.6",
     "@mastra/mcp": "^0.10.6",
+    "@mcpjam/inspector-v1": "^0.2.0",
     "@tanstack/react-query": "^5.83.0",
     "@tanstack/react-table": "^8.21.3",
     "@uiw/react-json-view": "^2.0.0-alpha.33",

@@ -3,6 +3,7 @@
 import { resolve, dirname } from "path";
 import { spawn } from "child_process";
 import { fileURLToPath } from "url";
+import { createServer } from "net";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
@@ -100,6 +101,32 @@ function logBox(content, title = null) {
 
 function delay(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms, true));
+}
+
+function isPortAvailable(port) {
+  return new Promise((resolve) => {
+    const server = createServer();
+    
+    server.listen(port, () => {
+      server.once('close', () => {
+        resolve(true);
+      });
+      server.close();
+    });
+    
+    server.on('error', () => {
+      resolve(false);
+    });
+  });
+}
+
+async function findAvailablePort(startPort = 3000, maxPort = 3100) {
+  for (let port = startPort; port <= maxPort; port++) {
+    if (await isPortAvailable(port)) {
+      return port;
+    }
+  }
+  throw new Error(`No available ports found between ${startPort} and ${maxPort}`);
 }
 
 function spawnPromise(command, args, options) {
@@ -211,7 +238,32 @@ async function main() {
   // Apply parsed environment variables to process.env first
   Object.assign(process.env, envVars);
 
-  const PORT = process.env.PORT ?? "3000";
+  // Get requested port and find available port
+  const requestedPort = parseInt(process.env.PORT ?? "3000", 10);
+  let PORT;
+  
+  try {
+    logStep("0", "Checking port availability...");
+    
+    if (await isPortAvailable(requestedPort)) {
+      PORT = requestedPort.toString();
+      logSuccess(`Port ${requestedPort} is available`);
+    } else {
+      logWarning(`Port ${requestedPort} is in use, finding alternative...`);
+      const availablePort = await findAvailablePort(requestedPort + 1);
+      PORT = availablePort.toString();
+      logSuccess(`Using available port ${availablePort}`);
+      
+      // Update environment variables with the new port
+      envVars.PORT = PORT;
+      envVars.NEXT_PUBLIC_BASE_URL = `http://localhost:${PORT}`;
+      envVars.BASE_URL = `http://localhost:${PORT}`;
+      Object.assign(process.env, envVars);
+    }
+  } catch (error) {
+    logError(`Failed to find available port: ${error.message}`);
+    throw error;
+  }
 
   await showServerInfo(PORT);
 
