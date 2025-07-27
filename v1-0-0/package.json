@@ -1,6 +1,6 @@
 {
   "name": "@mcpjam/inspector-v1",
-  "version": "0.2.2",
+  "version": "0.2.6",
   "type": "module",
   "description": "MCPJam inspector",
   "license": "Apache-2.0",
@@ -12,8 +12,8 @@
   },
   "files": [
     "bin",
-    ".next",
     "public",
+    ".next",
     "next.config.ts",
     "package.json"
   ],
