@@ -64,31 +64,7 @@ export function ChatTab({ serverConfigs, systemPrompt = "" }: ChatTabProps) {
   const handleCopyMessage = (content: string) => {
     navigator.clipboard.writeText(content);
   };
-
-  const hasServerConfig =
-    serverConfigs && Object.keys(serverConfigs).length > 0;
-
-  if (!hasServerConfig) {
-    return (
-      <div className="flex flex-col h-screen">
-        <div className="flex-1 flex items-center justify-center">
-          <div className="text-center space-y-6 max-w-md px-4">
-            <div className="w-20 h-20 mx-auto bg-gradient-to-br from-blue-500/10 to-purple-500/10 rounded-full flex items-center justify-center">
-              <MessageCircle className="h-10 w-10 text-muted-foreground/60" />
-            </div>
-            <div className="space-y-3">
-              <h3 className="text-2xl font-semibold">Connect to get started</h3>
-              <p className="text-muted-foreground text-base leading-relaxed">
-                Select MCP servers from the sidebar to begin chatting with
-                multiple AI assistants.
-              </p>
-            </div>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
+  console.log(availableModels);
   // Empty state - centered input
   if (!hasMessages) {
     return (
@@ -127,11 +103,11 @@ export function ChatTab({ serverConfigs, systemPrompt = "" }: ChatTabProps) {
               onChange={setInput}
               onSubmit={sendMessage}
               onStop={stopGeneration}
-              disabled={!hasServerConfig || !hasValidApiKey}
+              disabled={availableModels.length === 0}
               isLoading={isLoading}
               placeholder="Send a message..."
               className="border-2 shadow-lg bg-background/80 backdrop-blur-sm"
-              currentModel={model}
+              currentModel={model || null}
               availableModels={availableModels}
               onModelChange={setModel}
               onClearChat={clearChat}
@@ -175,7 +151,7 @@ export function ChatTab({ serverConfigs, systemPrompt = "" }: ChatTabProps) {
                 >
                   <Message
                     message={message}
-                    model={model}
+                    model={model || null}
                     isLoading={isLoading && index === messages.length - 1}
                     onEdit={() => {}}
                     onRegenerate={regenerateMessage}
@@ -238,7 +214,7 @@ export function ChatTab({ serverConfigs, systemPrompt = "" }: ChatTabProps) {
               onChange={setInput}
               onSubmit={sendMessage}
               onStop={stopGeneration}
-              disabled={!hasServerConfig || !hasValidApiKey}
+              disabled={availableModels.length === 0}
               isLoading={isLoading}
               placeholder="Send a message..."
               className="border-2 shadow-sm"

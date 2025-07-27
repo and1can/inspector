@@ -6,9 +6,11 @@ import { createMessage } from "@/lib/chat-utils";
 import {
   MastraMCPServerDefinition,
   Model,
+  ModelDefinition,
   SUPPORTED_MODELS,
 } from "@/lib/types";
 import { useAiProviderKeys } from "@/hooks/use-ai-provider-keys";
+import { detectOllamaModels } from "@/lib/ollama-utils";
 
 interface UseChatOptions {
   initialMessages?: ChatMessage[];
@@ -17,11 +19,11 @@ interface UseChatOptions {
   onMessageSent?: (message: ChatMessage) => void;
   onMessageReceived?: (message: ChatMessage) => void;
   onError?: (error: string) => void;
-  onModelChange?: (model: Model) => void;
+  onModelChange?: (model: ModelDefinition) => void;
 }
 
 export function useChat(options: UseChatOptions = {}) {
-  const { getToken, hasToken, tokens } = useAiProviderKeys();
+  const { getToken, hasToken, tokens, getOllamaBaseUrl } = useAiProviderKeys();
 
   const {
     initialMessages = [],
@@ -38,10 +40,11 @@ export function useChat(options: UseChatOptions = {}) {
     isLoading: false,
     connectionStatus: "disconnected",
   });
-
   const [input, setInput] = useState("");
   const [status, setStatus] = useState<"idle" | "error">("idle");
-  const [model, setModel] = useState(Model.GPT_4O);
+  const [model, setModel] = useState<ModelDefinition | null>(null);
+  const [ollamaModels, setOllamaModels] = useState<ModelDefinition[]>([]);
+  const [isOllamaRunning, setIsOllamaRunning] = useState(false);
   const abortControllerRef = useRef<AbortController | null>(null);
   const messagesRef = useRef(state.messages);
 
@@ -49,24 +52,65 @@ export function useChat(options: UseChatOptions = {}) {
     messagesRef.current = state.messages;
   }, [state.messages]);
 
+  // Check for Ollama models on mount and periodically
   useEffect(() => {
-    if (tokens.anthropic?.length > 0) {
-      setModel(Model.CLAUDE_3_5_SONNET_20240620);
+    const checkOllama = async () => {
+      const { isRunning, availableModels } =
+        await detectOllamaModels(getOllamaBaseUrl());
+      setIsOllamaRunning(isRunning);
+
+      // Convert string model names to ModelDefinition objects
+      const ollamaModelDefinitions: ModelDefinition[] = availableModels.map(
+        (modelName) => ({
+          id: modelName,
+          name: modelName,
+          provider: "ollama" as const,
+        }),
+      );
+
+      setOllamaModels(ollamaModelDefinitions);
+    };
+
+    checkOllama();
+
+    // Check every 30 seconds for Ollama availability
+    const interval = setInterval(checkOllama, 30000);
+
+    return () => clearInterval(interval);
+  }, [getOllamaBaseUrl]);
+
+  useEffect(() => {
+    if (ollamaModels.length > 0) {
+      setModel(ollamaModels[0]);
+    } else if (tokens.anthropic?.length > 0) {
+      const claudeModel = SUPPORTED_MODELS.find(
+        (m) => m.id === Model.CLAUDE_3_5_SONNET_20240620,
+      );
+      if (claudeModel) setModel(claudeModel);
     } else if (tokens.openai?.length > 0) {
-      setModel(Model.GPT_4O);
+      const gptModel = SUPPORTED_MODELS.find((m) => m.id === Model.GPT_4O);
+      if (gptModel) setModel(gptModel);
     }
-  }, [tokens]);
+  }, [tokens, ollamaModels]);
 
   const currentApiKey = useMemo(() => {
-    const modelDefinition = SUPPORTED_MODELS.find((m) => m.id === model);
-    if (modelDefinition) {
-      return getToken(modelDefinition.provider);
+    if (model) {
+      if (model.provider === "ollama") {
+        // For Ollama, return "local" if it's running and the model is available
+        return isOllamaRunning &&
+          ollamaModels.some(
+            (om) => om.id === model.id || om.id.startsWith(`${model.id}:`),
+          )
+          ? "local"
+          : "";
+      }
+      return getToken(model.provider);
     }
     return "";
-  }, [model, getToken]);
+  }, [model, getToken, isOllamaRunning, ollamaModels]);
 
   const handleModelChange = useCallback(
-    (newModel: Model) => {
+    (newModel: ModelDefinition) => {
       setModel(newModel);
       if (onModelChange) {
         onModelChange(newModel);
@@ -75,8 +119,36 @@ export function useChat(options: UseChatOptions = {}) {
     [onModelChange],
   );
 
-  // Available models with API keys
-  const availableModels = SUPPORTED_MODELS.filter((m) => hasToken(m.provider));
+  // Available models with API keys or local Ollama models
+  const availableModels = useMemo(() => {
+    const filteredSupportedModels = SUPPORTED_MODELS.filter((m) => {
+      if (m.provider === "ollama") {
+        return (
+          isOllamaRunning &&
+          ollamaModels.some(
+            (om) => om.id === m.id || om.id.startsWith(`${m.id}:`),
+          )
+        );
+      }
+      return hasToken(m.provider);
+    });
+
+    // Add all available Ollama models that aren't already in SUPPORTED_MODELS
+    const dynamicOllamaModels: ModelDefinition[] = [];
+    if (isOllamaRunning) {
+      for (const ollamaModel of ollamaModels) {
+        const isAlreadySupported = SUPPORTED_MODELS.some(
+          (m) =>
+            m.id === ollamaModel.id || ollamaModel.id.startsWith(`${m.id}:`),
+        );
+        if (!isAlreadySupported) {
+          dynamicOllamaModels.push(ollamaModel);
+        }
+      }
+    }
+
+    return [...filteredSupportedModels, ...dynamicOllamaModels];
+  }, [isOllamaRunning, ollamaModels, hasToken]);
 
   const handleStreamingEvent = useCallback(
     (
@@ -106,9 +178,9 @@ export function useChat(options: UseChatOptions = {}) {
       // Handle tool calls
       if (
         (parsed.type === "tool_call" || (!parsed.type && parsed.toolCall)) &&
-        (parsed.toolCall || parsed.toolCall)
+        parsed.toolCall
       ) {
-        const toolCall = parsed.toolCall || parsed.toolCall;
+        const toolCall = parsed.toolCall;
         toolCalls.current = [...toolCalls.current, toolCall];
         setState((prev) => ({
           ...prev,
@@ -125,9 +197,9 @@ export function useChat(options: UseChatOptions = {}) {
       if (
         (parsed.type === "tool_result" ||
           (!parsed.type && parsed.toolResult)) &&
-        (parsed.toolResult || parsed.toolResult)
+        parsed.toolResult
       ) {
-        const toolResult = parsed.toolResult || parsed.toolResult;
+        const toolResult = parsed.toolResult;
         toolResults.current = [...toolResults.current, toolResult];
 
         // Update the corresponding tool call status
@@ -194,6 +266,7 @@ export function useChat(options: UseChatOptions = {}) {
             apiKey: currentApiKey,
             systemPrompt,
             messages: messagesRef.current.concat(userMessage),
+            ollamaBaseUrl: getOllamaBaseUrl(),
           }),
           signal: abortControllerRef.current?.signal,
         });
@@ -215,19 +288,25 @@ export function useChat(options: UseChatOptions = {}) {
         const assistantContent = { current: "" };
         const toolCalls = { current: [] as any[] };
         const toolResults = { current: [] as any[] };
+        let buffer = "";
+        let isDone = false;
 
         if (reader) {
-          while (true) {
+          while (!isDone) {
             const { done, value } = await reader.read();
             if (done) break;
 
-            const chunk = decoder.decode(value);
-            const lines = chunk.split("\n");
+            buffer += decoder.decode(value, { stream: true });
+            const lines = buffer.split("\n");
+
+            // Keep the last incomplete line in the buffer
+            buffer = lines.pop() || "";
 
             for (const line of lines) {
               if (line.startsWith("data: ")) {
-                const data = line.slice(6);
+                const data = line.slice(6).trim();
                 if (data === "[DONE]") {
+                  isDone = true;
                   setState((prev) => ({
                     ...prev,
                     isLoading: false,
@@ -235,21 +314,28 @@ export function useChat(options: UseChatOptions = {}) {
                   break;
                 }
 
-                try {
-                  const parsed = JSON.parse(data);
-                  handleStreamingEvent(
-                    parsed,
-                    assistantMessage,
-                    assistantContent,
-                    toolCalls,
-                    toolResults,
-                  );
-                } catch (parseError) {
-                  console.warn("Failed to parse SSE data:", data, parseError);
+                if (data) {
+                  try {
+                    const parsed = JSON.parse(data);
+                    handleStreamingEvent(
+                      parsed,
+                      assistantMessage,
+                      assistantContent,
+                      toolCalls,
+                      toolResults,
+                    );
+                  } catch (parseError) {
+                    console.warn("Failed to parse SSE data:", data, parseError);
+                  }
                 }
               }
             }
           }
+        }
+
+        // Ensure we have some content, even if empty
+        if (!assistantContent.current && !toolCalls.current.length) {
+          console.warn("No content received from stream");
         }
 
         if (onMessageReceived) {
@@ -274,6 +360,7 @@ export function useChat(options: UseChatOptions = {}) {
       systemPrompt,
       onMessageReceived,
       handleStreamingEvent,
+      getOllamaBaseUrl,
     ],
   );
 

@@ -5,10 +5,10 @@ import type { ClientCapabilities } from "@modelcontextprotocol/sdk/types.js";
 import { OAuthClientState } from "./oauth-types";
 
 // Shared model definitions
-export type ModelProvider = "anthropic" | "openai";
+export type ModelProvider = "anthropic" | "openai" | "ollama";
 
 export interface ModelDefinition {
-  id: Model;
+  id: Model | string;
   name: string;
   provider: ModelProvider;
 }
