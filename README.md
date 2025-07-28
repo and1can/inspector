@@ -51,17 +51,17 @@ A developer tool for testing, debugging Model Context Protocol (MCP) servers. Te
 Start up the MCPJam inspector:
 
 ```bash
-npx @mcpjam/inspector
+npx @mcpjam/inspector@latest
 ```
 
 Other commands:
 
 ```bash
 # Launch with custom port
-npx @mcpjam/inspector --port 4000
+npx @mcpjam/inspector@latest --port 4000
 
 # Shortcut for starting MCPJam and an Ollama model
-npx @mcpjam/inspector --ollama llama3.2
+npx @mcpjam/inspector@latest --ollama llama3.2
 ```
 
 ## Requirements
