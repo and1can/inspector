@@ -43,7 +43,7 @@ export function ServerConnectionCard({
   const [currentTime, setCurrentTime] = useState(Date.now());
   const [isErrorExpanded, setIsErrorExpanded] = useState(false);
   const [copiedField, setCopiedField] = useState<string | null>(null);
-
+  console.log("server", server);
   const isHttpServer = server.config.url !== undefined;
   const hasOAuth = server.oauthTokens;
   const headers = server.config.requestInit?.headers as Record<string, string>;
@@ -297,7 +297,7 @@ export function ServerConnectionCard({
                           onClick={() =>
                             copyToClipboard(
                               manualBearerToken,
-                              "manualBearerToken",
+                              "manualBearerToken"
                             )
                           }
                           className="absolute top-1 right-1 p-1 text-muted-foreground/50 hover:text-foreground transition-colors cursor-pointer"
@@ -330,7 +330,7 @@ export function ServerConnectionCard({
                           onClick={() =>
                             copyToClipboard(
                               server.oauthTokens?.access_token || "",
-                              "accessToken",
+                              "accessToken"
                             )
                           }
                           className="absolute top-1 right-1 p-1 text-muted-foreground/50 hover:text-foreground transition-colors cursor-pointer"
@@ -355,7 +355,7 @@ export function ServerConnectionCard({
                           onClick={() =>
                             copyToClipboard(
                               server.oauthTokens?.client_id || "N/A",
-                              "clientId",
+                              "clientId"
                             )
                           }
                           className="absolute top-1 right-1 p-1 text-muted-foreground/50 hover:text-foreground transition-colors cursor-pointer"
@@ -438,7 +438,7 @@ export function ServerConnectionCard({
                                 <span className="text-blue-600">{key}</span>=
                                 <span className="text-green-600">{value}</span>
                               </div>
-                            ),
+                            )
                           )}
                         </div>
                       </div>

@@ -22,7 +22,7 @@ A developer tool for testing, debugging Model Context Protocol (MCP) servers. Te
 
 | Feature                      | Description                                                                                                                              |
 | ---------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------- |
-| **Full MCP Spec Compliance** | Test your MCP server's tools, resources, prompts, and OAuth 2. MCPJam is compliant with the latest MCP specs.                            |
+| **Full MCP Spec Compliance** | Test your MCP server's tools, resources, prompts, elicitation, and OAuth 2. MCPJam is compliant with the latest MCP specs.               |
 | **All transports supported** | Connect to any MCP server. MCPJam inspector supports STDIO, SSE, and Streamable HTTP transports.                                         |
 | **LLM Playground**           | Integrated chat playground with OpenAI, Anthropic Claude, and Ollama model support. Test how your MCP server would behave against an LLM |
 | **Debugging**                | Comprehensive logging, tracing, and error reporting for MCP server development                                                           |
@@ -30,7 +30,7 @@ A developer tool for testing, debugging Model Context Protocol (MCP) servers. Te
 
 ## 📸 Screenshots
 
-  <img alt="MCPJam Inspector Demo" src="./public/demo_1.png">
+<img alt="MCPJam Inspector Demo" src="./public/demo_1.png">
 
 <details>
 <summary><strong>LLM Playground</strong></summary>
