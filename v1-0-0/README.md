@@ -8,7 +8,7 @@
 
 <br/>
 
-# Inspector
+## Building MCP servers should be enjoyable
 
 [![npm version](https://img.shields.io/npm/v/@mcpjam/inspector?style=for-the-badge&color=blue)](https://www.npmjs.com/package/@mcpjam/inspector)
 [![License: Apache 2.0](https://img.shields.io/badge/License-Apache%202.0-blue.svg?style=for-the-badge)](https://opensource.org/licenses/Apache-2.0)
@@ -18,19 +18,33 @@
 
 A developer tool for testing, debugging Model Context Protocol (MCP) servers. It connects to any MCP server and allows you to manually test every part of your server. The project is open source and fully compliant to the MCP spec.
 
-## ✨ Key Features
+## Key Features
 
 | Feature                      | Description                                                                                                                              |
 | ---------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------- |
-| **Full MCP Spec Compliance** | Test your MCP server's tools, resources, prompts, and OAuth 2. MCPJam has full up to date MCP spec compliance.                           |
-| **All transports supported** | Connect to any MCP server. MCPJam inspector has support for STDIO, SSE, and Streamable HTTP servers.                                     |
-| **LLM Playground**           | Integrated chat playground with OpenAI, Anthropic Claude, and Ollama model support. Test how your MCp server would behave against an LLM |
+| **Full MCP Spec Compliance** | Test your MCP server's tools, resources, prompts, and OAuth 2. MCPJam is compliant with the latest MCP specs.                            |
+| **All transports supported** | Connect to any MCP server. MCPJam inspector supports STDIO, SSE, and Streamable HTTP transports.                                         |
+| **LLM Playground**           | Integrated chat playground with OpenAI, Anthropic Claude, and Ollama model support. Test how your MCP server would behave against an LLM |
 | **Debugging**                | Comprehensive logging, tracing, and error reporting for MCP server development                                                           |
 | **Developer Experience**     | Connect to multiple MCP servers. Save configurations. Upgraded UI/UX for modern dev experience.                                          |
 
 ## 📸 Screenshots
 
   <img alt="MCPJam Inspector Demo" src="./public/demo_1.png">
+
+<details>
+<summary><strong>LLM Playground</strong></summary>
+
+<img alt="LLM Chat Demo" src="./public/demo_2.png">
+
+</details>
+
+<details>
+<summary><strong>Connect to any server</strong></summary>
+
+<img alt="MCPJam Connection Demo" src="./public/demo_3.png">
+
+</details>
 
 ## 🚀 Quick Start
 
@@ -46,7 +60,7 @@ Other commands:
 # Launch with custom port
 npx @mcpjam/inspector --port 4000
 
-# Launch with Ollama (ollama installation required)
+# Shortcut for starting MCPJam and an Ollama model
 npx @mcpjam/inspector --ollama llama3.2
 ```
 
@@ -140,8 +154,6 @@ We welcome contributions to MCPJam Inspector V1! Please read our [CONTRIBUTING.m
 - **💬 Discord**: [Join the MCPJam Community](https://discord.gg/JEnDtz8X6z)
 - **📖 MCP Protocol**: [Model Context Protocol Documentation](https://modelcontextprotocol.io/)
 - **🔧 Mastra Framework**: [Mastra MCP Integration](https://github.com/mastra-ai/mastra)
-- **⚛️ Next.js**: [Next.js 15 Documentation](https://nextjs.org/docs)
-- **🎨 Radix UI**: [Component Library](https://www.radix-ui.com/)
 - **🤖 AI SDK**: [Vercel AI SDK](https://sdk.vercel.ai/)
 
 ---
