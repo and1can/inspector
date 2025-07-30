@@ -14,7 +14,9 @@
 [![License: Apache 2.0](https://img.shields.io/badge/License-Apache%202.0-blue.svg?style=for-the-badge)](https://opensource.org/licenses/Apache-2.0)
 [![Discord](https://img.shields.io/badge/Discord-Join%20Server-5865F2.svg?style=for-the-badge&logo=discord&logoColor=white)](https://discord.gg/JEnDtz8X6z)
 
-<img width="150" alt="Catalyst Logo" src="./public/catalyst.png" style="margin: -10px">
+<a href="https://www.opencoreventures.com/" target="_blank">
+  <img width="150" alt="Catalyst Logo" src="./public/catalyst.png" style="margin: -10px">
+</a>
 
 </div>
 
