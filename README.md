@@ -171,3 +171,7 @@ This project is licensed under the **Apache License 2.0** - see the [LICENSE](LI
 [🌐 Website](https://mcpjam.com) • [📖 Docs](https://modelcontextprotocol.io/) • [🐛 Issues](https://github.com/mcpjam/inspector-v1/issues)
 
 </div>
+
+## Sponsors
+
+<img width="150" alt="Catalyst Logo" src="./public/catalyst.png">
