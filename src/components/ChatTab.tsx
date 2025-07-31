@@ -6,6 +6,7 @@ import { MastraMCPServerDefinition } from "@/lib/types";
 import { useChat } from "@/hooks/use-chat";
 import { Message } from "./chat/message";
 import { ChatInput } from "./chat/chat-input";
+import { ElicitationDialog } from "./ElicitationDialog";
 import { TooltipProvider } from "./ui/tooltip";
 import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "sonner";
@@ -32,6 +33,9 @@ export function ChatTab({ serverConfigs, systemPrompt = "" }: ChatTabProps) {
     model,
     availableModels,
     setModel,
+    elicitationRequest,
+    elicitationLoading,
+    handleElicitationResponse,
   } = useChat({
     serverConfigs: serverConfigs,
     systemPrompt,
@@ -125,6 +129,13 @@ export function ChatTab({ serverConfigs, systemPrompt = "" }: ChatTabProps) {
             )}
           </motion.div>
         </div>
+
+        {/* Elicitation Dialog */}
+        <ElicitationDialog
+          elicitationRequest={elicitationRequest}
+          onResponse={handleElicitationResponse}
+          loading={elicitationLoading}
+        />
       </div>
     );
   }
@@ -226,6 +237,13 @@ export function ChatTab({ serverConfigs, systemPrompt = "" }: ChatTabProps) {
             />
           </div>
         </div>
+
+        {/* Elicitation Dialog */}
+        <ElicitationDialog
+          elicitationRequest={elicitationRequest}
+          onResponse={handleElicitationResponse}
+          loading={elicitationLoading}
+        />
       </div>
     </TooltipProvider>
   );

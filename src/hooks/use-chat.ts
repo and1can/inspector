@@ -12,6 +12,13 @@ import {
 import { useAiProviderKeys } from "@/hooks/use-ai-provider-keys";
 import { detectOllamaModels } from "@/lib/ollama-utils";
 
+interface ElicitationRequest {
+  requestId: string;
+  message: string;
+  schema: any;
+  timestamp: string;
+}
+
 interface UseChatOptions {
   initialMessages?: ChatMessage[];
   serverConfigs?: Record<string, MastraMCPServerDefinition>;
@@ -45,6 +52,8 @@ export function useChat(options: UseChatOptions = {}) {
   const [model, setModel] = useState<ModelDefinition | null>(null);
   const [ollamaModels, setOllamaModels] = useState<ModelDefinition[]>([]);
   const [isOllamaRunning, setIsOllamaRunning] = useState(false);
+  const [elicitationRequest, setElicitationRequest] = useState<ElicitationRequest | null>(null);
+  const [elicitationLoading, setElicitationLoading] = useState(false);
   const abortControllerRef = useRef<AbortController | null>(null);
   const messagesRef = useRef(state.messages);
   console.log("model", model);
@@ -219,6 +228,23 @@ export function useChat(options: UseChatOptions = {}) {
               : msg,
           ),
         }));
+        return;
+      }
+
+      // Handle elicitation requests
+      if (parsed.type === "elicitation_request") {
+        setElicitationRequest({
+          requestId: parsed.requestId,
+          message: parsed.message,
+          schema: parsed.schema,
+          timestamp: parsed.timestamp,
+        });
+        return;
+      }
+
+      // Handle elicitation completion
+      if (parsed.type === "elicitation_complete") {
+        setElicitationRequest(null);
         return;
       }
 
@@ -467,6 +493,64 @@ export function useChat(options: UseChatOptions = {}) {
     setInput("");
   }, []);
 
+  const handleElicitationResponse = useCallback(
+    async (
+      action: "accept" | "decline" | "cancel",
+      parameters?: Record<string, any>,
+    ) => {
+      if (!elicitationRequest) {
+        console.warn("Cannot handle elicitation response: no active request");
+        return;
+      }
+
+      setElicitationLoading(true);
+
+      try {
+        let responseData = null;
+        if (action === "accept") {
+          responseData = {
+            action: "accept",
+            content: parameters || {},
+          };
+        } else {
+          responseData = {
+            action,
+          };
+        }
+
+        const response = await fetch("/api/mcp/chat", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            action: "elicitation_response",
+            requestId: elicitationRequest.requestId,
+            response: responseData,
+          }),
+        });
+
+        if (!response.ok) {
+          const errorMsg = `HTTP error! status: ${response.status}`;
+          throw new Error(errorMsg);
+        }
+
+        setElicitationRequest(null);
+      } catch (err) {
+        const errorMessage =
+          err instanceof Error ? err.message : "Unknown error";
+        console.error("Error responding to elicitation request:", errorMessage);
+        
+        if (onError) {
+          onError("Error responding to elicitation request");
+        }
+      } finally {
+        setElicitationLoading(false);
+      }
+    },
+    [elicitationRequest, onError],
+  );
+
   // Cleanup on unmount
   useEffect(() => {
     return () => {
@@ -488,6 +572,8 @@ export function useChat(options: UseChatOptions = {}) {
     model,
     availableModels,
     hasValidApiKey: Boolean(currentApiKey),
+    elicitationRequest,
+    elicitationLoading,
 
     // Actions
     sendMessage,
@@ -496,5 +582,6 @@ export function useChat(options: UseChatOptions = {}) {
     deleteMessage,
     clearChat,
     setModel: handleModelChange,
+    handleElicitationResponse,
   };
 }

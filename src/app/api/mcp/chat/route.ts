@@ -12,9 +12,19 @@ import { ChatMessage } from "@/lib/chat-types";
 import { MCPClient } from "@mastra/mcp";
 import { ModelDefinition } from "@/lib/types";
 
+// Store for pending elicitation requests
+const pendingElicitations = new Map<
+  string,
+  {
+    resolve: (response: any) => void;
+    reject: (error: any) => void;
+  }
+>();
+
 export async function POST(request: NextRequest) {
   let client: MCPClient | null = null;
   try {
+    const requestData = await request.json();
     const {
       serverConfigs,
       model,
@@ -22,14 +32,46 @@ export async function POST(request: NextRequest) {
       systemPrompt,
       messages,
       ollamaBaseUrl,
+      action,
+      requestId,
+      response,
     }: {
-      serverConfigs: Record<string, any>;
-      model: ModelDefinition;
-      apiKey: string;
+      serverConfigs?: Record<string, any>;
+      model?: ModelDefinition;
+      apiKey?: string;
       systemPrompt?: string;
-      messages: ChatMessage[];
+      messages?: ChatMessage[];
       ollamaBaseUrl?: string;
-    } = await request.json();
+      action?: string;
+      requestId?: string;
+      response?: any;
+    } = requestData;
+
+    // Handle elicitation response
+    if (action === "elicitation_response") {
+      if (!requestId) {
+        return createErrorResponse(
+          "Missing requestId",
+          "requestId is required for elicitation_response action",
+        );
+      }
+
+      const pending = pendingElicitations.get(requestId);
+      if (!pending) {
+        return createErrorResponse(
+          "Invalid requestId",
+          "No pending elicitation found for this requestId",
+        );
+      }
+
+      // Resolve the pending elicitation with user's response
+      pending.resolve(response);
+      pendingElicitations.delete(requestId);
+
+      return new Response(JSON.stringify({ success: true }), {
+        headers: { "Content-Type": "application/json" },
+      });
+    }
     if (!model || !model.id || !apiKey || !messages) {
       return createErrorResponse(
         "Missing required fields",
@@ -37,7 +79,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    if (Object.keys(serverConfigs).length > 0) {
+    if (serverConfigs && Object.keys(serverConfigs).length > 0) {
       const validation = validateMultipleServerConfigs(serverConfigs);
       if (!validation.success) {
         return validation.error!;
@@ -61,13 +103,63 @@ export async function POST(request: NextRequest) {
     let streamController: ReadableStreamDefaultController | null = null;
     let encoder: TextEncoder | null = null;
 
+    // Set up elicitation handler
+    const elicitationHandler = async (elicitationRequest: any) => {
+      const requestId = `elicit_${Date.now()}_${Math.random().toString(36).substring(2, 11)}`;
+
+      // Stream elicitation request to client
+      if (streamController && encoder) {
+        streamController.enqueue(
+          encoder.encode(
+            `data: ${JSON.stringify({
+              type: "elicitation_request",
+              requestId,
+              message: elicitationRequest.message,
+              schema: elicitationRequest.requestedSchema,
+              timestamp: new Date(),
+            })}\n\n`,
+          ),
+        );
+      }
+
+      // Return a promise that will be resolved when user responds
+      return new Promise<{
+        action: "accept" | "decline" | "cancel";
+        content?: { [x: string]: unknown };
+        _meta?: { [x: string]: unknown };
+      }>((resolve, reject) => {
+        pendingElicitations.set(requestId, { resolve, reject });
+
+        // Set a timeout to clean up if no response
+        setTimeout(() => {
+          if (pendingElicitations.has(requestId)) {
+            pendingElicitations.delete(requestId);
+            reject(new Error("Elicitation timeout"));
+          }
+        }, 300000); // 5 minute timeout
+      });
+    };
+
+    // Register elicitation handler with the client for all servers
+    if (client.elicitation && client.elicitation.onRequest && serverConfigs) {
+      // Register elicitation handler for each server
+      for (const serverName of Object.keys(serverConfigs)) {
+        // Normalize server name to match MCPClient's internal naming
+        const normalizedName = serverName
+          .toLowerCase()
+          .replace(/[\s\-]+/g, "_")
+          .replace(/[^a-z0-9_]/g, "");
+        client.elicitation.onRequest(normalizedName, elicitationHandler);
+      }
+    }
+
     // Wrap tools to capture tool calls and results
     const originalTools = tools && Object.keys(tools).length > 0 ? tools : {};
     const wrappedTools: Record<string, any> = {};
 
     for (const [name, tool] of Object.entries(originalTools)) {
       wrappedTools[name] = {
-        ...tool,
+        ...(tool as any),
         execute: async (params: any) => {
           const currentToolCallId = ++toolCallId;
 
@@ -90,7 +182,7 @@ export async function POST(request: NextRequest) {
           }
 
           try {
-            const result = await tool.execute(params);
+            const result = await (tool as any).execute(params);
 
             // Stream tool result event immediately
             if (streamController && encoder) {
@@ -178,6 +270,15 @@ export async function POST(request: NextRequest) {
               ),
             );
           }
+
+          // Stream elicitation completion if there were any
+          controller.enqueue(
+            encoder!.encode(
+              `data: ${JSON.stringify({
+                type: "elicitation_complete",
+              })}\n\n`,
+            ),
+          );
 
           controller.enqueue(encoder!.encode(`data: [DONE]\n\n`));
         } catch (error) {
