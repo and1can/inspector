@@ -19,6 +19,12 @@
 
 # production
 /build
+/dist
+cli/build/
+client/dist/
+client/node_modules/
+cli/node_modules/
+mcp-chat-client/node_modules/
 
 # misc
 .DS_Store
