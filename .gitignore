@@ -17,8 +17,16 @@
 /.next/
 /out/
 
-# production
+# production  
 /build
+/dist
+cli/build/
+client/dist/
+server/build/
+client/node_modules/
+cli/node_modules/
+server/node_modules/
+mcp-chat-client/node_modules/
 
 # misc
 .DS_Store

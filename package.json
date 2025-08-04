@@ -12,9 +12,7 @@
   },
   "files": [
     "bin",
-    "public",
-    ".next",
-    "next.config.ts",
+    "dist",
     "package.json"
   ],
   "scripts": {
@@ -24,7 +22,15 @@
     "lint": "next lint",
     "publish": "npm publish --access public",
     "publish-all": "npm publish --workspaces --access public && npm publish --access public",
-    "prettier-fix": "prettier --write ."
+    "prettier-fix": "prettier --write .",
+    "dev:migration": "concurrently \"npm run migration:server\" \"npm run migration:client\"",
+    "migration:server": "cd server && npm run dev",
+    "migration:client": "cd client && npm run dev",
+    "build:migration": "npm run migration:build:client && npm run migration:build:server",
+    "migration:build:client": "cd client && npm run build",
+    "migration:build:server": "cd server && npm run build",
+    "start:migration": "NODE_ENV=production node dist/server/index.cjs",
+    "install:migration": "cd server && npm install && cd ../client && npm install"
   },
   "dependencies": {
     "@ai-sdk/anthropic": "^1.2.12",
@@ -84,6 +90,11 @@
     "eslint-config-next": "15.4.1",
     "tailwindcss": "^4.1.11",
     "tw-animate-css": "^1.3.5",
-    "typescript": "^5"
-  }
+    "typescript": "^5",
+    "concurrently": "^9.1.0"
+  },
+  "workspaces": [
+    "server",
+    "client"
+  ]
 }

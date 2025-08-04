@@ -1,0 +1,56 @@
+import { serve } from '@hono/node-server'
+import { Hono } from 'hono'
+import { cors } from 'hono/cors'
+import { logger } from 'hono/logger'
+import { serveStatic } from '@hono/node-server/serve-static'
+
+// Import routes
+import mcpRoutes from './routes/mcp/index.js'
+
+const app = new Hono()
+
+// Middleware
+app.use('*', logger())
+app.use('*', cors({
+  origin: ['http://localhost:8080', 'http://localhost:3000'],
+  credentials: true,
+}))
+
+// API Routes
+app.route('/api/mcp', mcpRoutes)
+
+// Health check
+app.get('/health', (c) => {
+  return c.json({ status: 'ok', timestamp: new Date().toISOString() })
+})
+
+// Static file serving (for production)
+if (process.env.NODE_ENV === 'production') {
+  app.use('/*', serveStatic({ root: './dist/client' }))
+  // SPA fallback
+  app.get('*', serveStatic({ path: './dist/client/index.html' }))
+} else {
+  // Development mode - just API
+  app.get('/', (c) => {
+    return c.json({ 
+      message: 'MCP Inspector API Server', 
+      environment: 'development',
+      frontend: 'http://localhost:5173'
+    })
+  })
+}
+
+const port = parseInt(process.env.PORT || '8001')
+
+console.log(`🚀 MCP Inspector Server starting on port ${port}`)
+console.log(`📡 API available at: http://localhost:${port}/api`)
+if (process.env.NODE_ENV !== 'production') {
+  console.log(`🎨 Frontend dev server: http://localhost:8080`)
+}
+
+serve({
+  fetch: app.fetch,
+  port,
+})
+
+export default app
