@@ -1,8 +1,8 @@
 import { ModelDefinition } from "@/lib/types";
-import claudeLogo from "../../../public/claude_logo.png";
-import openaiLogo from "../../../public/openai_logo.png";
-import ollamaLogo from "../../../public/ollama_logo.svg";
-import ollamaDarkLogo from "../../../public/ollama_dark.png";
+import claudeLogo from "/claude_logo.png";
+import openaiLogo from "/openai_logo.png";
+import ollamaLogo from "/ollama_logo.svg";
+import ollamaDarkLogo from "/ollama_dark.png";
 
 export const getProviderLogoFromProvider = (
   provider: string,
@@ -10,21 +10,21 @@ export const getProviderLogoFromProvider = (
 ): string | null => {
   switch (provider) {
     case "anthropic":
-      return claudeLogo.src;
+      return claudeLogo;
     case "openai":
-      return openaiLogo.src;
+      return openaiLogo;
     case "ollama":
       // Return dark logo when in dark mode
       if (themeMode === "dark") {
-        return ollamaDarkLogo.src;
+        return ollamaDarkLogo;
       }
       // For system theme, check if document has dark class
       if (themeMode === "system" && typeof document !== "undefined") {
         const isDark = document.documentElement.classList.contains("dark");
-        return isDark ? ollamaDarkLogo.src : ollamaLogo.src;
+        return isDark ? ollamaDarkLogo : ollamaLogo;
       }
       // Default to light logo for light mode or when themeMode is not provided
-      return ollamaLogo.src;
+      return ollamaLogo;
     default:
       return null;
   }

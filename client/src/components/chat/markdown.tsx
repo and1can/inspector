@@ -38,15 +38,14 @@ const components: Partial<Components> = {
   },
   a: ({ children, ...props }) => {
     return (
-      // @ts-expect-error - Next.js Link props don't match ReactMarkdown anchor interface
-      <Link
+      <a
         className="text-blue-500 hover:underline"
         target="_blank"
         rel="noreferrer"
         {...props}
       >
         {children}
-      </Link>
+      </a>
     );
   },
   h1: ({ children, ...props }) => {
