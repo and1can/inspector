@@ -1,8 +1,13 @@
 import { Hono } from 'hono'
+import connect from './connect'
+import tools from './tools'
+import resources from './resources'
+import prompts from './prompts'
+import chat from './chat'
 
 const mcp = new Hono()
 
-// Placeholder routes - will be implemented in Phase 2
+// Health check
 mcp.get('/health', (c) => {
   return c.json({ 
     service: 'MCP API',
@@ -11,61 +16,19 @@ mcp.get('/health', (c) => {
   })
 })
 
-// Chat endpoint placeholder
-mcp.post('/chat', (c) => {
-  return c.json({ 
-    message: 'Chat endpoint - will be implemented in Phase 3',
-    status: 'placeholder'
-  })
-})
+// Chat endpoint - REAL IMPLEMENTATION  
+mcp.route('/chat', chat)
 
-// Connect endpoint placeholder  
-mcp.post('/connect', (c) => {
-  return c.json({ 
-    message: 'Connect endpoint - will be implemented in Phase 2',
-    status: 'placeholder'
-  })
-})
+// Connect endpoint - REAL IMPLEMENTATION
+mcp.route('/connect', connect)
 
-// Tools endpoint placeholder
-mcp.get('/tools', (c) => {
-  return c.json({ 
-    message: 'Tools endpoint - will be implemented in Phase 2',
-    status: 'placeholder',
-    tools: []
-  })
-})
+// Tools endpoint - REAL IMPLEMENTATION
+mcp.route('/tools', tools)
 
-// Resources endpoints placeholder
-mcp.get('/resources/list', (c) => {
-  return c.json({ 
-    message: 'Resources list endpoint - will be implemented in Phase 2',
-    status: 'placeholder',
-    resources: []
-  })
-})
+// Resources endpoints - REAL IMPLEMENTATION
+mcp.route('/resources', resources)
 
-mcp.post('/resources/read', (c) => {
-  return c.json({ 
-    message: 'Resources read endpoint - will be implemented in Phase 2',
-    status: 'placeholder'
-  })
-})
-
-// Prompts endpoints placeholder
-mcp.get('/prompts/list', (c) => {
-  return c.json({ 
-    message: 'Prompts list endpoint - will be implemented in Phase 2',
-    status: 'placeholder',
-    prompts: []
-  })
-})
-
-mcp.post('/prompts/get', (c) => {
-  return c.json({ 
-    message: 'Prompts get endpoint - will be implemented in Phase 2',
-    status: 'placeholder'
-  })
-})
+// Prompts endpoints - REAL IMPLEMENTATION
+mcp.route('/prompts', prompts)
 
 export default mcp
