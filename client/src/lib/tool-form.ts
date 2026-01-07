@@ -5,10 +5,100 @@ export interface FormField {
   required: boolean;
   value: any;
   enum?: string[];
+  enumLabels?: string[]; // Display labels for enum values (from oneOf/anyOf titles)
   minimum?: number;
   maximum?: number;
   pattern?: string;
   isSet: boolean;
+}
+
+/**
+ * Resolve a $ref reference in a JSON schema.
+ * Handles local references like "#/$defs/CategoryName"
+ */
+function resolveRef(ref: string, rootSchema: any): any | null {
+  if (!ref.startsWith("#/")) return null;
+
+  const path = ref.slice(2).split("/"); // Remove "#/" and split
+  let current = rootSchema;
+
+  for (const segment of path) {
+    if (current && typeof current === "object" && segment in current) {
+      current = current[segment];
+    } else {
+      return null;
+    }
+  }
+
+  return current;
+}
+
+/**
+ * Extract enum values from oneOf/anyOf with const pattern.
+ * This is commonly used by some Python MCP servers for enum types.
+ * Returns { values, labels } where labels may have custom titles.
+ */
+function extractEnumFromOneOfAnyOf(prop: any): {
+  values: string[];
+  labels: string[];
+} | null {
+  const options = prop.oneOf || prop.anyOf;
+  if (!Array.isArray(options)) return null;
+
+  // Filter options that have a 'const' property (enum pattern)
+  const constOptions = options.filter(
+    (opt: any) => opt && typeof opt === "object" && "const" in opt,
+  );
+
+  if (constOptions.length === 0) return null;
+
+  const values: string[] = [];
+  const labels: string[] = [];
+
+  for (const opt of constOptions) {
+    const val = String(opt.const);
+    values.push(val);
+    // Use title if available, otherwise use the value itself
+    labels.push(opt.title ?? val);
+  }
+
+  return { values, labels };
+}
+
+/**
+ * Extract enum information from a property, handling multiple schema patterns:
+ * 1. Direct enum array: { enum: ["a", "b", "c"] }
+ * 2. $ref to $defs: { $ref: "#/$defs/MyEnum" } where $defs.MyEnum.enum exists
+ * 3. oneOf/anyOf with const: { oneOf: [{ const: "a", title: "A" }, ...] }
+ */
+function extractEnumFromProperty(
+  prop: any,
+  rootSchema: any,
+): { values: string[]; labels?: string[] } | null {
+  // Pattern 1: Direct enum array
+  if (prop.enum) {
+    const labels = Array.isArray(prop.enumNames) ? prop.enumNames : undefined;
+    return { values: prop.enum, labels };
+  }
+
+  // Pattern 2: $ref to $defs (common with Pydantic/FastMCP)
+  if (prop.$ref && typeof prop.$ref === "string") {
+    const resolved = resolveRef(prop.$ref, rootSchema);
+    if (resolved?.enum) {
+      return { values: resolved.enum };
+    }
+    // Also check for oneOf/anyOf in the resolved schema
+    if (resolved) {
+      const extracted = extractEnumFromOneOfAnyOf(resolved);
+      if (extracted) return extracted;
+    }
+  }
+
+  // Pattern 3: oneOf/anyOf with const values
+  const extracted = extractEnumFromOneOfAnyOf(prop);
+  if (extracted) return extracted;
+
+  return null;
 }
 
 export function getDefaultValue(type: string, enumValues?: string[]) {
@@ -36,11 +126,21 @@ export function generateFormFieldsFromSchema(schema: any): FormField[] {
   const fields: FormField[] = [];
   const requiredFields: string[] = schema.required || [];
   Object.entries(schema.properties).forEach(([key, prop]: [string, any]) => {
-    const fieldType = prop.enum ? "enum" : prop.type || "string";
+    // Check for enum values - supports multiple patterns including $ref to $defs
+    let enumValues: string[] | undefined;
+    let enumLabels: string[] | undefined;
+
+    const extracted = extractEnumFromProperty(prop, schema);
+    if (extracted) {
+      enumValues = extracted.values;
+      enumLabels = extracted.labels;
+    }
+
+    const fieldType = enumValues ? "enum" : prop.type || "string";
     const isRequired = requiredFields.includes(key);
 
     // Start with type-based default value
-    let value = getDefaultValue(fieldType, prop.enum);
+    let value = getDefaultValue(fieldType, enumValues);
     // Required fields are considered "set" by default, optional fields are unset
     let isSet = isRequired;
 
@@ -60,7 +160,8 @@ export function generateFormFieldsFromSchema(schema: any): FormField[] {
       description: prop.description,
       required: isRequired,
       value,
-      enum: prop.enum,
+      enum: enumValues,
+      enumLabels,
       minimum: prop.minimum,
       maximum: prop.maximum,
       pattern: prop.pattern,
