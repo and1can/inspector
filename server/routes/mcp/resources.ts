@@ -37,7 +37,7 @@ resources.post("/list", async (c) => {
   let serverId: string | undefined;
   let cursor: string | undefined;
   try {
-    const body = (await c.req.json()) as { 
+    const body = (await c.req.json()) as {
       serverId?: string;
       cursor?: string;
     };
@@ -48,8 +48,10 @@ resources.post("/list", async (c) => {
     }
     const mcpClientManager = c.mcpClientManager;
     const result = await mcpClientManager.listResources(
-      serverId, cursor ? { cursor } : undefined);
-    return c.json({ 
+      serverId,
+      cursor ? { cursor } : undefined,
+    );
+    return c.json({
       resources: result.resources,
       nextCursor: result.nextCursor,
     });
