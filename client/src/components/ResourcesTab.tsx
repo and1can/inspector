@@ -63,10 +63,10 @@ export function ResourcesTab({ serverConfig, serverName }: ResourcesTabProps) {
     }
 
     try {
-      const result= await listResources(serverName, cursor);
+      const result = await listResources(serverName, cursor);
       const serverResources: MCPResource[] = Array.isArray(result.resources)
-      ? result.resources
-      : [];
+        ? result.resources
+        : [];
 
       if (append) {
         setResources((prev) => [...prev, ...serverResources]);
@@ -247,7 +247,9 @@ export function ResourcesTab({ serverConfig, serverName }: ResourcesTabProps) {
                                     ? "bg-muted/50 dark:bg-muted/50 shadow-sm border border-border ring-1 ring-ring/20"
                                     : "hover:shadow-sm"
                                 }`}
-                                onClick={() => setSelectedResource(resource.uri)}
+                                onClick={() =>
+                                  setSelectedResource(resource.uri)
+                                }
                               >
                                 <div className="flex items-start gap-3">
                                   <div className="flex-1 min-w-0">
@@ -279,11 +281,13 @@ export function ResourcesTab({ serverConfig, serverName }: ResourcesTabProps) {
                             </div>
                           )}
 
-                          {!nextCursor && resources.length > 0 && !loadingMore && (
-                            <div className="text-center py-3 text-xs text-muted-foreground">
-                              No more resources
-                            </div>
-                          )}
+                          {!nextCursor &&
+                            resources.length > 0 &&
+                            !loadingMore && (
+                              <div className="text-center py-3 text-xs text-muted-foreground">
+                                No more resources
+                              </div>
+                            )}
                         </>
                       )}
                     </div>
