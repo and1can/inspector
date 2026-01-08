@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Button } from "./ui/button";
 import { Badge } from "./ui/badge";
 import { ScrollArea } from "./ui/scroll-area";
@@ -17,6 +17,7 @@ import {
   type MCPResource,
 } from "@/sdk";
 import { LoggerView } from "./logger-view";
+import { listResources } from "@/lib/apis/mcp-resources-api";
 
 interface ResourcesTabProps {
   serverConfig?: MCPServerConfig;
@@ -31,12 +32,9 @@ export function ResourcesTab({ serverConfig, serverName }: ResourcesTabProps) {
   const [loading, setLoading] = useState(false);
   const [fetchingResources, setFetchingResources] = useState(false);
   const [error, setError] = useState<string>("");
-
-  const selectedResourceData = useMemo(() => {
-    return (
-      resources.find((resource) => resource.uri === selectedResource) ?? null
-    );
-  }, [resources, selectedResource]);
+  const [nextCursor, setNextCursor] = useState<string | undefined>(undefined);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const sentinelRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     if (serverConfig && serverName) {
@@ -44,30 +42,36 @@ export function ResourcesTab({ serverConfig, serverName }: ResourcesTabProps) {
     }
   }, [serverConfig, serverName]);
 
-  const fetchResources = async () => {
+  const selectedResourceData = useMemo(() => {
+    return (
+      resources.find((resource) => resource.uri === selectedResource) ?? null
+    );
+  }, [resources, selectedResource]);
+
+  const fetchResources = async (cursor?: string, append = false) => {
     if (!serverName) return;
 
-    setFetchingResources(true);
-    setError("");
-    setResources([]);
-    setSelectedResource("");
-    setResourceContent(null);
+    if (append) {
+      setLoadingMore(true);
+    } else {
+      setFetchingResources(true);
+      setError("");
+      setResources([]);
+      setSelectedResource("");
+      setResourceContent(null);
+      setNextCursor(undefined);
+    }
 
     try {
-      const response = await fetch("/api/mcp/resources/list", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ serverId: serverName }),
-      });
+      const result= await listResources(serverName, cursor);
+      const serverResources: MCPResource[] = Array.isArray(result.resources)
+      ? result.resources
+      : [];
 
-      const data = await response.json();
-
-      if (response.ok) {
-        const serverResources: MCPResource[] = Array.isArray(data.resources)
-          ? data.resources
-          : [];
+      if (append) {
+        setResources((prev) => [...prev, ...serverResources]);
+      } else {
         setResources(serverResources);
-
         if (serverResources.length === 0) {
           setSelectedResource("");
           setResourceContent(null);
@@ -76,15 +80,46 @@ export function ResourcesTab({ serverConfig, serverName }: ResourcesTabProps) {
         ) {
           setResourceContent(null);
         }
-      } else {
-        setError(data.error || "Failed to fetch resources");
       }
+      setNextCursor(result.nextCursor);
     } catch (err) {
       setError(`Network error fetching resources: ${err}`);
     } finally {
       setFetchingResources(false);
+      setLoadingMore(false);
     }
   };
+
+  const loadMoreResources = useCallback(async () => {
+    if (loadingMore) return;
+    if (!nextCursor) return;
+
+    try {
+      await fetchResources(nextCursor, true);
+    } catch (err) {
+      // Error is already handled in fetchResources
+    }
+  }, [nextCursor, loadingMore]);
+
+  useEffect(() => {
+    if (!sentinelRef.current) return;
+
+    const element = sentinelRef.current;
+    const observer = new IntersectionObserver((entries) => {
+      const entry = entries[0];
+      if (!entry.isIntersecting) return;
+      if (!nextCursor || loadingMore) return;
+
+      loadMoreResources();
+    });
+
+    observer.observe(element);
+
+    return () => {
+      observer.unobserve(element);
+      observer.disconnect();
+    };
+  }, [nextCursor, loadingMore, loadMoreResources]);
 
   const readResource = async (uri: string) => {
     if (!serverName) return;
@@ -168,7 +203,7 @@ export function ResourcesTab({ serverConfig, serverName }: ResourcesTabProps) {
                     </Badge>
                   </div>
                   <Button
-                    onClick={fetchResources}
+                    onClick={() => fetchResources()}
                     variant="ghost"
                     size="sm"
                     disabled={fetchingResources}
@@ -202,36 +237,54 @@ export function ResourcesTab({ serverConfig, serverName }: ResourcesTabProps) {
                           </p>
                         </div>
                       ) : (
-                        <div className="space-y-1">
-                          {resources.map((resource) => (
-                            <div
-                              key={resource.uri}
-                              className={`cursor-pointer transition-all duration-200 hover:bg-muted/30 dark:hover:bg-muted/50 p-3 rounded-md mx-2 ${
-                                selectedResource === resource.uri
-                                  ? "bg-muted/50 dark:bg-muted/50 shadow-sm border border-border ring-1 ring-ring/20"
-                                  : "hover:shadow-sm"
-                              }`}
-                              onClick={() => setSelectedResource(resource.uri)}
-                            >
-                              <div className="flex items-start gap-3">
-                                <div className="flex-1 min-w-0">
-                                  <div className="flex items-center gap-2 mb-1">
-                                    <File className="h-3 w-3 text-muted-foreground flex-shrink-0" />
-                                    <code className="font-mono text-xs font-medium text-foreground bg-muted px-1.5 py-0.5 rounded border border-border">
-                                      {resource.name}
-                                    </code>
+                        <>
+                          <div className="space-y-1">
+                            {resources.map((resource) => (
+                              <div
+                                key={resource.uri}
+                                className={`cursor-pointer transition-all duration-200 hover:bg-muted/30 dark:hover:bg-muted/50 p-3 rounded-md mx-2 ${
+                                  selectedResource === resource.uri
+                                    ? "bg-muted/50 dark:bg-muted/50 shadow-sm border border-border ring-1 ring-ring/20"
+                                    : "hover:shadow-sm"
+                                }`}
+                                onClick={() => setSelectedResource(resource.uri)}
+                              >
+                                <div className="flex items-start gap-3">
+                                  <div className="flex-1 min-w-0">
+                                    <div className="flex items-center gap-2 mb-1">
+                                      <File className="h-3 w-3 text-muted-foreground flex-shrink-0" />
+                                      <code className="font-mono text-xs font-medium text-foreground bg-muted px-1.5 py-0.5 rounded border border-border">
+                                        {resource.name}
+                                      </code>
+                                    </div>
+                                    {resource.description && (
+                                      <p className="text-xs mt-2 line-clamp-2 leading-relaxed text-muted-foreground">
+                                        {resource.description}
+                                      </p>
+                                    )}
                                   </div>
-                                  {resource.description && (
-                                    <p className="text-xs mt-2 line-clamp-2 leading-relaxed text-muted-foreground">
-                                      {resource.description}
-                                    </p>
-                                  )}
+                                  <ChevronRight className="h-3 w-3 text-muted-foreground flex-shrink-0 mt-1" />
                                 </div>
-                                <ChevronRight className="h-3 w-3 text-muted-foreground flex-shrink-0 mt-1" />
                               </div>
+                            ))}
+                          </div>
+
+                          {/* Sentinel observed by IntersectionObserver */}
+                          <div ref={sentinelRef} className="h-4" />
+
+                          {loadingMore && (
+                            <div className="flex items-center justify-center py-3 text-xs text-muted-foreground gap-2">
+                              <RefreshCw className="h-3 w-3 animate-spin" />
+                              <span>Loading more resources…</span>
                             </div>
-                          ))}
-                        </div>
+                          )}
+
+                          {!nextCursor && resources.length > 0 && !loadingMore && (
+                            <div className="text-center py-3 text-xs text-muted-foreground">
+                              No more resources
+                            </div>
+                          )}
+                        </>
                       )}
                     </div>
                   </ScrollArea>
