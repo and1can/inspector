@@ -148,7 +148,7 @@ export function ResourcesTab({ serverConfig, serverName }: ResourcesTabProps) {
   }
 
   return (
-    <div className="h-[calc(100vh-120px)] flex flex-col">
+    <div className="h-full flex flex-col">
       <ResizablePanelGroup direction="vertical" className="flex-1">
         {/* Top Section - Resources and Preview */}
         <ResizablePanel defaultSize={70} minSize={30}>

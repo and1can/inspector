@@ -216,7 +216,7 @@ export function PromptsTab({ serverConfig, serverName }: PromptsTabProps) {
   }
 
   return (
-    <div className="h-[calc(100vh-120px)] flex flex-col">
+    <div className="h-full flex flex-col">
       <ResizablePanelGroup direction="vertical" className="flex-1">
         {/* Top Section - Prompts and Parameters */}
         <ResizablePanel defaultSize={70} minSize={30}>

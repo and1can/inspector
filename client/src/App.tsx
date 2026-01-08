@@ -290,7 +290,7 @@ export default function App() {
             />
           )}
 
-          <div className={activeTab === "tasks" ? "" : "hidden"}>
+          <div className={activeTab === "tasks" ? "h-full" : "hidden"}>
             <TasksTab
               serverConfig={selectedMCPConfig}
               serverName={appState.selectedServer}

@@ -469,7 +469,7 @@ export function TasksTab({
   }
 
   return (
-    <div className="h-[calc(100vh-120px)] flex flex-col">
+    <div className="h-full flex flex-col">
       <ResizablePanelGroup direction="vertical" className="flex-1">
         {/* Top Section - Tasks and Details */}
         <ResizablePanel defaultSize={70} minSize={30}>
@@ -802,6 +802,11 @@ export function TasksTab({
                       </div>
                       <ScrollArea className="flex-1">
                         <div className="p-4">
+                          {error && (
+                            <div className="mb-4 p-3 bg-destructive/10 border border-destructive/20 rounded text-destructive text-xs font-medium">
+                              {error}
+                            </div>
+                          )}
                           {loading ? (
                             <div className="flex flex-col items-center justify-center py-8 text-center">
                               <RefreshCw className="h-4 w-4 text-muted-foreground animate-spin mb-2" />
