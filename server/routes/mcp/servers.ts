@@ -36,8 +36,9 @@ servers.get("/", async (c) => {
 });
 
 servers.get("/status/:serverId", async (c) => {
+  let serverId: string | undefined;
   try {
-    const serverId = c.req.param("serverId");
+    serverId = c.req.param("serverId");
     const mcpClientManager = c.mcpClientManager;
     const status =
       mcpClientManager.getConnectionStatusByAttemptingPing(serverId);
@@ -61,8 +62,9 @@ servers.get("/status/:serverId", async (c) => {
 
 // Get initialization metadata for a server
 servers.get("/init-info/:serverId", async (c) => {
+  let serverId: string | undefined;
   try {
-    const serverId = c.req.param("serverId");
+    serverId = c.req.param("serverId");
     const mcpClientManager = c.mcpClientManager;
     const initInfo = mcpClientManager.getInitializationInfo(serverId);
 
@@ -95,8 +97,9 @@ servers.get("/init-info/:serverId", async (c) => {
 
 // Disconnect from a server
 servers.delete("/:serverId", async (c) => {
+  let serverId: string | undefined;
   try {
-    const serverId = c.req.param("serverId");
+    serverId = c.req.param("serverId");
     const mcpClientManager = c.mcpClientManager;
 
     try {
@@ -132,11 +135,15 @@ servers.delete("/:serverId", async (c) => {
 
 // Reconnect to a server
 servers.post("/reconnect", async (c) => {
+  let serverId: string | undefined;
   try {
-    const { serverId, serverConfig } = (await c.req.json()) as {
+    const body = (await c.req.json()) as {
       serverId?: string;
       serverConfig?: MCPServerConfig;
     };
+
+    serverId = body.serverId;
+    const serverConfig = body.serverConfig;
 
     if (!serverId || !serverConfig) {
       return c.json(
