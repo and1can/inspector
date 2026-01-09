@@ -625,11 +625,9 @@ export function ToolsTab({ serverConfig, serverName }: ToolsTabProps) {
     ? {
         requestId: activeElicitation.requestId,
         message: activeElicitation.request.message,
-        schema: (
-          activeElicitation.request as unknown as {
-            requestedSchema?: Record<string, unknown>;
-          }
-        ).requestedSchema as Record<string, unknown> | undefined,
+        schema: (activeElicitation.request as any).requestedSchema as
+          | Record<string, unknown>
+          | undefined,
         timestamp: activeElicitation.timestamp,
       }
     : null;
