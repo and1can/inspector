@@ -34,15 +34,27 @@ setInterval(
 
 // List resources endpoint
 resources.post("/list", async (c) => {
+  let serverId: string | undefined;
+  let cursor: string | undefined;
   try {
-    const { serverId } = (await c.req.json()) as { serverId?: string };
-
+    const body = (await c.req.json()) as {
+      serverId?: string;
+      cursor?: string;
+    };
+    serverId = body.serverId;
+    cursor = body.cursor;
     if (!serverId) {
       return c.json({ success: false, error: "serverId is required" }, 400);
     }
     const mcpClientManager = c.mcpClientManager;
-    const { resources } = await mcpClientManager.listResources(serverId);
-    return c.json({ resources });
+    const result = await mcpClientManager.listResources(
+      serverId,
+      cursor ? { cursor } : undefined,
+    );
+    return c.json({
+      resources: result.resources,
+      nextCursor: result.nextCursor,
+    });
   } catch (error) {
     logger.error("Error fetching resources", error, { serverId });
     return c.json(
@@ -57,12 +69,15 @@ resources.post("/list", async (c) => {
 
 // Read resource endpoint
 resources.post("/read", async (c) => {
+  let serverId: string | undefined;
+  let uri: string | undefined;
   try {
-    const { serverId, uri } = (await c.req.json()) as {
+    const result = (await c.req.json()) as {
       serverId?: string;
       uri?: string;
     };
-
+    serverId = result.serverId;
+    uri = result.uri;
     if (!serverId) {
       return c.json({ success: false, error: "serverId is required" }, 400);
     }
