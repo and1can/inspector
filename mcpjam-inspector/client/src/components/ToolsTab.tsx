@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import type {
   CallToolResult,
   ElicitRequest,
@@ -147,6 +147,11 @@ export function ToolsTab({ serverConfig, serverName }: ToolsTabProps) {
     useState<TaskCapabilities | null>(null);
   // TTL for task execution (milliseconds, 0 = no expiration)
   const [taskTtl, setTaskTtl] = useState<number>(0);
+  // Infinite scroll state
+  const [displayedToolCount, setDisplayedToolCount] = useState(20);
+  const toolsPerPage = 20;
+  const sentinelRef = useRef<HTMLDivElement | null>(null);
+  const [cursor, setCursor] = useState<string | undefined>(undefined);
   const serverKey = useMemo(() => {
     if (!serverConfig) return "none";
     try {
@@ -277,12 +282,14 @@ export function ToolsTab({ serverConfig, serverName }: ToolsTabProps) {
     setUnstructuredValidationResult("not_applicable");
 
     try {
-      const data = await listTools(serverName);
+      // Call to get all of the tools for server
+      const data = await listTools(serverName, cursor);
       const toolArray = data.tools ?? [];
       const dictionary = Object.fromEntries(
         toolArray.map((tool: Tool) => [tool.name, tool]),
       );
       setTools(dictionary);
+      setCursor(data.nextCursor);
       logger.info("Tools fetched", {
         serverId: serverName,
         toolCount: toolArray.length,
@@ -576,6 +583,36 @@ export function ToolsTab({ serverConfig, serverName }: ToolsTabProps) {
       })
     : toolNames;
 
+  // Reset displayed tool count when search query or tools change
+  useEffect(() => {
+    setDisplayedToolCount(toolsPerPage);
+  }, [searchQuery, toolNames.length]);
+
+  // IntersectionObserver for infinite scroll
+  useEffect(() => {
+    if (!sentinelRef.current) return;
+    if (activeTab !== "tools") return; // Only observe when tools tab is active
+
+    const element = sentinelRef.current;
+    const observer = new IntersectionObserver((entries) => {
+      const entry = entries[0];
+      if (!entry.isIntersecting) return;
+
+      // Check if there are more tools to display
+      if (displayedToolCount >= filteredToolNames.length) return;
+
+      // Load more tools
+      fetchTools();
+    });
+
+    observer.observe(element);
+
+    return () => {
+      observer.unobserve(element);
+      observer.disconnect();
+    };
+  }, [displayedToolCount, filteredToolNames.length, activeTab, toolsPerPage]);
+
   const filteredSavedRequests = searchQuery.trim()
     ? savedRequests.filter((tool) => {
         const haystack =
@@ -630,6 +667,8 @@ export function ToolsTab({ serverConfig, serverName }: ToolsTabProps) {
               onRenameRequest={handleRenameRequest}
               onDuplicateRequest={handleDuplicateRequest}
               onDeleteRequest={handleDeleteRequest}
+              displayedToolCount={displayedToolCount}
+              sentinelRef={sentinelRef}
             />
             <ResizableHandle withHandle />
             {selectedTool ? (
