@@ -44,6 +44,7 @@ import type {
   Transport,
   TransportSendOptions,
 } from "@modelcontextprotocol/sdk/shared/transport.js";
+import { getMcpAppsStyleVariables } from "./mcp-apps-renderer-helper";
 
 // Injected by Vite at build time from package.json
 declare const __APP_VERSION__: string;
@@ -515,23 +516,10 @@ export function MCPAppsRenderer({
 
   // CSS Variables for theming (SEP-1865 styles.variables)
   // These are sent via hostContext.styles.variables - the SDK should pass them through
-  const styleVariables = useMemo(() => {
-    const isDark = themeMode === "dark";
-    return {
-      "--color-background-primary": isDark ? "#171717" : "#ffffff",
-      "--color-background-secondary": isDark ? "#262626" : "#f5f5f5",
-      "--color-text-primary": isDark ? "#fafafa" : "#171717",
-      "--color-text-secondary": isDark ? "#a3a3a3" : "#737373",
-      "--color-border-primary": isDark ? "#404040" : "#e5e5e5",
-      "--font-sans":
-        "system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
-      "--font-mono":
-        "ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, monospace",
-      "--border-radius-sm": "4px",
-      "--border-radius-md": "8px",
-      "--border-radius-lg": "12px",
-    } as Record<string, string>;
-  }, [themeMode]);
+  const styleVariables = useMemo(
+    () => getMcpAppsStyleVariables(themeMode),
+    [themeMode],
+  );
 
   const hostContext = useMemo<McpUiHostContext>(
     () => ({
