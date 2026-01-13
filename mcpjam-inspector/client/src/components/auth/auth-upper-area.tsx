@@ -1,5 +1,5 @@
 import { useAuth } from "@workos-inc/authkit-react";
-import { useConvexAuth } from "convex/react";
+import { useConvexAuth, useQuery } from "convex/react";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -11,7 +11,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { getInitials } from "@/lib/utils";
-import { CircleUser, LogOut, RefreshCw, Settings } from "lucide-react";
+import { CircleUser, LogOut, RefreshCw, Settings, User } from "lucide-react";
 import { usePostHog } from "posthog-js/react";
 import { detectEnvironment, detectPlatform } from "@/lib/PosthogUtils";
 import { DiscordIcon } from "@/components/ui/discord-icon";
@@ -20,6 +20,7 @@ import {
   ActiveServerSelector,
   ActiveServerSelectorProps,
 } from "@/components/ActiveServerSelector";
+import { useProfilePicture } from "@/hooks/useProfilePicture";
 
 interface AuthUpperAreaProps {
   activeServerSelectorProps?: ActiveServerSelectorProps;
@@ -31,6 +32,8 @@ export function AuthUpperArea({
   const { isLoading } = useConvexAuth();
   const { user, signIn, signOut, signUp } = useAuth();
   const posthog = usePostHog();
+  const { profilePictureUrl } = useProfilePicture();
+  const convexUser = useQuery("users:getCurrentUser" as any);
 
   const communityLinks = (
     <div className="flex items-center gap-1">
@@ -61,9 +64,11 @@ export function AuthUpperArea({
     </div>
   );
 
-  const displayName = user
+  // Prefer convexUser name (can be edited) over WorkOS user name
+  const workOsName = user
     ? [user.firstName, user.lastName].filter(Boolean).join(" ")
     : "";
+  const displayName = convexUser?.name || workOsName || "User";
   const email = user?.email ?? "";
   const initials = getInitials(displayName);
 
@@ -76,7 +81,7 @@ export function AuthUpperArea({
     signOut({ returnTo });
   };
 
-  const avatarUrl = user?.profilePictureUrl || undefined;
+  const avatarUrl = profilePictureUrl;
 
   const dropdown = (
     <DropdownMenu>
@@ -112,6 +117,13 @@ export function AuthUpperArea({
           </div>
         </DropdownMenuLabel>
         <DropdownMenuSeparator />
+        <DropdownMenuItem
+          onClick={() => (window.location.hash = "profile")}
+          className="cursor-pointer"
+        >
+          <User className="size-4" />
+          Profile
+        </DropdownMenuItem>
         <DropdownMenuItem
           onClick={() => (window.location.hash = "settings")}
           className="cursor-pointer"
