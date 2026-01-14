@@ -46,9 +46,21 @@ export function appReducer(state: AppState, action: AppAction): AppState {
     }
 
     case "CONNECT_SUCCESS": {
-      const existing = state.servers[action.name];
-      if (!existing) return state;
-      const nextServer = setStatus(existing, "connected", {
+      // Check state.servers first, then fallback to workspace servers (for cloud-synced servers)
+      // If server doesn't exist anywhere, create it (for servers from Convex remote workspaces)
+      const activeWorkspace = state.workspaces[state.activeWorkspaceId];
+      const existing =
+        state.servers[action.name] ?? activeWorkspace?.servers[action.name];
+      // Create server entry if it doesn't exist (for Convex-synced servers)
+      const baseServer: ServerWithName = existing ?? {
+        name: action.name,
+        config: action.config,
+        lastConnectionTime: new Date(),
+        connectionStatus: "disconnected",
+        retryCount: 0,
+        enabled: true,
+      };
+      const nextServer = setStatus(baseServer, "connected", {
         config: action.config,
         lastConnectionTime: new Date(),
         retryCount: 0,
@@ -58,7 +70,6 @@ export function appReducer(state: AppState, action: AppAction): AppState {
         // Track whether this server uses OAuth based on whether tokens were provided
         useOAuth: action.tokens != null,
       });
-      const activeWorkspace = state.workspaces[state.activeWorkspaceId];
       return {
         ...state,
         servers: {
@@ -80,7 +91,10 @@ export function appReducer(state: AppState, action: AppAction): AppState {
     }
 
     case "CONNECT_FAILURE": {
-      const existing = state.servers[action.name];
+      // Check state.servers first, then fallback to workspace servers (for cloud-synced servers)
+      const activeWorkspace = state.workspaces[state.activeWorkspaceId];
+      const existing =
+        state.servers[action.name] ?? activeWorkspace?.servers[action.name];
       if (!existing) return state;
       return {
         ...state,
@@ -95,19 +109,35 @@ export function appReducer(state: AppState, action: AppAction): AppState {
     }
 
     case "RECONNECT_REQUEST": {
-      const existing = state.servers[action.name];
-      if (!existing) return state;
+      // Check state.servers first, then fallback to workspace servers (for cloud-synced servers)
+      // If server doesn't exist anywhere, create it (for servers from Convex remote workspaces)
+      const activeWorkspace = state.workspaces[state.activeWorkspaceId];
+      const existing =
+        state.servers[action.name] ?? activeWorkspace?.servers[action.name];
+      // Create server entry if it doesn't exist (for Convex-synced servers)
+      const baseServer: ServerWithName = existing ?? {
+        name: action.name,
+        config: action.config,
+        lastConnectionTime: new Date(),
+        connectionStatus: "disconnected",
+        retryCount: 0,
+        enabled: true,
+      };
+      const nextServer = setStatus(baseServer, "connecting", { enabled: true });
       return {
         ...state,
         servers: {
           ...state.servers,
-          [action.name]: setStatus(existing, "connecting", { enabled: true }),
+          [action.name]: nextServer,
         },
       };
     }
 
     case "DISCONNECT": {
-      const existing = state.servers[action.name];
+      // Check state.servers first, then fallback to workspace servers (for cloud-synced servers)
+      const activeWorkspace = state.workspaces[state.activeWorkspaceId];
+      const existing =
+        state.servers[action.name] ?? activeWorkspace?.servers[action.name];
       if (!existing) return state;
       const nextSelected =
         state.selectedServer === action.name ? "none" : state.selectedServer;

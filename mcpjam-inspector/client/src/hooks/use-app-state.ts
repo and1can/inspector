@@ -1346,10 +1346,13 @@ export function useAppState() {
   const handleReconnect = useCallback(
     async (serverName: string, options?: { forceOAuthFlow?: boolean }) => {
       logger.info("Reconnecting to server", { serverName, options });
-      const server = appState.servers[serverName];
+      // Use effectiveServers (workspace servers with runtime state) instead of appState.servers
+      // This ensures servers synced from cloud workspaces are found even if they haven't been
+      // connected in the current session yet
+      const server = effectiveServers[serverName];
       if (!server) throw new Error(`Server ${serverName} not found`);
 
-      dispatch({ type: "RECONNECT_REQUEST", name: serverName });
+      dispatch({ type: "RECONNECT_REQUEST", name: serverName, config: server.config });
       const token = nextOpToken(serverName);
 
       // If forceOAuthFlow is true, clear all OAuth data and initiate a fresh OAuth flow
@@ -1507,7 +1510,7 @@ export function useAppState() {
         throw error;
       }
     },
-    [appState.servers, fetchAndStoreInitInfo, syncServerToConvex],
+    [effectiveServers, fetchAndStoreInitInfo, syncServerToConvex],
   );
 
   // Sync with centralized agent status on app startup only
