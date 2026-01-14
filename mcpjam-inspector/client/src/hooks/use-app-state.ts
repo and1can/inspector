@@ -63,7 +63,7 @@ export function useAppState() {
     (opTokenRef.current.get(name) ?? 0) !== token;
 
   // Convex integration for workspaces
-  const { isAuthenticated } = useConvexAuth();
+  const { isAuthenticated, isLoading: isAuthLoading } = useConvexAuth();
   const { workspaces: remoteWorkspaces, isLoading: isLoadingWorkspaces } =
     useWorkspaceQueries({ isAuthenticated });
   const {
@@ -75,9 +75,15 @@ export function useAppState() {
   // Track if we've done the initial migration from local to Convex
   const hasMigratedRef = useRef(false);
   // Track active workspace ID separately for authenticated mode (Convex IDs)
+  // Initialize from localStorage synchronously to avoid race conditions with OAuth callback
   const [convexActiveWorkspaceId, setConvexActiveWorkspaceId] = useState<
     string | null
-  >(null);
+  >(() => {
+    if (typeof window !== "undefined") {
+      return localStorage.getItem("convex-active-workspace-id");
+    }
+    return null;
+  });
   // Debounce timer for Convex updates
   const syncTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   // Fallback to local storage if Convex takes too long or fails
@@ -222,19 +228,22 @@ export function useAppState() {
   ]);
 
   // Set initial active workspace when Convex workspaces load
+  // Also handles case where stored workspace ID no longer exists
   useEffect(() => {
     if (
       isAuthenticated &&
       remoteWorkspaces &&
-      remoteWorkspaces.length > 0 &&
-      !convexActiveWorkspaceId
+      remoteWorkspaces.length > 0
     ) {
-      // Try to restore last active workspace from localStorage
-      const savedActiveId = localStorage.getItem("convex-active-workspace-id");
-      if (savedActiveId && convexWorkspaces[savedActiveId]) {
-        setConvexActiveWorkspaceId(savedActiveId);
-      } else {
-        setConvexActiveWorkspaceId(remoteWorkspaces[0]._id);
+      // If no workspace selected, or selected workspace doesn't exist, pick a valid one
+      if (!convexActiveWorkspaceId || !convexWorkspaces[convexActiveWorkspaceId]) {
+        // Try to restore last active workspace from localStorage
+        const savedActiveId = localStorage.getItem("convex-active-workspace-id");
+        if (savedActiveId && convexWorkspaces[savedActiveId]) {
+          setConvexActiveWorkspaceId(savedActiveId);
+        } else {
+          setConvexActiveWorkspaceId(remoteWorkspaces[0]._id);
+        }
       }
     }
   }, [
@@ -576,6 +585,10 @@ export function useAppState() {
     // Wait for local storage to load
     if (isLoading) return;
 
+    // Wait for auth state to be determined before processing OAuth callback
+    // This prevents processing while isAuthenticated is still false due to loading
+    if (isAuthLoading) return;
+
     // If authenticated, also wait for Convex workspaces to load and workspace ID to be set
     // This ensures syncServerToConvex will work correctly
     // Skip this wait if useLocalFallback is true (Convex timed out)
@@ -613,6 +626,7 @@ export function useAppState() {
     }
   }, [
     isLoading,
+    isAuthLoading,
     isLoadingWorkspaces,
     isAuthenticated,
     effectiveActiveWorkspaceId,
