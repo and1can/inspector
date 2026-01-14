@@ -540,7 +540,23 @@ export class MCPClientManager {
     const loadForServer = async (id: string): Promise<ToolSet> => {
       await this.ensureConnected(id);
       const listToolsResult = await this.listTools(id);
-      return convertMCPToolsToVercelTools(listToolsResult, {
+
+      // Filter out app-only tools (visibility: ["app"]) per SEP-1865
+      // These tools are callable by apps but should not be exposed to the AI model
+      const filteredTools = {
+        ...listToolsResult,
+        tools: listToolsResult.tools.filter((tool) => {
+          const visibility = (tool._meta?.ui as any)?.visibility as
+            | Array<"model" | "app">
+            | undefined;
+          // Default visibility is ["model", "app"], so undefined means include
+          if (!visibility) return true;
+          // Exclude if visibility is exactly ["app"]
+          return !(visibility.length === 1 && visibility[0] === "app");
+        }),
+      };
+
+      return convertMCPToolsToVercelTools(filteredTools, {
         schemas: options.schemas,
         callTool: async ({ name, args, options: callOptions }) => {
           const requestOptions = callOptions?.abortSignal

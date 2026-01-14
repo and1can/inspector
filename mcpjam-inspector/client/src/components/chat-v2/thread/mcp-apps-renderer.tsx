@@ -47,6 +47,7 @@ import type {
   TransportSendOptions,
 } from "@modelcontextprotocol/sdk/shared/transport.js";
 import { getMcpAppsStyleVariables } from "./mcp-apps-renderer-helper";
+import { isVisibleToModelOnly } from "@/lib/mcp-ui/mcp-apps-utils";
 
 // Injected by Vite at build time from package.json
 declare const __APP_VERSION__: string;
@@ -73,6 +74,8 @@ interface MCPAppsRendererProps {
   toolErrorText?: string;
   resourceUri: string;
   toolMetadata?: Record<string, unknown>;
+  /** All tools metadata for visibility checking when widget calls tools */
+  toolsMetadata?: Record<string, Record<string, unknown>>;
   onSendFollowUp?: (text: string) => void;
   onCallTool?: (
     toolName: string,
@@ -160,6 +163,7 @@ export function MCPAppsRenderer({
   toolErrorText,
   resourceUri,
   toolMetadata,
+  toolsMetadata,
   onSendFollowUp,
   onCallTool,
   pipWidgetId,
@@ -320,6 +324,7 @@ export function MCPAppsRenderer({
   const serverIdRef = useRef(serverId);
   const toolCallIdRef = useRef(toolCallId);
   const pipWidgetIdRef = useRef(pipWidgetId);
+  const toolsMetadataRef = useRef(toolsMetadata);
 
   // Fetch widget HTML when tool output is available or CSP mode changes
   useEffect(() => {
@@ -594,6 +599,7 @@ export function MCPAppsRenderer({
     serverIdRef.current = serverId;
     toolCallIdRef.current = toolCallId;
     pipWidgetIdRef.current = pipWidgetId;
+    toolsMetadataRef.current = toolsMetadata;
   }, [
     onSendFollowUp,
     onCallTool,
@@ -606,6 +612,7 @@ export function MCPAppsRenderer({
     serverId,
     toolCallId,
     pipWidgetId,
+    toolsMetadata,
   ]);
 
   const registerBridgeHandlers = useCallback(
@@ -631,6 +638,14 @@ export function MCPAppsRenderer({
       };
 
       bridge.oncalltool = async ({ name, arguments: args }, _extra) => {
+        // Check if tool is model-only (not callable by apps) per SEP-1865
+        const calledToolMeta = toolsMetadataRef.current?.[name];
+        if (isVisibleToModelOnly(calledToolMeta)) {
+          throw new Error(
+            `Tool "${name}" is not callable by apps (visibility: model-only)`,
+          );
+        }
+
         if (!onCallToolRef.current) {
           throw new Error("Tool calls not supported");
         }
