@@ -154,6 +154,12 @@ export function useAppState() {
     };
   }, [isAuthenticated, remoteWorkspaces, useLocalFallback, logger]);
 
+  // Flag indicating we're waiting for Convex workspaces to load
+  // Also true when auth is loading and user was previously authenticated
+  const isLoadingRemoteWorkspaces =
+    (isAuthenticated && !useLocalFallback && remoteWorkspaces === undefined) ||
+    (isAuthLoading && !!convexActiveWorkspaceId);
+
   // Convert remote workspaces to local format
   const convexWorkspaces = useMemo((): Record<string, Workspace> => {
     if (!remoteWorkspaces) return {};
@@ -190,11 +196,22 @@ export function useAppState() {
       // If no workspaces in Convex yet, show empty (migration will create them)
       return convexWorkspaces;
     }
+    if (isAuthenticated) {
+      // Waiting for Convex - return empty, UI will show loading skeleton
+      return {};
+    }
+    // If auth is still loading and user was previously authenticated (has convexActiveWorkspaceId),
+    // return empty to avoid briefly showing local workspaces before Convex loads
+    if (isAuthLoading && convexActiveWorkspaceId) {
+      return {};
+    }
     return appState.workspaces;
   }, [
     isAuthenticated,
+    isAuthLoading,
     remoteWorkspaces,
     convexWorkspaces,
+    convexActiveWorkspaceId,
     appState.workspaces,
     useLocalFallback,
   ]);
@@ -230,15 +247,16 @@ export function useAppState() {
   // Set initial active workspace when Convex workspaces load
   // Also handles case where stored workspace ID no longer exists
   useEffect(() => {
-    if (
-      isAuthenticated &&
-      remoteWorkspaces &&
-      remoteWorkspaces.length > 0
-    ) {
+    if (isAuthenticated && remoteWorkspaces && remoteWorkspaces.length > 0) {
       // If no workspace selected, or selected workspace doesn't exist, pick a valid one
-      if (!convexActiveWorkspaceId || !convexWorkspaces[convexActiveWorkspaceId]) {
+      if (
+        !convexActiveWorkspaceId ||
+        !convexWorkspaces[convexActiveWorkspaceId]
+      ) {
         // Try to restore last active workspace from localStorage
-        const savedActiveId = localStorage.getItem("convex-active-workspace-id");
+        const savedActiveId = localStorage.getItem(
+          "convex-active-workspace-id",
+        );
         if (savedActiveId && convexWorkspaces[savedActiveId]) {
           setConvexActiveWorkspaceId(savedActiveId);
         } else {
@@ -1352,7 +1370,11 @@ export function useAppState() {
       const server = effectiveServers[serverName];
       if (!server) throw new Error(`Server ${serverName} not found`);
 
-      dispatch({ type: "RECONNECT_REQUEST", name: serverName, config: server.config });
+      dispatch({
+        type: "RECONNECT_REQUEST",
+        name: serverName,
+        config: server.config,
+      });
       const token = nextOpToken(serverName);
 
       // If forceOAuthFlow is true, clear all OAuth data and initiate a fresh OAuth flow
@@ -1878,7 +1900,9 @@ export function useAppState() {
         // This bypasses the existence check in handleSwitchWorkspace since
         // the workspace was just created and may not be in effectiveWorkspaces yet
         setConvexActiveWorkspaceId(convexWorkspaceId);
-        logger.info("Switched to newly shared workspace", { convexWorkspaceId });
+        logger.info("Switched to newly shared workspace", {
+          convexWorkspaceId,
+        });
       } else {
         // For non-authenticated users, update local workspace with the sharedWorkspaceId
         dispatch({
@@ -1951,6 +1975,7 @@ export function useAppState() {
     // State
     appState,
     isLoading,
+    isLoadingRemoteWorkspaces,
     // Cloud sync status - true when authenticated and Convex is working
     isCloudSyncActive:
       isAuthenticated && !useLocalFallback && remoteWorkspaces !== undefined,

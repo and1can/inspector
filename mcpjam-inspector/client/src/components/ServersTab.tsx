@@ -47,6 +47,7 @@ import {
 import { CollapsedPanelStrip } from "./ui/collapsed-panel-strip";
 import { LoggerView } from "./logger-view";
 import { useJsonRpcPanelVisibility } from "@/hooks/use-json-rpc-panel";
+import { Skeleton } from "./ui/skeleton";
 
 interface ServersTabProps {
   connectedServerConfigs: Record<string, ServerWithName>;
@@ -62,6 +63,7 @@ interface ServersTabProps {
     skipAutoConnect?: boolean,
   ) => void;
   onRemove: (serverName: string) => void;
+  isLoadingWorkspaces?: boolean;
 }
 
 export function ServersTab({
@@ -71,6 +73,7 @@ export function ServersTab({
   onReconnect,
   onUpdate,
   onRemove,
+  isLoadingWorkspaces,
 }: ServersTabProps) {
   const posthog = usePostHog();
   const { getAccessToken } = useAuth();
@@ -453,9 +456,22 @@ export function ServersTab({
     </div>
   );
 
+  const renderLoadingContent = () => (
+    <div className="flex-1 p-6">
+      <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
+        <Skeleton className="h-48 w-full rounded-lg" />
+        <Skeleton className="h-48 w-full rounded-lg" />
+      </div>
+    </div>
+  );
+
   return (
     <div className="h-full flex flex-col">
-      {connectedCount > 0 ? renderConnectedContent() : renderEmptyContent()}
+      {isLoadingWorkspaces
+        ? renderLoadingContent()
+        : connectedCount > 0
+          ? renderConnectedContent()
+          : renderEmptyContent()}
 
       {/* Add Server Modal */}
       <AddServerModal

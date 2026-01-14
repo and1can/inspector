@@ -90,6 +90,7 @@ export default function App() {
   const {
     appState,
     isLoading,
+    isLoadingRemoteWorkspaces,
     workspaceServers,
     connectedServerConfigs,
     selectedMCPConfig,
@@ -251,6 +252,7 @@ export default function App() {
           onLeaveWorkspace={handleLeaveWorkspace}
           onWorkspaceShared={handleWorkspaceShared}
           activeServerSelectorProps={activeServerSelectorProps}
+          isLoadingWorkspaces={isLoadingRemoteWorkspaces}
         />
         <div className="flex flex-1 min-h-0 flex-col overflow-hidden h-full">
           {/* Content Areas */}
@@ -262,6 +264,7 @@ export default function App() {
               onReconnect={handleReconnect}
               onUpdate={handleUpdate}
               onRemove={handleRemoveServer}
+              isLoadingWorkspaces={isLoadingRemoteWorkspaces}
             />
           )}
           {activeTab === "tools" && (

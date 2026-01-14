@@ -16,6 +16,7 @@ interface HeaderProps {
   onLeaveWorkspace: (workspaceId: string) => void;
   onWorkspaceShared: (convexWorkspaceId: string) => void;
   activeServerSelectorProps?: ActiveServerSelectorProps;
+  isLoadingWorkspaces?: boolean;
 }
 
 export const Header = ({
@@ -28,6 +29,7 @@ export const Header = ({
   onLeaveWorkspace,
   onWorkspaceShared,
   activeServerSelectorProps,
+  isLoadingWorkspaces,
 }: HeaderProps) => {
   const { activeIpc, dismissActiveIpc } = useHeaderIpc();
 
@@ -49,6 +51,7 @@ export const Header = ({
             onCreateWorkspace={onCreateWorkspace}
             onUpdateWorkspace={onUpdateWorkspace}
             onDeleteWorkspace={onDeleteWorkspace}
+            isLoading={isLoadingWorkspaces}
           />
           <WorkspaceMembers
             workspaceName={activeWorkspace?.name || "Workspace"}

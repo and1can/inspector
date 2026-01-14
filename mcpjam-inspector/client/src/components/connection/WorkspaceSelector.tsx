@@ -8,6 +8,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { EditableText } from "@/components/ui/editable-text";
+import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 import { Workspace } from "@/state/app-types";
 
@@ -18,6 +19,7 @@ interface WorkspaceSelectorProps {
   onCreateWorkspace: (name: string, switchTo?: boolean) => string;
   onUpdateWorkspace: (workspaceId: string, updates: Partial<Workspace>) => void;
   onDeleteWorkspace: (workspaceId: string) => void;
+  isLoading?: boolean;
 }
 
 export function WorkspaceSelector({
@@ -27,7 +29,16 @@ export function WorkspaceSelector({
   onCreateWorkspace,
   onUpdateWorkspace,
   onDeleteWorkspace,
+  isLoading,
 }: WorkspaceSelectorProps) {
+  if (isLoading) {
+    return (
+      <div className="flex items-center gap-1">
+        <Skeleton className="h-8 w-32" />
+      </div>
+    );
+  }
+
   const activeWorkspace = workspaces[activeWorkspaceId];
 
   const workspaceList = Object.values(workspaces).sort((a, b) => {
