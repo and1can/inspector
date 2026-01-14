@@ -14,6 +14,7 @@ interface HeaderProps {
   onUpdateWorkspace: (workspaceId: string, updates: Partial<Workspace>) => void;
   onDeleteWorkspace: (workspaceId: string) => void;
   onLeaveWorkspace: (workspaceId: string) => void;
+  onWorkspaceShared: (convexWorkspaceId: string) => void;
   activeServerSelectorProps?: ActiveServerSelectorProps;
 }
 
@@ -25,17 +26,12 @@ export const Header = ({
   onUpdateWorkspace,
   onDeleteWorkspace,
   onLeaveWorkspace,
+  onWorkspaceShared,
   activeServerSelectorProps,
 }: HeaderProps) => {
   const { activeIpc, dismissActiveIpc } = useHeaderIpc();
 
   const activeWorkspace = workspaces[activeWorkspaceId];
-
-  const handleWorkspaceShared = (sharedWorkspaceId: string) => {
-    if (activeWorkspaceId) {
-      onUpdateWorkspace(activeWorkspaceId, { sharedWorkspaceId });
-    }
-  };
 
   const handleLeaveWorkspace = () => {
     onLeaveWorkspace(activeWorkspaceId);
@@ -58,7 +54,7 @@ export const Header = ({
             workspaceName={activeWorkspace?.name || "Workspace"}
             workspaceServers={activeWorkspace?.servers || {}}
             sharedWorkspaceId={activeWorkspace?.sharedWorkspaceId}
-            onWorkspaceShared={handleWorkspaceShared}
+            onWorkspaceShared={onWorkspaceShared}
             onLeaveWorkspace={handleLeaveWorkspace}
           />
         </div>

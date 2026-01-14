@@ -1853,6 +1853,27 @@ export function useAppState() {
     toast.success("Default workspace updated");
   }, []);
 
+  // Handler for when a workspace is shared/linked to Convex for the first time
+  const handleWorkspaceShared = useCallback(
+    (convexWorkspaceId: string) => {
+      if (isAuthenticated) {
+        // For authenticated users, switch to the new Convex workspace directly
+        // This bypasses the existence check in handleSwitchWorkspace since
+        // the workspace was just created and may not be in effectiveWorkspaces yet
+        setConvexActiveWorkspaceId(convexWorkspaceId);
+        logger.info("Switched to newly shared workspace", { convexWorkspaceId });
+      } else {
+        // For non-authenticated users, update local workspace with the sharedWorkspaceId
+        dispatch({
+          type: "UPDATE_WORKSPACE",
+          workspaceId: appState.activeWorkspaceId,
+          updates: { sharedWorkspaceId: convexWorkspaceId },
+        });
+      }
+    },
+    [isAuthenticated, appState.activeWorkspaceId, logger],
+  );
+
   const handleExportWorkspace = useCallback(
     (workspaceId: string) => {
       const workspace = effectiveWorkspaces[workspaceId];
@@ -1971,6 +1992,7 @@ export function useAppState() {
     handleLeaveWorkspace,
     handleDuplicateWorkspace,
     handleSetDefaultWorkspace,
+    handleWorkspaceShared,
     handleExportWorkspace,
     handleImportWorkspace,
   };
