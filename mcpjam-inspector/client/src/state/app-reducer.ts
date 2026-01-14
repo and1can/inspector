@@ -3,6 +3,7 @@ import {
   AppState,
   ConnectionStatus,
   ServerWithName,
+  Workspace,
 } from "./app-types";
 
 const setStatus = (

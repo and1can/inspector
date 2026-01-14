@@ -51,6 +51,7 @@ export interface Workspace {
   createdAt: Date;
   updatedAt: Date;
   isDefault?: boolean;
+  sharedWorkspaceId?: string;
 }
 
 export interface AppState {

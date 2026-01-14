@@ -2,6 +2,7 @@ import { AuthUpperArea } from "./auth/auth-upper-area";
 import { SidebarTrigger } from "./ui/sidebar";
 import { useHeaderIpc } from "./ipc/use-header-ipc";
 import { WorkspaceSelector } from "./connection/WorkspaceSelector";
+import { WorkspaceMembers } from "./workspace/WorkspaceMembers";
 import { Workspace } from "@/state/app-types";
 import { ActiveServerSelectorProps } from "./ActiveServerSelector";
 
@@ -12,6 +13,7 @@ interface HeaderProps {
   onCreateWorkspace: (name: string, switchTo?: boolean) => string;
   onUpdateWorkspace: (workspaceId: string, updates: Partial<Workspace>) => void;
   onDeleteWorkspace: (workspaceId: string) => void;
+  onLeaveWorkspace: (workspaceId: string) => void;
   activeServerSelectorProps?: ActiveServerSelectorProps;
 }
 
@@ -22,9 +24,22 @@ export const Header = ({
   onCreateWorkspace,
   onUpdateWorkspace,
   onDeleteWorkspace,
+  onLeaveWorkspace,
   activeServerSelectorProps,
 }: HeaderProps) => {
   const { activeIpc, dismissActiveIpc } = useHeaderIpc();
+
+  const activeWorkspace = workspaces[activeWorkspaceId];
+
+  const handleWorkspaceShared = (sharedWorkspaceId: string) => {
+    if (activeWorkspaceId) {
+      onUpdateWorkspace(activeWorkspaceId, { sharedWorkspaceId });
+    }
+  };
+
+  const handleLeaveWorkspace = () => {
+    onLeaveWorkspace(activeWorkspaceId);
+  };
 
   return (
     <header className="flex shrink-0 flex-col border-b transition-[width,height] ease-linear">
@@ -38,6 +53,13 @@ export const Header = ({
             onCreateWorkspace={onCreateWorkspace}
             onUpdateWorkspace={onUpdateWorkspace}
             onDeleteWorkspace={onDeleteWorkspace}
+          />
+          <WorkspaceMembers
+            workspaceName={activeWorkspace?.name || "Workspace"}
+            workspaceServers={activeWorkspace?.servers || {}}
+            sharedWorkspaceId={activeWorkspace?.sharedWorkspaceId}
+            onWorkspaceShared={handleWorkspaceShared}
+            onLeaveWorkspace={handleLeaveWorkspace}
           />
         </div>
         <AuthUpperArea activeServerSelectorProps={activeServerSelectorProps} />

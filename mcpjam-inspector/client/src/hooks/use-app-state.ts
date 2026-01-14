@@ -1,5 +1,13 @@
-import { useCallback, useEffect, useReducer, useRef, useState } from "react";
+import {
+  useCallback,
+  useEffect,
+  useReducer,
+  useRef,
+  useState,
+  useMemo,
+} from "react";
 import { toast } from "sonner";
+import { useConvexAuth } from "convex/react";
 import { useLogger } from "./use-logger";
 import {
   initialAppState,
@@ -8,6 +16,11 @@ import {
 } from "@/state/app-types";
 import { appReducer } from "@/state/app-reducer";
 import { loadAppState, saveAppState } from "@/state/storage";
+import { useWorkspaceQueries, useWorkspaceMutations } from "./useWorkspaces";
+import {
+  serializeServersForSharing,
+  deserializeServersFromConvex,
+} from "@/lib/workspace-serialization";
 import {
   testConnection,
   deleteServer,
@@ -36,6 +49,8 @@ export function useAppState() {
 
   const [appState, dispatch] = useReducer(appReducer, initialAppState);
   const [isLoading, setIsLoading] = useState(true);
+  // Guard to prevent duplicate OAuth callback processing
+  const oauthCallbackHandledRef = useRef(false);
   // Operation guard to avoid races
   const opTokenRef = useRef<Map<string, number>>(new Map());
   const nextOpToken = (name: string) => {
@@ -46,6 +61,29 @@ export function useAppState() {
   };
   const isStaleOp = (name: string, token: number) =>
     (opTokenRef.current.get(name) ?? 0) !== token;
+
+  // Convex integration for workspaces
+  const { isAuthenticated } = useConvexAuth();
+  const { workspaces: remoteWorkspaces, isLoading: isLoadingWorkspaces } =
+    useWorkspaceQueries({ isAuthenticated });
+  const {
+    createWorkspace: convexCreateWorkspace,
+    updateWorkspace: convexUpdateWorkspace,
+    deleteWorkspace: convexDeleteWorkspace,
+  } = useWorkspaceMutations();
+
+  // Track if we've done the initial migration from local to Convex
+  const hasMigratedRef = useRef(false);
+  // Track active workspace ID separately for authenticated mode (Convex IDs)
+  const [convexActiveWorkspaceId, setConvexActiveWorkspaceId] = useState<
+    string | null
+  >(null);
+  // Debounce timer for Convex updates
+  const syncTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  // Fallback to local storage if Convex takes too long or fails
+  const [useLocalFallback, setUseLocalFallback] = useState(false);
+  const convexTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const CONVEX_TIMEOUT_MS = 10000; // 10 seconds timeout
 
   // Load from storage once
   useEffect(() => {
@@ -61,10 +99,245 @@ export function useAppState() {
     }
   }, [logger]);
 
-  // Persist on change
+  // Persist local state on change (only for unauthenticated mode or server runtime state)
   useEffect(() => {
     if (!isLoading) saveAppState(appState);
   }, [appState, isLoading]);
+
+  // Convex timeout - fall back to local if Convex takes too long
+  useEffect(() => {
+    if (!isAuthenticated) {
+      // Not authenticated, reset fallback state
+      setUseLocalFallback(false);
+      if (convexTimeoutRef.current) {
+        clearTimeout(convexTimeoutRef.current);
+        convexTimeoutRef.current = null;
+      }
+      return;
+    }
+
+    if (remoteWorkspaces !== undefined) {
+      // Convex responded, clear timeout and reset fallback
+      setUseLocalFallback(false);
+      if (convexTimeoutRef.current) {
+        clearTimeout(convexTimeoutRef.current);
+        convexTimeoutRef.current = null;
+      }
+      return;
+    }
+
+    // Authenticated but still waiting for Convex - start timeout
+    if (!convexTimeoutRef.current && !useLocalFallback) {
+      convexTimeoutRef.current = setTimeout(() => {
+        logger.warn(
+          "Convex connection timed out, falling back to local storage",
+        );
+        toast.warning("Cloud sync unavailable - using local data", {
+          description: "Your changes will be saved locally",
+        });
+        setUseLocalFallback(true);
+        convexTimeoutRef.current = null;
+      }, CONVEX_TIMEOUT_MS);
+    }
+
+    return () => {
+      if (convexTimeoutRef.current) {
+        clearTimeout(convexTimeoutRef.current);
+        convexTimeoutRef.current = null;
+      }
+    };
+  }, [isAuthenticated, remoteWorkspaces, useLocalFallback, logger]);
+
+  // Convert remote workspaces to local format
+  const convexWorkspaces = useMemo((): Record<string, Workspace> => {
+    if (!remoteWorkspaces) return {};
+    return Object.fromEntries(
+      remoteWorkspaces.map((rw) => {
+        const deserializedServers = deserializeServersFromConvex(
+          rw.servers || {},
+        );
+        return [
+          rw._id,
+          {
+            id: rw._id,
+            name: rw.name,
+            description: rw.description,
+            servers: deserializedServers,
+            createdAt: new Date(rw.createdAt),
+            updatedAt: new Date(rw.updatedAt),
+            sharedWorkspaceId: rw._id, // Points to itself when in Convex
+          } as Workspace,
+        ];
+      }),
+    );
+  }, [remoteWorkspaces]);
+
+  // Derive effective workspaces based on auth state
+  // When authenticated: use Convex as source of truth (unless fallback is active)
+  // When not authenticated or fallback: use local state
+  const effectiveWorkspaces = useMemo((): Record<string, Workspace> => {
+    if (useLocalFallback) {
+      // Convex connection failed, use local storage
+      return appState.workspaces;
+    }
+    if (isAuthenticated && remoteWorkspaces !== undefined) {
+      // If no workspaces in Convex yet, show empty (migration will create them)
+      return convexWorkspaces;
+    }
+    return appState.workspaces;
+  }, [
+    isAuthenticated,
+    remoteWorkspaces,
+    convexWorkspaces,
+    appState.workspaces,
+    useLocalFallback,
+  ]);
+
+  // Derive effective active workspace ID
+  const effectiveActiveWorkspaceId = useMemo(() => {
+    if (useLocalFallback) {
+      // Convex connection failed, use local storage
+      return appState.activeWorkspaceId;
+    }
+    if (isAuthenticated && remoteWorkspaces !== undefined) {
+      // Use convexActiveWorkspaceId if set and valid
+      if (
+        convexActiveWorkspaceId &&
+        effectiveWorkspaces[convexActiveWorkspaceId]
+      ) {
+        return convexActiveWorkspaceId;
+      }
+      // Default to first workspace
+      const firstId = Object.keys(effectiveWorkspaces)[0];
+      return firstId || "none";
+    }
+    return appState.activeWorkspaceId;
+  }, [
+    isAuthenticated,
+    remoteWorkspaces,
+    convexActiveWorkspaceId,
+    effectiveWorkspaces,
+    appState.activeWorkspaceId,
+    useLocalFallback,
+  ]);
+
+  // Set initial active workspace when Convex workspaces load
+  useEffect(() => {
+    if (
+      isAuthenticated &&
+      remoteWorkspaces &&
+      remoteWorkspaces.length > 0 &&
+      !convexActiveWorkspaceId
+    ) {
+      // Try to restore last active workspace from localStorage
+      const savedActiveId = localStorage.getItem("convex-active-workspace-id");
+      if (savedActiveId && convexWorkspaces[savedActiveId]) {
+        setConvexActiveWorkspaceId(savedActiveId);
+      } else {
+        setConvexActiveWorkspaceId(remoteWorkspaces[0]._id);
+      }
+    }
+  }, [
+    isAuthenticated,
+    remoteWorkspaces,
+    convexActiveWorkspaceId,
+    convexWorkspaces,
+  ]);
+
+  // Persist active workspace ID to localStorage
+  useEffect(() => {
+    if (convexActiveWorkspaceId) {
+      localStorage.setItem(
+        "convex-active-workspace-id",
+        convexActiveWorkspaceId,
+      );
+    }
+  }, [convexActiveWorkspaceId]);
+
+  // Migrate local workspaces to Convex on first login
+  useEffect(() => {
+    if (!isAuthenticated) {
+      hasMigratedRef.current = false; // Reset when logged out
+      return;
+    }
+    if (useLocalFallback) return; // Skip migration if Convex is unavailable
+    if (hasMigratedRef.current) return;
+    if (remoteWorkspaces === undefined) return; // Still loading
+
+    hasMigratedRef.current = true;
+
+    // Check if user has local workspaces that need migration
+    const localWorkspaces = Object.values(appState.workspaces).filter(
+      (w) => !w.sharedWorkspaceId, // Only migrate workspaces not already linked to Convex
+    );
+
+    if (localWorkspaces.length === 0) return;
+    if (remoteWorkspaces.length > 0) return; // User already has Convex workspaces, don't migrate
+
+    // Migrate local workspaces to Convex
+    logger.info("Migrating local workspaces to Convex", {
+      count: localWorkspaces.length,
+    });
+
+    const migrateWorkspace = async (workspace: Workspace) => {
+      try {
+        const serializedServers = serializeServersForSharing(workspace.servers);
+        await convexCreateWorkspace({
+          name: workspace.name,
+          description: workspace.description,
+          servers: serializedServers,
+        });
+        logger.info("Migrated workspace to Convex", { name: workspace.name });
+      } catch (error) {
+        logger.error("Failed to migrate workspace", {
+          name: workspace.name,
+          error: error instanceof Error ? error.message : "Unknown error",
+        });
+      }
+    };
+
+    // Migrate all local workspaces
+    Promise.all(localWorkspaces.map(migrateWorkspace)).then(() => {
+      toast.success("Your workspaces have been synced to the cloud");
+    });
+  }, [
+    isAuthenticated,
+    useLocalFallback,
+    remoteWorkspaces,
+    appState.workspaces,
+    convexCreateWorkspace,
+    logger,
+  ]);
+
+  // Get active workspace with server runtime state overlaid
+  const activeWorkspace = useMemo(() => {
+    const workspace = effectiveWorkspaces[effectiveActiveWorkspaceId];
+    if (!workspace) {
+      return undefined;
+    }
+
+    // Overlay server runtime state from appState.servers
+    const serversWithRuntime: Record<string, ServerWithName> = {};
+    for (const [name, server] of Object.entries(workspace.servers)) {
+      const runtimeState = appState.servers[name];
+      serversWithRuntime[name] = {
+        ...server,
+        connectionStatus: runtimeState?.connectionStatus || "disconnected",
+        oauthTokens: runtimeState?.oauthTokens,
+        initializationInfo: runtimeState?.initializationInfo,
+        lastConnectionTime:
+          runtimeState?.lastConnectionTime || server.lastConnectionTime,
+        retryCount: runtimeState?.retryCount || 0,
+      };
+    }
+
+    return { ...workspace, servers: serversWithRuntime };
+  }, [effectiveWorkspaces, effectiveActiveWorkspaceId, appState.servers]);
+
+  // Servers with runtime state for the active workspace
+  const effectiveServers = useMemo(() => {
+    return activeWorkspace?.servers || {};
+  }, [activeWorkspace]);
 
   const validateForm = (formData: ServerFormData): string | null => {
     if (formData.type === "stdio") {
@@ -91,22 +364,109 @@ export function useAppState() {
     dispatch({ type: "SET_MULTI_SELECTED", names: connectedNames });
   }, [appState.servers]);
 
+  // Helper to sync server config to Convex workspace
+  const syncServerToConvex = useCallback(
+    async (serverName: string, serverEntry: ServerWithName) => {
+      // Skip Convex sync if using local fallback or not authenticated
+      if (useLocalFallback || !isAuthenticated || !effectiveActiveWorkspaceId)
+        return;
+
+      const currentWorkspace = effectiveWorkspaces[effectiveActiveWorkspaceId];
+      if (!currentWorkspace) return;
+
+      const updatedServers = {
+        ...currentWorkspace.servers,
+        [serverName]: serverEntry,
+      };
+
+      try {
+        await convexUpdateWorkspace({
+          workspaceId: effectiveActiveWorkspaceId,
+          servers: serializeServersForSharing(updatedServers),
+        });
+      } catch (error) {
+        logger.error("Failed to sync server to Convex", {
+          serverName,
+          error: error instanceof Error ? error.message : "Unknown error",
+        });
+      }
+    },
+    [
+      useLocalFallback,
+      isAuthenticated,
+      effectiveActiveWorkspaceId,
+      effectiveWorkspaces,
+      convexUpdateWorkspace,
+      logger,
+    ],
+  );
+
+  // Helper to remove server from Convex workspace
+  const removeServerFromConvex = useCallback(
+    async (serverName: string) => {
+      // Skip Convex sync if using local fallback or not authenticated
+      if (useLocalFallback || !isAuthenticated || !effectiveActiveWorkspaceId)
+        return;
+
+      const currentWorkspace = effectiveWorkspaces[effectiveActiveWorkspaceId];
+      if (!currentWorkspace) return;
+
+      const { [serverName]: _, ...remainingServers } = currentWorkspace.servers;
+
+      try {
+        await convexUpdateWorkspace({
+          workspaceId: effectiveActiveWorkspaceId,
+          servers: serializeServersForSharing(remainingServers),
+        });
+      } catch (error) {
+        logger.error("Failed to remove server from Convex", {
+          serverName,
+          error: error instanceof Error ? error.message : "Unknown error",
+        });
+      }
+    },
+    [
+      useLocalFallback,
+      isAuthenticated,
+      effectiveActiveWorkspaceId,
+      effectiveWorkspaces,
+      convexUpdateWorkspace,
+      logger,
+    ],
+  );
+
+  // Helper to fetch and store initialization info
+  const fetchAndStoreInitInfo = useCallback(async (serverName: string) => {
+    try {
+      const result = await getInitializationInfo(serverName);
+      if (result.success && result.initInfo) {
+        dispatch({
+          type: "SET_INITIALIZATION_INFO",
+          name: serverName,
+          initInfo: result.initInfo,
+        });
+      }
+    } catch (error) {
+      // Silent fail - initialization info is optional
+      console.debug("Failed to fetch initialization info", {
+        serverName,
+        error,
+      });
+    }
+  }, []);
+
   // OAuth callback finish handler
   const handleOAuthCallbackComplete = useCallback(
     async (code: string) => {
-      // Get saved hash but don't clear URL yet - wait until OAuth succeeds
-      const savedHash = localStorage.getItem("mcp-oauth-return-hash") || "";
+      // Note: URL is already cleared by the useEffect before calling this function
+      // to prevent duplicate processing from React re-renders
 
       try {
         const result = await handleOAuthCallback(code);
 
-        // Only clear URL and hash after successful OAuth
+        // Clean up OAuth return hash from localStorage
         localStorage.removeItem("mcp-oauth-return-hash");
-        window.history.replaceState(
-          {},
-          document.title,
-          window.location.pathname + savedHash,
-        );
+
         if (result.success && result.serverConfig && result.serverName) {
           const serverName = result.serverName;
 
@@ -131,11 +491,28 @@ export function useAppState() {
                 config: result.serverConfig,
                 tokens: getStoredTokens(serverName),
               });
-              // Fetch initialization info after successful connection
-              await fetchAndStoreInitInfo(serverName);
               logger.info("OAuth connection successful", { serverName });
               toast.success(
                 `OAuth connection successful! Connected to ${serverName}.`,
+              );
+              // Sync server config to Convex workspace (non-blocking)
+              const serverEntry: ServerWithName = {
+                name: serverName,
+                config: result.serverConfig,
+                lastConnectionTime: new Date(),
+                connectionStatus: "connected",
+                retryCount: 0,
+                enabled: true,
+                useOAuth: true,
+              };
+              syncServerToConvex(serverName, serverEntry).catch((err) =>
+                logger.warn("Background sync to Convex failed", {
+                  serverName,
+                  err,
+                }),
+              );
+              fetchAndStoreInitInfo(serverName).catch((err) =>
+                logger.warn("Failed to fetch init info", { serverName, err }),
               );
             } else {
               dispatch({
@@ -180,18 +557,12 @@ export function useAppState() {
         toast.error(`Error completing OAuth flow: ${errorMessage}`);
         logger.error("OAuth callback failed", { error: errorMessage });
 
-        // Clear URL on failure too, but keep ?code= removal to prevent redirect loops
-        // The CLI config check uses urlParams.has("code") to prevent re-triggering OAuth
+        // Clean up OAuth state on failure
         localStorage.removeItem("mcp-oauth-return-hash");
         localStorage.removeItem("mcp-oauth-pending");
-        window.history.replaceState(
-          {},
-          document.title,
-          window.location.pathname + savedHash,
-        );
       }
     },
-    [logger],
+    [logger, syncServerToConvex, fetchAndStoreInitInfo],
   );
 
   // Check for OAuth callback completion on mount
@@ -202,43 +573,52 @@ export function useAppState() {
       return;
     }
 
-    if (!isLoading) {
-      const urlParams = new URLSearchParams(window.location.search);
-      const code = urlParams.get("code");
-      const error = urlParams.get("error");
-      if (code) {
-        handleOAuthCallbackComplete(code);
-      } else if (error) {
-        toast.error(`OAuth authorization failed: ${error}`);
-        localStorage.removeItem("mcp-oauth-pending");
-        window.history.replaceState(
-          {},
-          document.title,
-          window.location.pathname,
-        );
-      }
-    }
-  }, [isLoading, handleOAuthCallbackComplete]);
+    // Wait for local storage to load
+    if (isLoading) return;
 
-  // Helper to fetch and store initialization info
-  const fetchAndStoreInitInfo = useCallback(async (serverName: string) => {
-    try {
-      const result = await getInitializationInfo(serverName);
-      if (result.success && result.initInfo) {
-        dispatch({
-          type: "SET_INITIALIZATION_INFO",
-          name: serverName,
-          initInfo: result.initInfo,
-        });
-      }
-    } catch (error) {
-      // Silent fail - initialization info is optional
-      console.debug("Failed to fetch initialization info", {
-        serverName,
-        error,
-      });
+    // If authenticated, also wait for Convex workspaces to load and workspace ID to be set
+    // This ensures syncServerToConvex will work correctly
+    // Skip this wait if useLocalFallback is true (Convex timed out)
+    if (
+      isAuthenticated &&
+      !useLocalFallback &&
+      (isLoadingWorkspaces || !effectiveActiveWorkspaceId)
+    ) {
+      return;
     }
-  }, []);
+
+    const urlParams = new URLSearchParams(window.location.search);
+    const code = urlParams.get("code");
+    const error = urlParams.get("error");
+    if (code) {
+      // Prevent duplicate processing (React StrictMode, dependency changes, etc.)
+      if (oauthCallbackHandledRef.current) {
+        return;
+      }
+      oauthCallbackHandledRef.current = true;
+
+      // Clear URL immediately to prevent re-processing on re-renders
+      const savedHash = localStorage.getItem("mcp-oauth-return-hash") || "";
+      window.history.replaceState(
+        {},
+        document.title,
+        window.location.pathname + savedHash,
+      );
+
+      handleOAuthCallbackComplete(code);
+    } else if (error) {
+      toast.error(`OAuth authorization failed: ${error}`);
+      localStorage.removeItem("mcp-oauth-pending");
+      window.history.replaceState({}, document.title, window.location.pathname);
+    }
+  }, [
+    isLoading,
+    isLoadingWorkspaces,
+    isAuthenticated,
+    effectiveActiveWorkspaceId,
+    useLocalFallback,
+    handleOAuthCallbackComplete,
+  ]);
 
   const handleConnect = useCallback(
     async (formData: ServerFormData) => {
@@ -287,9 +667,31 @@ export function useAppState() {
                 config: serverConfig as MCPServerConfig,
                 tokens: existingTokens,
               });
-              await fetchAndStoreInitInfo(formData.name);
+              // Sync server config to Convex workspace
+              const serverEntry: ServerWithName = {
+                name: formData.name,
+                config: serverConfig as MCPServerConfig,
+                lastConnectionTime: new Date(),
+                connectionStatus: "connected",
+                retryCount: 0,
+                enabled: true,
+                useOAuth: true,
+              };
               toast.success(
                 `Connected successfully with existing OAuth tokens!`,
+              );
+              // Background sync - don't block UI
+              syncServerToConvex(formData.name, serverEntry).catch((err) =>
+                logger.warn("Background sync to Convex failed", {
+                  serverName: formData.name,
+                  err,
+                }),
+              );
+              fetchAndStoreInitInfo(formData.name).catch((err) =>
+                logger.warn("Failed to fetch init info", {
+                  serverName: formData.name,
+                  err,
+                }),
               );
               return;
             } else {
@@ -341,9 +743,30 @@ export function useAppState() {
                   config: oauthResult.serverConfig,
                   tokens: getStoredTokens(formData.name),
                 });
-                // Fetch initialization info after successful connection
-                await fetchAndStoreInitInfo(formData.name);
+                // Sync server config to Convex workspace
+                const serverEntry: ServerWithName = {
+                  name: formData.name,
+                  config: oauthResult.serverConfig,
+                  lastConnectionTime: new Date(),
+                  connectionStatus: "connected",
+                  retryCount: 0,
+                  enabled: true,
+                  useOAuth: true,
+                };
                 toast.success(`Connected successfully with OAuth!`);
+                // Background sync - don't block UI
+                syncServerToConvex(formData.name, serverEntry).catch((err) =>
+                  logger.warn("Background sync to Convex failed", {
+                    serverName: formData.name,
+                    err,
+                  }),
+                );
+                fetchAndStoreInitInfo(formData.name).catch((err) =>
+                  logger.warn("Failed to fetch init info", {
+                    serverName: formData.name,
+                    err,
+                  }),
+                );
               } else {
                 dispatch({
                   type: "CONNECT_FAILURE",
@@ -389,10 +812,30 @@ export function useAppState() {
             name: formData.name,
             config: mcpConfig,
           });
-          // Fetch initialization info after successful connection
-          await fetchAndStoreInitInfo(formData.name);
+          // Sync server config to Convex workspace
+          const serverEntry: ServerWithName = {
+            name: formData.name,
+            config: mcpConfig,
+            lastConnectionTime: new Date(),
+            connectionStatus: "connected",
+            retryCount: 0,
+            enabled: true,
+          };
           logger.info("Connection successful", { serverName: formData.name });
           toast.success(`Connected successfully!`);
+          // Background sync - don't block UI
+          syncServerToConvex(formData.name, serverEntry).catch((err) =>
+            logger.warn("Background sync to Convex failed", {
+              serverName: formData.name,
+              err,
+            }),
+          );
+          fetchAndStoreInitInfo(formData.name).catch((err) =>
+            logger.warn("Failed to fetch init info", {
+              serverName: formData.name,
+              err,
+            }),
+          );
         } else {
           dispatch({
             type: "CONNECT_FAILURE",
@@ -421,11 +864,11 @@ export function useAppState() {
         toast.error(`Network error: ${errorMessage}`);
       }
     },
-    [appState.servers, logger, fetchAndStoreInitInfo],
+    [appState.servers, logger, fetchAndStoreInitInfo, syncServerToConvex],
   );
 
   const saveServerConfigWithoutConnecting = useCallback(
-    (
+    async (
       formData: ServerFormData,
       options?: { oauthProfile?: OAuthTestProfile },
     ) => {
@@ -509,18 +952,41 @@ export function useAppState() {
         // Note: OAuth data cleanup for non-OAuth servers is handled above via clearOAuthData
       }
 
-      const activeWorkspace = appState.workspaces[appState.activeWorkspaceId];
-      if (activeWorkspace) {
-        dispatch({
-          type: "UPDATE_WORKSPACE",
-          workspaceId: appState.activeWorkspaceId,
-          updates: {
-            servers: {
-              ...activeWorkspace.servers,
-              [serverName]: serverEntry,
+      // Sync to Convex or local workspace
+      if (isAuthenticated && effectiveActiveWorkspaceId) {
+        // When authenticated, sync server to Convex
+        const currentWorkspace =
+          effectiveWorkspaces[effectiveActiveWorkspaceId];
+        if (currentWorkspace) {
+          const updatedServers = {
+            ...currentWorkspace.servers,
+            [serverName]: serverEntry,
+          };
+          try {
+            await convexUpdateWorkspace({
+              workspaceId: effectiveActiveWorkspaceId,
+              servers: serializeServersForSharing(updatedServers),
+            });
+          } catch (error) {
+            logger.error("Failed to sync server to Convex", {
+              error: error instanceof Error ? error.message : "Unknown error",
+            });
+          }
+        }
+      } else {
+        const activeWorkspace = appState.workspaces[appState.activeWorkspaceId];
+        if (activeWorkspace) {
+          dispatch({
+            type: "UPDATE_WORKSPACE",
+            workspaceId: appState.activeWorkspaceId,
+            updates: {
+              servers: {
+                ...activeWorkspace.servers,
+                [serverName]: serverEntry,
+              },
             },
-          },
-        });
+          });
+        }
       }
 
       logger.info("Saved server configuration without connecting", {
@@ -528,7 +994,16 @@ export function useAppState() {
       });
       toast.success(`Saved configuration for ${serverName}`);
     },
-    [appState.activeWorkspaceId, appState.servers, appState.workspaces, logger],
+    [
+      appState.activeWorkspaceId,
+      appState.servers,
+      appState.workspaces,
+      logger,
+      isAuthenticated,
+      effectiveActiveWorkspaceId,
+      effectiveWorkspaces,
+      convexUpdateWorkspace,
+    ],
   );
 
   // Apply tokens from OAuth flow to a server and connect
@@ -606,6 +1081,22 @@ export function useAppState() {
             config: serverConfig as MCPServerConfig,
             tokens: getStoredTokens(serverName),
           });
+          // Sync server config to Convex (tokens stay in localStorage only)
+          const serverEntry: ServerWithName = {
+            name: serverName,
+            config: serverConfig as MCPServerConfig,
+            lastConnectionTime: new Date(),
+            connectionStatus: "connected",
+            retryCount: 0,
+            enabled: true,
+            useOAuth: true,
+          };
+          syncServerToConvex(serverName, serverEntry).catch((err) =>
+            logger.warn("Background sync to Convex failed", {
+              serverName,
+              err,
+            }),
+          );
           await fetchAndStoreInitInfo(serverName);
           return { success: true };
         } else {
@@ -630,7 +1121,7 @@ export function useAppState() {
         return { success: false, error: errorMessage };
       }
     },
-    [fetchAndStoreInitInfo],
+    [fetchAndStoreInitInfo, syncServerToConvex, logger],
   );
 
   // Connect a server with tokens from OAuth flow (for new connections)
@@ -827,11 +1318,16 @@ export function useAppState() {
     }
   }, []);
 
-  const handleRemoveServer = useCallback(async (serverName: string) => {
-    logger.info("Removing server", { serverName });
-    clearOAuthData(serverName);
-    dispatch({ type: "REMOVE_SERVER", name: serverName });
-  }, []);
+  const handleRemoveServer = useCallback(
+    async (serverName: string) => {
+      logger.info("Removing server", { serverName });
+      clearOAuthData(serverName);
+      dispatch({ type: "REMOVE_SERVER", name: serverName });
+      // Remove from Convex workspace if authenticated
+      await removeServerFromConvex(serverName);
+    },
+    [logger, removeServerFromConvex],
+  );
 
   const handleReconnect = useCallback(
     async (serverName: string, options?: { forceOAuthFlow?: boolean }) => {
@@ -889,10 +1385,29 @@ export function useAppState() {
             config: oauthResult.serverConfig!,
             tokens: getStoredTokens(serverName),
           });
-          await fetchAndStoreInitInfo(serverName);
+          // Sync server config to Convex workspace
+          const serverEntry: ServerWithName = {
+            ...server,
+            config: oauthResult.serverConfig!,
+            lastConnectionTime: new Date(),
+            connectionStatus: "connected",
+            retryCount: 0,
+            enabled: true,
+            useOAuth: true,
+          };
           logger.info("Reconnection with fresh OAuth successful", {
             serverName,
           });
+          // Background sync - don't block UI
+          syncServerToConvex(serverName, serverEntry).catch((err) =>
+            logger.warn("Background sync to Convex failed", {
+              serverName,
+              err,
+            }),
+          );
+          fetchAndStoreInitInfo(serverName).catch((err) =>
+            logger.warn("Failed to fetch init info", { serverName, err }),
+          );
           return { success: true } as const;
         } else {
           dispatch({
@@ -930,9 +1445,26 @@ export function useAppState() {
             config: authResult.serverConfig,
             tokens: authResult.tokens,
           });
-          // Fetch initialization info after successful reconnection
-          await fetchAndStoreInitInfo(serverName);
+          // Sync server config to Convex workspace
+          const serverEntry: ServerWithName = {
+            ...server,
+            config: authResult.serverConfig,
+            lastConnectionTime: new Date(),
+            connectionStatus: "connected",
+            retryCount: 0,
+            enabled: true,
+          };
           logger.info("Reconnection successful", { serverName, result });
+          // Background sync - don't block UI
+          syncServerToConvex(serverName, serverEntry).catch((err) =>
+            logger.warn("Background sync to Convex failed", {
+              serverName,
+              err,
+            }),
+          );
+          fetchAndStoreInitInfo(serverName).catch((err) =>
+            logger.warn("Failed to fetch init info", { serverName, err }),
+          );
           return { success: true } as const;
         } else {
           dispatch({
@@ -961,7 +1493,7 @@ export function useAppState() {
         throw error;
       }
     },
-    [appState.servers, fetchAndStoreInitInfo],
+    [appState.servers, fetchAndStoreInitInfo, syncServerToConvex],
   );
 
   // Sync with centralized agent status on app startup only
@@ -1092,7 +1624,7 @@ export function useAppState() {
 
   const handleSwitchWorkspace = useCallback(
     async (workspaceId: string) => {
-      const newWorkspace = appState.workspaces[workspaceId];
+      const newWorkspace = effectiveWorkspaces[workspaceId];
       if (!newWorkspace) {
         toast.error("Workspace not found");
         return;
@@ -1116,61 +1648,204 @@ export function useAppState() {
       }
 
       // Switch the workspace
-      dispatch({ type: "SWITCH_WORKSPACE", workspaceId });
+      if (isAuthenticated) {
+        setConvexActiveWorkspaceId(workspaceId);
+      } else {
+        dispatch({ type: "SWITCH_WORKSPACE", workspaceId });
+      }
       toast.success(`Switched to workspace: ${newWorkspace.name}`);
     },
-    [appState.workspaces, appState.servers, handleDisconnect, logger],
+    [
+      effectiveWorkspaces,
+      appState.servers,
+      handleDisconnect,
+      logger,
+      isAuthenticated,
+    ],
   );
 
   const handleCreateWorkspace = useCallback(
-    (name: string, switchTo: boolean = false) => {
-      const newWorkspace: Workspace = {
-        id: `workspace_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`,
-        name,
-        servers: {},
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      };
-      dispatch({ type: "CREATE_WORKSPACE", workspace: newWorkspace });
+    async (name: string, switchTo: boolean = false) => {
+      if (isAuthenticated) {
+        // Create in Convex
+        try {
+          const workspaceId = await convexCreateWorkspace({
+            name,
+            servers: {},
+          });
+          if (switchTo && workspaceId) {
+            setConvexActiveWorkspaceId(workspaceId as string);
+          }
+          toast.success(`Workspace "${name}" created`);
+          return workspaceId as string;
+        } catch (error) {
+          const errorMessage =
+            error instanceof Error ? error.message : "Unknown error";
+          toast.error(`Failed to create workspace: ${errorMessage}`);
+          return "";
+        }
+      } else {
+        // Create locally
+        const newWorkspace: Workspace = {
+          id: `workspace_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`,
+          name,
+          servers: {},
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        };
+        dispatch({ type: "CREATE_WORKSPACE", workspace: newWorkspace });
 
-      // Switch to the new workspace if requested
-      if (switchTo) {
-        dispatch({ type: "SWITCH_WORKSPACE", workspaceId: newWorkspace.id });
+        if (switchTo) {
+          dispatch({ type: "SWITCH_WORKSPACE", workspaceId: newWorkspace.id });
+        }
+
+        toast.success(`Workspace "${name}" created`);
+        return newWorkspace.id;
       }
-
-      toast.success(`Workspace "${name}" created`);
-      return newWorkspace.id;
     },
-    [],
+    [isAuthenticated, convexCreateWorkspace],
   );
 
   const handleUpdateWorkspace = useCallback(
-    (workspaceId: string, updates: Partial<Workspace>) => {
-      dispatch({ type: "UPDATE_WORKSPACE", workspaceId, updates });
+    async (workspaceId: string, updates: Partial<Workspace>) => {
+      if (isAuthenticated) {
+        // Update in Convex
+        try {
+          const updateData: any = { workspaceId };
+          if (updates.name !== undefined) updateData.name = updates.name;
+          if (updates.description !== undefined)
+            updateData.description = updates.description;
+          if (updates.servers !== undefined) {
+            updateData.servers = serializeServersForSharing(updates.servers);
+          }
+          await convexUpdateWorkspace(updateData);
+        } catch (error) {
+          logger.error("Failed to update workspace", {
+            error: error instanceof Error ? error.message : "Unknown error",
+          });
+        }
+      } else {
+        dispatch({ type: "UPDATE_WORKSPACE", workspaceId, updates });
+      }
     },
-    [],
+    [isAuthenticated, convexUpdateWorkspace, logger],
   );
 
   const handleDeleteWorkspace = useCallback(
-    (workspaceId: string) => {
-      if (workspaceId === appState.activeWorkspaceId) {
+    async (workspaceId: string) => {
+      if (workspaceId === effectiveActiveWorkspaceId) {
         toast.error(
           "Cannot delete the active workspace. Switch to another workspace first.",
         );
         return;
       }
-      dispatch({ type: "DELETE_WORKSPACE", workspaceId });
-      toast.success("Workspace deleted");
+
+      if (isAuthenticated) {
+        // Delete from Convex
+        try {
+          await convexDeleteWorkspace({ workspaceId });
+        } catch (error) {
+          let errorMessage = "Failed to delete workspace";
+          if (error instanceof Error) {
+            const match = error.message.match(/Uncaught Error: (.+?)(?:\n|$)/);
+            errorMessage = match ? match[1] : error.message;
+          }
+          logger.error("Failed to delete workspace from Convex", {
+            error: errorMessage,
+          });
+          toast.error(errorMessage);
+          return;
+        }
+        toast.success("Workspace deleted");
+      } else {
+        dispatch({ type: "DELETE_WORKSPACE", workspaceId });
+        toast.success("Workspace deleted");
+      }
     },
-    [appState.activeWorkspaceId],
+    [
+      effectiveActiveWorkspaceId,
+      isAuthenticated,
+      convexDeleteWorkspace,
+      logger,
+    ],
+  );
+
+  // Leave a shared workspace (removes from local state without deleting from Convex)
+  // The backend removeMember call should be made before calling this
+  const handleLeaveWorkspace = useCallback(
+    async (workspaceId: string) => {
+      const workspace = effectiveWorkspaces[workspaceId];
+      if (!workspace) {
+        toast.error("Workspace not found");
+        return;
+      }
+
+      // Find another workspace to switch to
+      const otherWorkspaceIds = Object.keys(effectiveWorkspaces).filter(
+        (id) => id !== workspaceId,
+      );
+      const defaultWorkspace = otherWorkspaceIds.find(
+        (id) => effectiveWorkspaces[id].isDefault,
+      );
+      const targetWorkspaceId = defaultWorkspace || otherWorkspaceIds[0];
+
+      if (!targetWorkspaceId) {
+        toast.error("Cannot leave the only workspace");
+        return;
+      }
+
+      // Disconnect all servers before leaving
+      const workspaceServers = Object.keys(workspace.servers || {});
+      for (const serverName of workspaceServers) {
+        const runtimeServer = appState.servers[serverName];
+        if (runtimeServer?.connectionStatus === "connected") {
+          await handleDisconnect(serverName);
+        }
+      }
+
+      // Switch to another workspace
+      if (isAuthenticated) {
+        setConvexActiveWorkspaceId(targetWorkspaceId);
+      } else {
+        dispatch({ type: "SWITCH_WORKSPACE", workspaceId: targetWorkspaceId });
+        // Then delete the workspace from local state (don't touch Convex - removeMember already handled it)
+        dispatch({ type: "DELETE_WORKSPACE", workspaceId });
+      }
+    },
+    [effectiveWorkspaces, appState.servers, handleDisconnect, isAuthenticated],
   );
 
   const handleDuplicateWorkspace = useCallback(
-    (workspaceId: string, newName: string) => {
-      dispatch({ type: "DUPLICATE_WORKSPACE", workspaceId, newName });
-      toast.success(`Workspace duplicated as "${newName}"`);
+    async (workspaceId: string, newName: string) => {
+      const sourceWorkspace = effectiveWorkspaces[workspaceId];
+      if (!sourceWorkspace) {
+        toast.error("Workspace not found");
+        return;
+      }
+
+      if (isAuthenticated) {
+        // Duplicate in Convex
+        try {
+          const serializedServers = serializeServersForSharing(
+            sourceWorkspace.servers,
+          );
+          await convexCreateWorkspace({
+            name: newName,
+            description: sourceWorkspace.description,
+            servers: serializedServers,
+          });
+          toast.success(`Workspace duplicated as "${newName}"`);
+        } catch (error) {
+          const errorMessage =
+            error instanceof Error ? error.message : "Unknown error";
+          toast.error(`Failed to duplicate workspace: ${errorMessage}`);
+        }
+      } else {
+        dispatch({ type: "DUPLICATE_WORKSPACE", workspaceId, newName });
+        toast.success(`Workspace duplicated as "${newName}"`);
+      }
     },
-    [],
+    [effectiveWorkspaces, isAuthenticated, convexCreateWorkspace],
   );
 
   const handleSetDefaultWorkspace = useCallback((workspaceId: string) => {
@@ -1180,7 +1855,7 @@ export function useAppState() {
 
   const handleExportWorkspace = useCallback(
     (workspaceId: string) => {
-      const workspace = appState.workspaces[workspaceId];
+      const workspace = effectiveWorkspaces[workspaceId];
       if (!workspace) {
         toast.error("Workspace not found");
         return;
@@ -1196,42 +1871,70 @@ export function useAppState() {
       URL.revokeObjectURL(url);
       toast.success("Workspace exported");
     },
-    [appState.workspaces],
+    [effectiveWorkspaces],
   );
 
-  const handleImportWorkspace = useCallback((workspaceData: Workspace) => {
-    // Generate new ID to avoid conflicts
-    const importedWorkspace: Workspace = {
-      ...workspaceData,
-      id: `workspace_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`,
-      createdAt: new Date(),
-      updatedAt: new Date(),
-      isDefault: false, // Never import as default
-    };
-    dispatch({ type: "IMPORT_WORKSPACE", workspace: importedWorkspace });
-    toast.success(`Workspace "${importedWorkspace.name}" imported`);
-  }, []);
+  const handleImportWorkspace = useCallback(
+    async (workspaceData: Workspace) => {
+      if (isAuthenticated) {
+        // Import to Convex
+        try {
+          const serializedServers = serializeServersForSharing(
+            workspaceData.servers || {},
+          );
+          await convexCreateWorkspace({
+            name: workspaceData.name,
+            description: workspaceData.description,
+            servers: serializedServers,
+          });
+          toast.success(`Workspace "${workspaceData.name}" imported`);
+        } catch (error) {
+          const errorMessage =
+            error instanceof Error ? error.message : "Unknown error";
+          toast.error(`Failed to import workspace: ${errorMessage}`);
+        }
+      } else {
+        // Generate new ID to avoid conflicts
+        const importedWorkspace: Workspace = {
+          ...workspaceData,
+          id: `workspace_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+          isDefault: false, // Never import as default
+        };
+        dispatch({ type: "IMPORT_WORKSPACE", workspace: importedWorkspace });
+        toast.success(`Workspace "${importedWorkspace.name}" imported`);
+      }
+    },
+    [isAuthenticated, convexCreateWorkspace],
+  );
 
   return {
     // State
     appState,
     isLoading,
+    // Cloud sync status - true when authenticated and Convex is working
+    isCloudSyncActive:
+      isAuthenticated && !useLocalFallback && remoteWorkspaces !== undefined,
 
-    // Computed values
+    // Computed values - use effective servers (from active workspace with runtime state)
+    // All servers from the active workspace (for display in ServersTab)
+    workspaceServers: effectiveServers,
+    // Only connected servers (for features requiring active connections)
     connectedServerConfigs: Object.fromEntries(
-      Object.entries(appState.servers).filter(
+      Object.entries(effectiveServers).filter(
         ([, server]) => server.connectionStatus === "connected",
       ),
     ),
-    selectedServerEntry: appState.servers[appState.selectedServer],
-    selectedMCPConfig: appState.servers[appState.selectedServer]?.config,
+    selectedServerEntry: effectiveServers[appState.selectedServer],
+    selectedMCPConfig: effectiveServers[appState.selectedServer]?.config,
     selectedMCPConfigs: appState.selectedMultipleServers
-      .map((name) => appState.servers[name])
+      .map((name) => effectiveServers[name])
       .filter(Boolean),
     selectedMCPConfigsMap: appState.selectedMultipleServers.reduce(
       (acc, name) => {
-        if (appState.servers[name]) {
-          acc[name] = appState.servers[name].config;
+        if (effectiveServers[name]) {
+          acc[name] = effectiveServers[name].config;
         }
         return acc;
       },
@@ -1239,10 +1942,10 @@ export function useAppState() {
     ),
     isMultiSelectMode: appState.isMultiSelectMode,
 
-    // Workspace-related
-    workspaces: appState.workspaces,
-    activeWorkspaceId: appState.activeWorkspaceId,
-    activeWorkspace: appState.workspaces[appState.activeWorkspaceId],
+    // Workspace-related - use effective workspaces (Convex when authenticated, local otherwise)
+    workspaces: effectiveWorkspaces,
+    activeWorkspaceId: effectiveActiveWorkspaceId,
+    activeWorkspace,
 
     // Actions
     handleConnect,
@@ -1265,6 +1968,7 @@ export function useAppState() {
     handleCreateWorkspace,
     handleUpdateWorkspace,
     handleDeleteWorkspace,
+    handleLeaveWorkspace,
     handleDuplicateWorkspace,
     handleSetDefaultWorkspace,
     handleExportWorkspace,
