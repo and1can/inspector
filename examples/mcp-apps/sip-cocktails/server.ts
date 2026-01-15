@@ -35,7 +35,10 @@ export function createServer(options: ServerFactoryOptions = {}): McpServer {
     convexClient.setAuth(options.authToken);
   }
 
-  const resourceUri = "ui://cocktail/cocktail-recipe-widget.html";
+  const cocktailRecipeWidgetResourceUri =
+    "ui://cocktail/cocktail-recipe-widget.html";
+  const likedCocktailsWidgetResourceUri =
+    "ui://cocktail/liked-cocktails-widget.html";
 
   const sharedResourceMeta = {
     ui: {
@@ -56,7 +59,10 @@ export function createServer(options: ServerFactoryOptions = {}): McpServer {
       title: "Get Cocktail",
       description: "Fetch a cocktail by id with ingredients and images. If the id is unknown, use the 'Get All Cocktails' tool to get a list of all cocktails.",
       inputSchema: z.object({ id: z.string().describe("The id of the cocktail to fetch. ex. 'margarita' or 'bloody_mary'. Ids are lower case and snake case.") }),
-      _meta: { ui: { resourceUri }, visibility: ["model"] },
+      _meta: {
+        ui: { resourceUri: cocktailRecipeWidgetResourceUri },
+        visibility: ["model", "app"],
+      },
     },
     async ({ id }: { id: string }): Promise<CallToolResult> => {
       const cocktail = await convexClient.query(api.cocktails.getCocktailById, {
@@ -78,6 +84,46 @@ export function createServer(options: ServerFactoryOptions = {}): McpServer {
     },
   );
 
+  registerAppResource(server,
+    cocktailRecipeWidgetResourceUri,
+    cocktailRecipeWidgetResourceUri,
+    {
+      mimeType: RESOURCE_MIME_TYPE,
+      _meta: sharedResourceMeta,
+    },
+    async (): Promise<ReadResourceResult> => {
+      const html = await fs.readFile(path.join(DIST_DIR, "cocktail-recipe-widget.html"), "utf-8");
+      return {
+        contents: [{ uri: cocktailRecipeWidgetResourceUri, mimeType: RESOURCE_MIME_TYPE, text: html, _meta: sharedResourceMeta }],
+      };
+    },
+  );
+
+  registerAppResource(server,
+    likedCocktailsWidgetResourceUri,
+    likedCocktailsWidgetResourceUri,
+    {
+      mimeType: RESOURCE_MIME_TYPE,
+      _meta: sharedResourceMeta,
+    },
+    async (): Promise<ReadResourceResult> => {
+      const html = await fs.readFile(
+        path.join(DIST_DIR, "liked-cocktails-widget.html"),
+        "utf-8",
+      );
+      return {
+        contents: [
+          {
+            uri: likedCocktailsWidgetResourceUri,
+            mimeType: RESOURCE_MIME_TYPE,
+            text: html,
+            _meta: sharedResourceMeta,
+          },
+        ],
+      };
+    },
+  );
+
   server.registerTool(
     "get_all_cocktails",
     {
@@ -90,55 +136,65 @@ export function createServer(options: ServerFactoryOptions = {}): McpServer {
         api.cocktails.getCocktailIdsAndNames,
         {},
       );
-
-      const viewer = await getCurrentUser(convexClient, isAuthenticated);
       return {
         content: [
           { type: "text", text: `Loaded ${cocktails.length} cocktails.` },
         ],
-        structuredContent: { cocktails, viewer },
+        structuredContent: { cocktails },
       };
     },
   );
 
   if (isAuthenticated) {
-    server.registerTool(
-      "get_current_user",
+    registerAppTool(
+      server,
+      "get_liked_cocktails",
       {
-        title: "Get Current User",
-        description: "Fetch the current authenticated user from Convex.",
-        inputSchema: {},
+        title: "Get Liked Cocktails",
+        description:
+          "Fetch the cocktails in the current user's liked list with details.",
+        inputSchema: z.object({}),
+        _meta: {
+          ui: { resourceUri: likedCocktailsWidgetResourceUri },
+          visibility: ["model", "app"],
+        },
       },
       async (): Promise<CallToolResult> => {
-        const viewer = await getCurrentUser(convexClient, isAuthenticated);
-        if (!viewer) {
-          return {
-            content: [{ type: "text", text: "No authenticated user." }],
-            isError: true,
-          };
-        }
+        const cocktails = await convexClient.query(
+          api.cocktails.getLikedCocktailRecipes,
+          {},
+        );
         return {
-          content: [{ type: "text", text: `Loaded user "${viewer.name}".` }],
-          structuredContent: { viewer },
+          content: [
+            {
+              type: "text",
+              text: `Loaded ${cocktails.length} liked cocktails: ${cocktails.map((cocktail) => cocktail?.id).join(", ")}.`,
+            },
+          ],
+          structuredContent: { cocktails },
         };
       },
     );
-  }
 
-  registerAppResource(server,
-    resourceUri,
-    resourceUri,
-    {
-      mimeType: RESOURCE_MIME_TYPE,
-      _meta: sharedResourceMeta,
-    },
-    async (): Promise<ReadResourceResult> => {
-      const html = await fs.readFile(path.join(DIST_DIR, "cocktail-recipe-widget.html"), "utf-8");
-      return {
-        contents: [{ uri: resourceUri, mimeType: RESOURCE_MIME_TYPE, text: html, _meta: sharedResourceMeta }],
-      };
-    },
-  );
+    server.registerTool(
+      "save_cocktail_recipe_liked_list",
+      {
+        title: "Get Current User",
+        description: "Fetch the current authenticated user from Convex.",
+        inputSchema: {
+          cocktailId: z
+            .string()
+            .describe("The id of the cocktail to save to the liked list. ex. 'margarita' or 'bloody_mary'."),
+        },
+      },
+      async ({ cocktailId }: { cocktailId: string }): Promise<CallToolResult> => {
+        await convexClient.mutation(api.cocktails.saveCocktailRecipeLikedList, {
+          cocktailId,
+        });
+        return { content: [{ type: "text", text: `Saved cocktail "${cocktailId}" to the liked list.` }] };
+      },
+    );
+  }
 
   return server;
 }
