@@ -97,16 +97,15 @@ export function WorkspaceSelector({
                 "cursor-pointer group flex items-center justify-between",
                 workspace.id === activeWorkspaceId && "bg-accent",
               )}
+              onClick={() => onSwitchWorkspace(workspace.id)}
             >
-              <span
-                className="truncate flex-1"
-                onClick={() => onSwitchWorkspace(workspace.id)}
-              >
+              <span className="truncate flex-1">
                 {workspace.name}
               </span>
               <button
                 onClick={(e) => {
                   e.stopPropagation();
+                  e.preventDefault();
                   onDeleteWorkspace(workspace.id);
                 }}
                 className="opacity-0 group-hover:opacity-100 hover:text-destructive transition-opacity p-1"
