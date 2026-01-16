@@ -46,18 +46,17 @@ docker run --rm -p 6274:6274 mcpjam/mcp-inspector -- \
 For more information check out our docs on [Launch from Code](https://docs.mcpjam.com/inspector/launch-from-code)
 
 <Warning>
-**Important for macOS/Windows users:**
+  **Important for macOS/Windows users:**
 
-- Access the app via `http://127.0.0.1:6274` (not `localhost`)
-- When connecting to MCP servers on your host machine, use `http://host.docker.internal:PORT` instead of `http://127.0.0.1:PORT`
+  - Access the app via `http://127.0.0.1:6274` (not `localhost`)
+  - When connecting to MCP servers on your host machine, use `http://host.docker.internal:PORT` instead of `http://127.0.0.1:PORT`
 
-Example:
+  Example:
 
-```bash
-# Your MCP server runs on host at: http://127.0.0.1:8080/mcp
-# In Docker, configure it as: http://host.docker.internal:8080/mcp
-```
-
+  ```bash
+  # Your MCP server runs on host at: http://127.0.0.1:8080/mcp
+  # In Docker, configure it as: http://host.docker.internal:8080/mcp
+  ```
 </Warning>
 
 ## Start with STDIO server
@@ -71,22 +70,19 @@ This will open the MCPJam inspector and connect to a STDIO using the commands yo
     npx @mcpjam/inspector@latest uv run fastmcp run /path/to/your/server.py
     ```
   </Tab>
-  
   <Tab title="Node.js Server">
     ```bash
     # NPX package
     npx @mcpjam/inspector@latest npx -y your-mcp-package
-
+    
     # Direct Node.js execution
     npx @mcpjam/inspector@latest node /path/to/your/server.js
     ```
-
   </Tab>
 </Tabs>
 
 <Info>
-  **Use Absolute Paths**: Always use absolute file paths (e.g.,
-  `/Users/yourname/project/server.py`) to avoid path resolution issues.
+  **Use Absolute Paths**: Always use absolute file paths (e.g., `/Users/yourname/project/server.py`) to avoid path resolution issues.
 </Info>
 
 ## Start with custom port
@@ -119,8 +115,7 @@ npm start -- --config path/to/config.json --server myserver
 ```
 
 <Info>
-  **Note**: When using `npm start`, you need the `--` separator to pass
-  arguments to the underlying script.
+  **Note**: When using `npm start`, you need the `--` separator to pass arguments to the underlying script.
 </Info>
 
 Example configuration file structure:
@@ -161,6 +156,5 @@ npx @mcpjam/inspector@latest -v
 ```
 
 <Info>
-  Verbose mode logs all HTTP requests made by the inspector, which can help
-  diagnose connectivity problems or inspect server communication.
+  Verbose mode logs all HTTP requests made by the inspector, which can help diagnose connectivity problems or inspect server communication.
 </Info>
