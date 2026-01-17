@@ -220,6 +220,38 @@ export function ToolsTab({ serverConfig, serverName }: ToolsTabProps) {
     void fetchTaskCapabilities();
   }, [serverConfig, serverName]);
 
+  const toolNames = Object.keys(tools);
+  const filteredToolNames = searchQuery.trim()
+    ? toolNames.filter((name) => {
+        const tool = tools[name];
+        const haystack = `${name} ${tool?.description ?? ""}`.toLowerCase();
+        return haystack.includes(searchQuery.trim().toLowerCase());
+      })
+    : toolNames;
+
+  // IntersectionObserver for infinite scroll
+  useEffect(() => {
+    if (!sentinelRef.current) return;
+    if (activeTab !== "tools") return; // Only observe when tools tab is active
+
+    const element = sentinelRef.current;
+    const observer = new IntersectionObserver((entries) => {
+      const entry = entries[0];
+      if (!entry.isIntersecting) return;
+      if (!cursor || fetchingTools) return;
+
+      // Load more tools
+      fetchTools();
+    });
+
+    observer.observe(element);
+
+    return () => {
+      observer.unobserve(element);
+      observer.disconnect();
+    };
+  }, [filteredToolNames.length, activeTab, cursor, activeTab, fetchingTools]);
+
   // Fetch task capabilities for the server
   const fetchTaskCapabilities = async () => {
     if (!serverName) return;
@@ -575,38 +607,6 @@ export function ToolsTab({ serverConfig, serverName }: ToolsTabProps) {
     setDialogDefaults({ title: req.title, description: req.description });
     setIsSaveDialogOpen(true);
   };
-
-  const toolNames = Object.keys(tools);
-  const filteredToolNames = searchQuery.trim()
-    ? toolNames.filter((name) => {
-        const tool = tools[name];
-        const haystack = `${name} ${tool?.description ?? ""}`.toLowerCase();
-        return haystack.includes(searchQuery.trim().toLowerCase());
-      })
-    : toolNames;
-
-  // IntersectionObserver for infinite scroll
-  useEffect(() => {
-    if (!sentinelRef.current) return;
-    if (activeTab !== "tools") return; // Only observe when tools tab is active
-
-    const element = sentinelRef.current;
-    const observer = new IntersectionObserver((entries) => {
-      const entry = entries[0];
-      if (!entry.isIntersecting) return;
-      if (!cursor || fetchingTools) return;
-
-      // Load more tools
-      fetchTools();
-    });
-
-    observer.observe(element);
-
-    return () => {
-      observer.unobserve(element);
-      observer.disconnect();
-    };
-  }, [filteredToolNames.length, activeTab]);
 
   const filteredSavedRequests = searchQuery.trim()
     ? savedRequests.filter((tool) => {
