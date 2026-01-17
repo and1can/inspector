@@ -44,12 +44,12 @@ export type ToolExecutionResponse =
 export async function listTools(
   serverId: string,
   modelId?: string,
-  nextCursor?: string,
+  cursor?: string,
 ): Promise<ListToolsResultWithMetadata> {
   const res = await fetch("/api/mcp/tools/list", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ serverId, modelId, nextCursor }),
+    body: JSON.stringify({ serverId, modelId, cursor }),
   });
   let body: any = null;
   try {

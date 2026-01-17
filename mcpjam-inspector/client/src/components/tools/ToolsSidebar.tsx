@@ -31,6 +31,8 @@ interface ToolsSidebarProps {
   onDeleteRequest: (id: string) => void;
   displayedToolCount: number;
   sentinelRef: RefObject<HTMLDivElement | null>;
+  loadingMore: boolean;
+  cursor: string;
 }
 
 export function ToolsSidebar({
@@ -53,6 +55,8 @@ export function ToolsSidebar({
   onDeleteRequest,
   displayedToolCount,
   sentinelRef,
+  loadingMore,
+  cursor,
 }: ToolsSidebarProps) {
   const posthog = usePostHog();
   return (
@@ -169,17 +173,16 @@ export function ToolsSidebar({
                     {/* Sentinel observed by IntersectionObserver */}
                     <div ref={sentinelRef} className="h-4" />
 
-                    {/* Bottom loading indicator (only show if more tools available) */}
-                    {displayedToolCount < filteredToolNames.length && (
+                    {loadingMore && (
                       <div className="flex items-center justify-center py-3 text-xs text-muted-foreground gap-2">
                         <RefreshCw className="h-3 w-3 animate-spin" />
                         <span>Loading more tools…</span>
                       </div>
                     )}
 
-                    {/* No more tools indicator */}
-                    {displayedToolCount >= filteredToolNames.length &&
-                      filteredToolNames.length > 0 && (
+                    {!cursor &&
+                      filteredToolNames.length > 0 &&
+                      !loadingMore && (
                         <div className="text-center py-3 text-xs text-muted-foreground">
                           No more tools
                         </div>

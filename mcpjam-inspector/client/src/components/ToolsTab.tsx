@@ -116,7 +116,7 @@ export function ToolsTab({ serverConfig, serverName }: ToolsTabProps) {
     useState<"not_applicable" | "valid" | "invalid_json" | "schema_mismatch">(
       "not_applicable",
     );
-  const [loading, setLoading] = useState(false);
+  const [loadingExecuteTool, setLoadingExecuteTool] = useState(false);
   const [fetchingTools, setFetchingTools] = useState(false);
   const [error, setError] = useState<string>("");
   const [activeElicitation, setActiveElicitation] =
@@ -148,8 +148,6 @@ export function ToolsTab({ serverConfig, serverName }: ToolsTabProps) {
   // TTL for task execution (milliseconds, 0 = no expiration)
   const [taskTtl, setTaskTtl] = useState<number>(0);
   // Infinite scroll state
-  const [displayedToolCount, setDisplayedToolCount] = useState(20);
-  const toolsPerPage = 20;
   const sentinelRef = useRef<HTMLDivElement | null>(null);
   const [cursor, setCursor] = useState<string | undefined>(undefined);
   const serverKey = useMemo(() => {
@@ -272,7 +270,6 @@ export function ToolsTab({ serverConfig, serverName }: ToolsTabProps) {
 
     setFetchingTools(true);
     setError("");
-    setTools({});
     setSelectedTool("");
     setFormFields([]);
     setResult(null);
@@ -288,7 +285,7 @@ export function ToolsTab({ serverConfig, serverName }: ToolsTabProps) {
       const dictionary = Object.fromEntries(
         toolArray.map((tool: Tool) => [tool.name, tool]),
       );
-      setTools(dictionary);
+      setTools((prev) => ({ ...prev, ...dictionary }));
       setCursor(data.nextCursor);
       logger.info("Tools fetched", {
         serverId: serverName,
@@ -434,7 +431,7 @@ export function ToolsTab({ serverConfig, serverName }: ToolsTabProps) {
       return;
     }
 
-    setLoading(true);
+    setLoadingExecuteTool(true);
     setError("");
     setResult(null);
     setStructuredResult(null);
@@ -480,7 +477,7 @@ export function ToolsTab({ serverConfig, serverName }: ToolsTabProps) {
       });
       setError(message);
     } finally {
-      setLoading(false);
+      setLoadingExecuteTool(false);
     }
   };
 
@@ -488,7 +485,12 @@ export function ToolsTab({ serverConfig, serverName }: ToolsTabProps) {
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       // Check if Enter is pressed (not Shift+Enter)
-      if (e.key === "Enter" && !e.shiftKey && selectedTool && !loading) {
+      if (
+        e.key === "Enter" &&
+        !e.shiftKey &&
+        selectedTool &&
+        !loadingExecuteTool
+      ) {
         // Don't trigger if user is typing in an input, textarea, or contenteditable
         const target = e.target as HTMLElement;
         const tagName = target.tagName;
@@ -505,7 +507,7 @@ export function ToolsTab({ serverConfig, serverName }: ToolsTabProps) {
 
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [selectedTool, loading]);
+  }, [selectedTool, loadingExecuteTool]);
 
   const handleElicitationResponse = async (
     action: "accept" | "decline" | "cancel",
@@ -583,11 +585,6 @@ export function ToolsTab({ serverConfig, serverName }: ToolsTabProps) {
       })
     : toolNames;
 
-  // Reset displayed tool count when search query or tools change
-  useEffect(() => {
-    setDisplayedToolCount(toolsPerPage);
-  }, [searchQuery, toolNames.length]);
-
   // IntersectionObserver for infinite scroll
   useEffect(() => {
     if (!sentinelRef.current) return;
@@ -597,9 +594,7 @@ export function ToolsTab({ serverConfig, serverName }: ToolsTabProps) {
     const observer = new IntersectionObserver((entries) => {
       const entry = entries[0];
       if (!entry.isIntersecting) return;
-
-      // Check if there are more tools to display
-      if (displayedToolCount >= filteredToolNames.length) return;
+      if (!cursor || fetchingTools) return;
 
       // Load more tools
       fetchTools();
@@ -611,7 +606,7 @@ export function ToolsTab({ serverConfig, serverName }: ToolsTabProps) {
       observer.unobserve(element);
       observer.disconnect();
     };
-  }, [displayedToolCount, filteredToolNames.length, activeTab, toolsPerPage]);
+  }, [filteredToolNames.length, activeTab]);
 
   const filteredSavedRequests = searchQuery.trim()
     ? savedRequests.filter((tool) => {
@@ -665,8 +660,10 @@ export function ToolsTab({ serverConfig, serverName }: ToolsTabProps) {
               onRenameRequest={handleRenameRequest}
               onDuplicateRequest={handleDuplicateRequest}
               onDeleteRequest={handleDeleteRequest}
-              displayedToolCount={displayedToolCount}
+              displayedToolCount={toolNames.length}
               sentinelRef={sentinelRef}
+              loadingMore={fetchingTools}
+              cursor={cursor ?? ""}
             />
             <ResizableHandle withHandle />
             {selectedTool ? (
@@ -675,7 +672,7 @@ export function ToolsTab({ serverConfig, serverName }: ToolsTabProps) {
                 toolDescription={tools[selectedTool]?.description}
                 formFields={formFields}
                 onToggleField={updateFieldIsSet}
-                loading={loading}
+                loading={loadingExecuteTool}
                 waitingOnElicitation={!!activeElicitation}
                 onExecute={executeTool}
                 onSave={handleSaveCurrent}
