@@ -280,7 +280,7 @@ export function ToolsTab({ serverConfig, serverName }: ToolsTabProps) {
 
     try {
       // Call to get all of the tools for server
-      const data = await listTools(serverName, cursor);
+      const data = await listTools(serverName, undefined, cursor);
       const toolArray = data.tools ?? [];
       const dictionary = Object.fromEntries(
         toolArray.map((tool: Tool) => [tool.name, tool]),
