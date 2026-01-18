@@ -10,9 +10,12 @@ import { createServer, createWorkspace } from "../factories";
  * Creates a minimal valid AppState for testing
  */
 export function createMockAppState(
-  overrides: Partial<AppState> = {}
+  overrides: Partial<AppState> = {},
 ): AppState {
-  const defaultWorkspace = createWorkspace({ id: "default-workspace", isDefault: true });
+  const defaultWorkspace = createWorkspace({
+    id: "default-workspace",
+    isDefault: true,
+  });
 
   return {
     servers: {},
@@ -30,7 +33,7 @@ export function createMockAppState(
  */
 export function createMockAppStateWithServers(
   servers: ServerWithName[],
-  overrides: Partial<AppState> = {}
+  overrides: Partial<AppState> = {},
 ): AppState {
   const serversMap = Object.fromEntries(servers.map((s) => [s.name, s]));
   const workspace = createWorkspace({
@@ -51,7 +54,7 @@ export function createMockAppStateWithServers(
  * Creates a mock for the useAppState hook return value
  */
 export function createMockUseAppState(
-  overrides: Partial<ReturnType<any>> = {}
+  overrides: Partial<ReturnType<any>> = {},
 ) {
   const appState = createMockAppState();
   const defaultWorkspace = Object.values(appState.workspaces)[0];
@@ -125,7 +128,7 @@ export function createMockConvexAuth(overrides = {}) {
  */
 export function createMockWorkspaceQueries(
   workspaces: Workspace[] = [],
-  overrides = {}
+  overrides = {},
 ) {
   return {
     workspaces,
@@ -187,12 +190,14 @@ export const storePresets = {
           name: `server-${i + 1}`,
           connectionStatus: i < connectedCount ? "connected" : "disconnected",
           enabled: i < connectedCount,
-        })
+        }),
       );
     }
     const serversMap = Object.fromEntries(servers.map((s) => [s.name, s]));
     const connectedMap = Object.fromEntries(
-      servers.filter((s) => s.connectionStatus === "connected").map((s) => [s.name, s])
+      servers
+        .filter((s) => s.connectionStatus === "connected")
+        .map((s) => [s.name, s]),
     );
     const workspace = createWorkspace({
       id: "default-workspace",

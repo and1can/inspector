@@ -77,10 +77,12 @@ describe("POST /api/mcp/connect", () => {
       expect(data.status).toBe("connected");
 
       // Verify MCPClientManager was called
-      expect(mcpClientManager.disconnectServer).toHaveBeenCalledWith("test-server");
+      expect(mcpClientManager.disconnectServer).toHaveBeenCalledWith(
+        "test-server",
+      );
       expect(mcpClientManager.connectToServer).toHaveBeenCalledWith(
         "test-server",
-        { command: "node", args: ["server.js"] }
+        { command: "node", args: ["server.js"] },
       );
     });
   });
@@ -108,7 +110,7 @@ describe("POST /api/mcp/connect", () => {
         "http-server",
         expect.objectContaining({
           url: expect.any(URL),
-        })
+        }),
       );
 
       const callArgs = mcpClientManager.connectToServer.mock.calls[0][1];
@@ -139,7 +141,7 @@ describe("POST /api/mcp/connect", () => {
   describe("connection errors", () => {
     it("returns 500 when connection fails", async () => {
       mcpClientManager.connectToServer.mockRejectedValue(
-        new Error("Connection refused")
+        new Error("Connection refused"),
       );
 
       const res = await app.request("/api/mcp/connect", {
@@ -154,7 +156,9 @@ describe("POST /api/mcp/connect", () => {
       expect(res.status).toBe(500);
       const data = await res.json();
       expect(data.success).toBe(false);
-      expect(data.error).toContain("Connection failed for server failing-server");
+      expect(data.error).toContain(
+        "Connection failed for server failing-server",
+      );
       expect(data.details).toBe("Connection refused");
     });
 
@@ -171,8 +175,10 @@ describe("POST /api/mcp/connect", () => {
       expect(res.status).toBe(200);
 
       // Verify disconnect was called before connect
-      const disconnectOrder = mcpClientManager.disconnectServer.mock.invocationCallOrder[0];
-      const connectOrder = mcpClientManager.connectToServer.mock.invocationCallOrder[0];
+      const disconnectOrder =
+        mcpClientManager.disconnectServer.mock.invocationCallOrder[0];
+      const connectOrder =
+        mcpClientManager.connectToServer.mock.invocationCallOrder[0];
       expect(disconnectOrder).toBeLessThan(connectOrder);
     });
   });
@@ -189,10 +195,7 @@ describe("POST /api/mcp/connect", () => {
       });
 
       expect(res.status).toBe(200);
-      expect(mcpClientManager.connectToServer).toHaveBeenCalledWith(
-        "test",
-        {}
-      );
+      expect(mcpClientManager.connectToServer).toHaveBeenCalledWith("test", {});
     });
 
     it("handles serverConfig with undefined url", async () => {

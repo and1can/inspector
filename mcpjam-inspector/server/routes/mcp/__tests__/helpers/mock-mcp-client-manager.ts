@@ -3,7 +3,9 @@ import { vi } from "vitest";
 /**
  * Type for the mock MCPClientManager - all methods are vi.fn() mocks
  */
-export type MockMCPClientManager = ReturnType<typeof createMockMcpClientManager>;
+export type MockMCPClientManager = ReturnType<
+  typeof createMockMcpClientManager
+>;
 
 /**
  * Default mock implementations for MCPClientManager methods.
@@ -65,7 +67,9 @@ const defaultMocks = {
  * manager.listTools.mockResolvedValue({ tools: [{ name: "custom" }] });
  */
 export function createMockMcpClientManager(
-  overrides: Partial<Record<keyof typeof defaultMocks, ReturnType<typeof vi.fn>>> = {}
+  overrides: Partial<
+    Record<keyof typeof defaultMocks, ReturnType<typeof vi.fn>>
+  > = {},
 ) {
   return {
     ...Object.fromEntries(
@@ -73,7 +77,7 @@ export function createMockMcpClientManager(
         key,
         // Create a fresh mock for each call to avoid state pollution
         vi.fn().mockImplementation(mockFn.getMockImplementation()),
-      ])
+      ]),
     ),
     ...overrides,
   } as typeof defaultMocks;
@@ -86,7 +90,9 @@ export const mockFactories = {
   /**
    * Creates a manager with tools configured
    */
-  withTools: (tools: Array<{ name: string; description?: string; inputSchema?: object }>) =>
+  withTools: (
+    tools: Array<{ name: string; description?: string; inputSchema?: object }>,
+  ) =>
     createMockMcpClientManager({
       listTools: vi.fn().mockResolvedValue({ tools }),
       listServers: vi.fn().mockReturnValue(["test-server"]),
@@ -95,15 +101,21 @@ export const mockFactories = {
   /**
    * Creates a manager with resources configured
    */
-  withResources: (resources: Array<{ uri: string; name: string; mimeType?: string }>) =>
+  withResources: (
+    resources: Array<{ uri: string; name: string; mimeType?: string }>,
+  ) =>
     createMockMcpClientManager({
-      listResources: vi.fn().mockResolvedValue({ resources, nextCursor: undefined }),
+      listResources: vi
+        .fn()
+        .mockResolvedValue({ resources, nextCursor: undefined }),
     }),
 
   /**
    * Creates a manager with prompts configured
    */
-  withPrompts: (prompts: Array<{ name: string; description?: string; arguments?: any[] }>) =>
+  withPrompts: (
+    prompts: Array<{ name: string; description?: string; arguments?: any[] }>,
+  ) =>
     createMockMcpClientManager({
       listPrompts: vi.fn().mockResolvedValue({ prompts }),
     }),
@@ -112,7 +124,7 @@ export const mockFactories = {
    * Creates a manager with servers configured
    */
   withServers: (
-    servers: Array<{ id: string; status: string; config: object }>
+    servers: Array<{ id: string; status: string; config: object }>,
   ) =>
     createMockMcpClientManager({
       getServerSummaries: vi.fn().mockReturnValue(servers),
@@ -139,7 +151,10 @@ export const mockFactories = {
       getInitializationInfo: vi.fn().mockReturnValue({
         protocolVersion: initInfo.protocolVersion || "2024-11-05",
         capabilities: initInfo.capabilities || { tools: {}, resources: {} },
-        serverInfo: initInfo.serverInfo || { name: "test-server", version: "1.0.0" },
+        serverInfo: initInfo.serverInfo || {
+          name: "test-server",
+          version: "1.0.0",
+        },
       }),
     }),
 };
@@ -188,13 +203,19 @@ export const sampleData = {
       description: "Review code for best practices",
       arguments: [
         { name: "code", description: "The code to review", required: true },
-        { name: "language", description: "Programming language", required: false },
+        {
+          name: "language",
+          description: "Programming language",
+          required: false,
+        },
       ],
     },
     summarize: {
       name: "summarize",
       description: "Summarize text content",
-      arguments: [{ name: "text", description: "Text to summarize", required: true }],
+      arguments: [
+        { name: "text", description: "Text to summarize", required: true },
+      ],
     },
   },
 

@@ -22,12 +22,12 @@ interface CustomRenderOptions extends Omit<RenderOptions, "wrapper"> {
  * Creates a wrapper component with all specified providers
  */
 function createWrapper(
-  providers: Array<React.ComponentType<{ children: ReactNode }>>
+  providers: Array<React.ComponentType<{ children: ReactNode }>>,
 ) {
   return function Wrapper({ children }: { children: ReactNode }) {
     return providers.reduceRight(
       (acc, Provider) => <Provider>{acc}</Provider>,
-      children
+      children,
     );
   };
 }
@@ -48,7 +48,7 @@ function createWrapper(
  */
 export function renderWithProviders(
   ui: ReactElement,
-  options: CustomRenderOptions = {}
+  options: CustomRenderOptions = {},
 ): RenderResult {
   const { providers = [], ...renderOptions } = options;
 

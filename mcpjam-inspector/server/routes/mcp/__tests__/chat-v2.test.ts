@@ -15,7 +15,7 @@ vi.mock("ai", () => ({
     toUIMessageStreamResponse: vi.fn().mockReturnValue(
       new Response(JSON.stringify({ type: "text", content: "Hello" }), {
         headers: { "Content-Type": "text/event-stream" },
-      })
+      }),
     ),
   }),
   stepCountIs: vi.fn().mockReturnValue(() => false),
@@ -131,7 +131,7 @@ describe("POST /api/mcp/chat-v2", () => {
       expect(streamText).toHaveBeenCalledWith(
         expect.objectContaining({
           temperature: 0.5,
-        })
+        }),
       );
     });
 
@@ -147,7 +147,7 @@ describe("POST /api/mcp/chat-v2", () => {
       expect(streamText).toHaveBeenCalledWith(
         expect.objectContaining({
           temperature: 0.7,
-        })
+        }),
       );
     });
 
@@ -164,14 +164,16 @@ describe("POST /api/mcp/chat-v2", () => {
       expect(streamText).toHaveBeenCalledWith(
         expect.objectContaining({
           system: "You are a helpful assistant",
-        })
+        }),
       );
     });
   });
 
   describe("error handling", () => {
     it("returns 500 when getToolsForAiSdk fails", async () => {
-      manager.getToolsForAiSdk.mockRejectedValue(new Error("Tools fetch failed"));
+      manager.getToolsForAiSdk.mockRejectedValue(
+        new Error("Tools fetch failed"),
+      );
 
       const res = await postJson(app, "/api/mcp/chat-v2", {
         messages: [{ role: "user", content: "Hello" }],

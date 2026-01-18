@@ -136,24 +136,30 @@ describe("PartSwitch", () => {
     it("passes role to TextPart", () => {
       const part = { type: "text", text: "Hello" };
 
-      render(<PartSwitch {...defaultProps} part={part as any} role="assistant" />);
+      render(
+        <PartSwitch {...defaultProps} part={part as any} role="assistant" />,
+      );
 
       expect(screen.getByTestId("text-part")).toHaveAttribute(
         "data-role",
-        "assistant"
+        "assistant",
       );
     });
   });
 
   describe("reasoning parts", () => {
     it("renders ReasoningPart for reasoning type", () => {
-      const part = { type: "reasoning", text: "Thinking...", state: "thinking" };
+      const part = {
+        type: "reasoning",
+        text: "Thinking...",
+        state: "thinking",
+      };
 
       render(<PartSwitch {...defaultProps} part={part as any} />);
 
       expect(screen.getByTestId("reasoning-part")).toBeInTheDocument();
       expect(screen.getByTestId("reasoning-part")).toHaveTextContent(
-        "Thinking..."
+        "Thinking...",
       );
     });
 
@@ -164,7 +170,7 @@ describe("PartSwitch", () => {
 
       expect(screen.getByTestId("reasoning-part")).toHaveAttribute(
         "data-state",
-        "complete"
+        "complete",
       );
     });
   });
@@ -187,7 +193,7 @@ describe("PartSwitch", () => {
 
       expect(screen.getByTestId("source-url-part")).toBeInTheDocument();
       expect(screen.getByTestId("source-url-part")).toHaveTextContent(
-        "https://example.com"
+        "https://example.com",
       );
     });
 
@@ -198,7 +204,7 @@ describe("PartSwitch", () => {
 
       expect(screen.getByTestId("source-document-part")).toBeInTheDocument();
       expect(screen.getByTestId("source-document-part")).toHaveTextContent(
-        "Doc Title"
+        "Doc Title",
       );
     });
   });
@@ -208,7 +214,7 @@ describe("PartSwitch", () => {
       const part = { type: "step-start" };
 
       const { container } = render(
-        <PartSwitch {...defaultProps} part={part as any} />
+        <PartSwitch {...defaultProps} part={part as any} />,
       );
 
       expect(container.firstChild).toBeNull();
@@ -224,7 +230,7 @@ describe("PartSwitch", () => {
       expect(screen.getByTestId("json-part")).toBeInTheDocument();
       expect(screen.getByTestId("json-part")).toHaveAttribute(
         "data-label",
-        "Unknown part"
+        "Unknown part",
       );
     });
   });
@@ -256,7 +262,7 @@ describe("PartSwitch", () => {
           part={part as any}
           toolsMetadata={{}}
           toolServerMap={{}}
-        />
+        />,
       );
 
       expect(screen.getByTestId("tool-part")).toBeInTheDocument();

@@ -224,7 +224,8 @@ export function useChatSession({
         systemPrompt,
         selectedServers,
       },
-      headers: Object.keys(mergedHeaders).length > 0 ? mergedHeaders : undefined,
+      headers:
+        Object.keys(mergedHeaders).length > 0 ? mergedHeaders : undefined,
     });
   }, [
     selectedModel,

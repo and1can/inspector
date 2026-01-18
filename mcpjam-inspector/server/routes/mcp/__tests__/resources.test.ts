@@ -7,17 +7,29 @@ const createMockMcpClientManager = (overrides: Record<string, any> = {}) => ({
   listResources: vi.fn().mockResolvedValue({
     resources: [
       { uri: "file:///test.txt", name: "test.txt", mimeType: "text/plain" },
-      { uri: "file:///data.json", name: "data.json", mimeType: "application/json" },
+      {
+        uri: "file:///data.json",
+        name: "data.json",
+        mimeType: "application/json",
+      },
     ],
     nextCursor: undefined,
   }),
   readResource: vi.fn().mockResolvedValue({
-    contents: [{ uri: "file:///test.txt", text: "Hello, World!", mimeType: "text/plain" }],
+    contents: [
+      {
+        uri: "file:///test.txt",
+        text: "Hello, World!",
+        mimeType: "text/plain",
+      },
+    ],
   }),
   ...overrides,
 });
 
-function createApp(mcpClientManager: ReturnType<typeof createMockMcpClientManager>) {
+function createApp(
+  mcpClientManager: ReturnType<typeof createMockMcpClientManager>,
+) {
   const app = new Hono();
 
   // Middleware to inject mock mcpClientManager
@@ -80,7 +92,10 @@ describe("POST /api/mcp/resources/list", () => {
       const res = await app.request("/api/mcp/resources/list", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ serverId: "test-server", cursor: "cursor-page-2" }),
+        body: JSON.stringify({
+          serverId: "test-server",
+          cursor: "cursor-page-2",
+        }),
       });
 
       expect(res.status).toBe(200);
@@ -89,7 +104,7 @@ describe("POST /api/mcp/resources/list", () => {
 
       expect(mcpClientManager.listResources).toHaveBeenCalledWith(
         "test-server",
-        { cursor: "cursor-page-2" }
+        { cursor: "cursor-page-2" },
       );
     });
 
@@ -103,7 +118,7 @@ describe("POST /api/mcp/resources/list", () => {
       expect(res.status).toBe(200);
       expect(mcpClientManager.listResources).toHaveBeenCalledWith(
         "test-server",
-        undefined
+        undefined,
       );
     });
   });
@@ -111,7 +126,7 @@ describe("POST /api/mcp/resources/list", () => {
   describe("error handling", () => {
     it("returns 500 when listResources fails", async () => {
       mcpClientManager.listResources.mockRejectedValue(
-        new Error("Resource listing failed")
+        new Error("Resource listing failed"),
       );
 
       const res = await app.request("/api/mcp/resources/list", {
@@ -181,9 +196,12 @@ describe("POST /api/mcp/resources/read", () => {
       const data = await res.json();
       expect(data.content.contents[0].text).toBe("Hello, World!");
 
-      expect(mcpClientManager.readResource).toHaveBeenCalledWith("test-server", {
-        uri: "file:///test.txt",
-      });
+      expect(mcpClientManager.readResource).toHaveBeenCalledWith(
+        "test-server",
+        {
+          uri: "file:///test.txt",
+        },
+      );
     });
 
     it("returns binary content for blob resources", async () => {
@@ -216,7 +234,7 @@ describe("POST /api/mcp/resources/read", () => {
   describe("error handling", () => {
     it("returns 500 when readResource fails", async () => {
       mcpClientManager.readResource.mockRejectedValue(
-        new Error("Resource not found")
+        new Error("Resource not found"),
       );
 
       const res = await app.request("/api/mcp/resources/read", {

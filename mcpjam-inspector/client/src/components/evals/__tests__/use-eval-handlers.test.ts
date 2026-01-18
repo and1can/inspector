@@ -140,7 +140,7 @@ describe("useEvalHandlers", () => {
         expect.objectContaining({
           method: "POST",
           headers: { "Content-Type": "application/json" },
-        })
+        }),
       );
     });
 
@@ -192,7 +192,7 @@ describe("useEvalHandlers", () => {
       // Verify regular fetch was NOT called with the evals/run endpoint
       const fetchCalls = fetchSpy.mock.calls.filter(
         (call) =>
-          typeof call[0] === "string" && call[0].includes("/api/mcp/evals/run")
+          typeof call[0] === "string" && call[0].includes("/api/mcp/evals/run"),
       );
       expect(fetchCalls).toHaveLength(0);
 
@@ -211,7 +211,7 @@ describe("useEvalHandlers", () => {
               expectedToolCalls: [],
             },
           ],
-        })
+        }),
       );
 
       const { result } = renderHook(() => useEvalHandlers(defaultProps));
@@ -226,7 +226,7 @@ describe("useEvalHandlers", () => {
         expect.objectContaining({
           method: "POST",
           headers: { "Content-Type": "application/json" },
-        })
+        }),
       );
     });
 
@@ -253,7 +253,9 @@ describe("useEvalHandlers", () => {
 
     it("does not use regular fetch for /api/mcp/evals/generate-tests", async () => {
       const originalFetch = global.fetch;
-      const fetchSpy = vi.fn().mockResolvedValue(createFetchResponse({ tests: [] }));
+      const fetchSpy = vi
+        .fn()
+        .mockResolvedValue(createFetchResponse({ tests: [] }));
       global.fetch = fetchSpy;
 
       // Re-mock authFetch to ensure it's the one being called
@@ -269,7 +271,7 @@ describe("useEvalHandlers", () => {
       const fetchCalls = fetchSpy.mock.calls.filter(
         (call) =>
           typeof call[0] === "string" &&
-          call[0].includes("/api/mcp/evals/generate-tests")
+          call[0].includes("/api/mcp/evals/generate-tests"),
       );
       expect(fetchCalls).toHaveLength(0);
 
@@ -294,10 +296,12 @@ describe("useEvalHandlers", () => {
               expectedToolCalls: ["tool2"],
             },
           ],
-        })
+        }),
       );
 
-      mockMutations.createTestCaseMutation.mockResolvedValue("new-test-case-id");
+      mockMutations.createTestCaseMutation.mockResolvedValue(
+        "new-test-case-id",
+      );
 
       const { result } = renderHook(() => useEvalHandlers(defaultProps));
 
@@ -310,7 +314,9 @@ describe("useEvalHandlers", () => {
     });
 
     it("handles API errors gracefully", async () => {
-      mockAuthFetch.mockResolvedValue(createFetchResponse({ error: "API Error" }, 500));
+      mockAuthFetch.mockResolvedValue(
+        createFetchResponse({ error: "API Error" }, 500),
+      );
 
       const { result } = renderHook(() => useEvalHandlers(defaultProps));
 

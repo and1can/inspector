@@ -43,7 +43,7 @@ const routeModules: Record<RouteConfig, { path: string; handler: Hono }> = {
  */
 export function createTestApp(
   mcpClientManager: MockMCPClientManager,
-  routes: RouteConfig | RouteConfig[]
+  routes: RouteConfig | RouteConfig[],
 ): Hono {
   const app = new Hono();
 
@@ -74,7 +74,7 @@ export function createTestApp(
 export async function postJson(
   app: Hono,
   path: string,
-  body: Record<string, unknown>
+  body: Record<string, unknown>,
 ): Promise<Response> {
   return app.request(path, {
     method: "POST",
@@ -114,7 +114,7 @@ export async function deleteJson(app: Hono, path: string): Promise<Response> {
  * expect(data.success).toBe(true);
  */
 export async function expectJson<T = unknown>(
-  response: Response
+  response: Response,
 ): Promise<{ status: number; data: T }> {
   return {
     status: response.status,
@@ -130,10 +130,14 @@ export async function expectJson<T = unknown>(
  * const data = await expectSuccess(response);
  * expect(data.tools).toHaveLength(2);
  */
-export async function expectSuccess<T = unknown>(response: Response): Promise<T> {
+export async function expectSuccess<T = unknown>(
+  response: Response,
+): Promise<T> {
   const { status, data } = await expectJson<T>(response);
   if (status < 200 || status >= 300) {
-    throw new Error(`Expected success status but got ${status}: ${JSON.stringify(data)}`);
+    throw new Error(
+      `Expected success status but got ${status}: ${JSON.stringify(data)}`,
+    );
   }
   return data;
 }
@@ -148,11 +152,13 @@ export async function expectSuccess<T = unknown>(response: Response): Promise<T>
  */
 export async function expectError<T = unknown>(
   response: Response,
-  expectedStatus?: number
+  expectedStatus?: number,
 ): Promise<T> {
   const { status, data } = await expectJson<T>(response);
   if (status >= 200 && status < 300) {
-    throw new Error(`Expected error status but got ${status}: ${JSON.stringify(data)}`);
+    throw new Error(
+      `Expected error status but got ${status}: ${JSON.stringify(data)}`,
+    );
   }
   if (expectedStatus !== undefined && status !== expectedStatus) {
     throw new Error(`Expected status ${expectedStatus} but got ${status}`);

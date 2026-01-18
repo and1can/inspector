@@ -60,13 +60,15 @@ describe("ResourcesTab", () => {
       expect(screen.getByText("No Server Selected")).toBeInTheDocument();
       expect(
         screen.getByText(
-          "Connect to an MCP server to browse and explore its available resources."
-        )
+          "Connect to an MCP server to browse and explore its available resources.",
+        ),
       ).toBeInTheDocument();
     });
 
     it("shows empty state when serverConfig is undefined", () => {
-      render(<ResourcesTab serverConfig={undefined} serverName="test-server" />);
+      render(
+        <ResourcesTab serverConfig={undefined} serverName="test-server" />,
+      );
 
       expect(screen.getByText("No Server Selected")).toBeInTheDocument();
     });
@@ -77,17 +79,18 @@ describe("ResourcesTab", () => {
       const serverConfig = createServerConfig();
 
       mockListResources.mockResolvedValue({
-        resources: [
-          { name: "test.txt", uri: "file:///test.txt" },
-        ],
+        resources: [{ name: "test.txt", uri: "file:///test.txt" }],
       });
 
       render(
-        <ResourcesTab serverConfig={serverConfig} serverName="test-server" />
+        <ResourcesTab serverConfig={serverConfig} serverName="test-server" />,
       );
 
       await waitFor(() => {
-        expect(mockListResources).toHaveBeenCalledWith("test-server", undefined);
+        expect(mockListResources).toHaveBeenCalledWith(
+          "test-server",
+          undefined,
+        );
       });
     });
 
@@ -109,7 +112,7 @@ describe("ResourcesTab", () => {
       });
 
       render(
-        <ResourcesTab serverConfig={serverConfig} serverName="test-server" />
+        <ResourcesTab serverConfig={serverConfig} serverName="test-server" />,
       );
 
       await waitFor(() => {
@@ -129,7 +132,7 @@ describe("ResourcesTab", () => {
       });
 
       render(
-        <ResourcesTab serverConfig={serverConfig} serverName="test-server" />
+        <ResourcesTab serverConfig={serverConfig} serverName="test-server" />,
       );
 
       await waitFor(() => {
@@ -143,7 +146,7 @@ describe("ResourcesTab", () => {
       mockListResources.mockResolvedValue({ resources: [] });
 
       render(
-        <ResourcesTab serverConfig={serverConfig} serverName="test-server" />
+        <ResourcesTab serverConfig={serverConfig} serverName="test-server" />,
       );
 
       await waitFor(() => {
@@ -161,7 +164,7 @@ describe("ResourcesTab", () => {
       });
 
       render(
-        <ResourcesTab serverConfig={serverConfig} serverName="test-server" />
+        <ResourcesTab serverConfig={serverConfig} serverName="test-server" />,
       );
 
       await waitFor(() => {
@@ -183,7 +186,7 @@ describe("ResourcesTab", () => {
       });
 
       render(
-        <ResourcesTab serverConfig={serverConfig} serverName="test-server" />
+        <ResourcesTab serverConfig={serverConfig} serverName="test-server" />,
       );
 
       await waitFor(() => {
@@ -195,7 +198,7 @@ describe("ResourcesTab", () => {
       // After selection, the Read button should be visible
       await waitFor(() => {
         expect(
-          screen.getByRole("button", { name: /read/i })
+          screen.getByRole("button", { name: /read/i }),
         ).toBeInTheDocument();
       });
     });
@@ -220,7 +223,7 @@ describe("ResourcesTab", () => {
       });
 
       render(
-        <ResourcesTab serverConfig={serverConfig} serverName="test-server" />
+        <ResourcesTab serverConfig={serverConfig} serverName="test-server" />,
       );
 
       await waitFor(() => {
@@ -231,7 +234,7 @@ describe("ResourcesTab", () => {
 
       await waitFor(() => {
         expect(
-          screen.getByRole("button", { name: /read/i })
+          screen.getByRole("button", { name: /read/i }),
         ).toBeInTheDocument();
       });
 
@@ -246,7 +249,7 @@ describe("ResourcesTab", () => {
               serverId: "test-server",
               uri: "file:///test.txt",
             }),
-          })
+          }),
         );
       });
     });
@@ -264,7 +267,7 @@ describe("ResourcesTab", () => {
       });
 
       render(
-        <ResourcesTab serverConfig={serverConfig} serverName="test-server" />
+        <ResourcesTab serverConfig={serverConfig} serverName="test-server" />,
       );
 
       await waitFor(() => {
@@ -291,7 +294,7 @@ describe("ResourcesTab", () => {
       mockListResources.mockResolvedValue({ resources: [] });
 
       render(
-        <ResourcesTab serverConfig={serverConfig} serverName="test-server" />
+        <ResourcesTab serverConfig={serverConfig} serverName="test-server" />,
       );
 
       await waitFor(() => {
@@ -301,7 +304,7 @@ describe("ResourcesTab", () => {
       // Find and click refresh button
       const buttons = screen.getAllByRole("button");
       const refreshButton = buttons.find((btn) =>
-        btn.querySelector(".lucide-refresh-cw")
+        btn.querySelector(".lucide-refresh-cw"),
       );
 
       if (refreshButton) {
@@ -329,12 +332,12 @@ describe("ResourcesTab", () => {
       });
 
       render(
-        <ResourcesTab serverConfig={serverConfig} serverName="test-server" />
+        <ResourcesTab serverConfig={serverConfig} serverName="test-server" />,
       );
 
       await waitFor(() => {
         expect(
-          screen.getByText("Application configuration file")
+          screen.getByText("Application configuration file"),
         ).toBeInTheDocument();
       });
     });
@@ -350,7 +353,7 @@ describe("ResourcesTab", () => {
       });
 
       render(
-        <ResourcesTab serverConfig={serverConfig} serverName="test-server" />
+        <ResourcesTab serverConfig={serverConfig} serverName="test-server" />,
       );
 
       await waitFor(() => {

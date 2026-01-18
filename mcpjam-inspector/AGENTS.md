@@ -57,6 +57,7 @@ Browser `console.*` is acceptable for client-side debugging.
 ### Structure
 
 Tests live in `__tests__/` directories next to source files. Use existing tests as examples:
+
 - **Components**: `client/src/components/*/__tests__/*.test.tsx`
 - **State**: `client/src/state/__tests__/app-reducer.test.ts`
 - **Server routes**: `server/routes/mcp/__tests__/*.test.ts`

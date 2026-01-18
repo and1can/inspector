@@ -27,7 +27,7 @@ function createInitialState(overrides: Partial<AppState> = {}): AppState {
 // Helper to create a server entry
 function createServer(
   name: string,
-  overrides: Partial<ServerWithName> = {}
+  overrides: Partial<ServerWithName> = {},
 ): ServerWithName {
   return {
     name,
@@ -240,7 +240,9 @@ describe("appReducer", () => {
 
   describe("CONNECT_FAILURE", () => {
     it("updates server to failed state with error", () => {
-      const server = createServer("failing", { connectionStatus: "connecting" });
+      const server = createServer("failing", {
+        connectionStatus: "connecting",
+      });
       const workspace: Workspace = {
         id: "workspace-1",
         name: "Test",
@@ -306,7 +308,9 @@ describe("appReducer", () => {
     });
 
     it("clears selection if disconnected server was selected", () => {
-      const server = createServer("selected", { connectionStatus: "connected" });
+      const server = createServer("selected", {
+        connectionStatus: "connected",
+      });
       const workspace: Workspace = {
         id: "workspace-1",
         name: "Test",
@@ -400,7 +404,9 @@ describe("appReducer", () => {
       });
 
       expect(result.servers["to-remove"]).toBeUndefined();
-      expect(result.workspaces["workspace-1"].servers["to-remove"]).toBeUndefined();
+      expect(
+        result.workspaces["workspace-1"].servers["to-remove"],
+      ).toBeUndefined();
     });
 
     it("clears selection if removed server was selected", () => {
@@ -621,7 +627,7 @@ describe("appReducer", () => {
 
         expect(result.workspaces["workspace-1"].name).toBe("Updated Name");
         expect(result.workspaces["workspace-1"].description).toBe(
-          "New description"
+          "New description",
         );
       });
 
@@ -692,7 +698,7 @@ describe("appReducer", () => {
         expect(result.selectedMultipleServers).toEqual([]);
         expect(result.servers["target-server"]).toBeDefined();
         expect(result.servers["target-server"].connectionStatus).toBe(
-          "disconnected"
+          "disconnected",
         );
       });
 
@@ -760,7 +766,7 @@ describe("appReducer", () => {
         });
 
         const newWorkspaces = Object.values(result.workspaces).filter(
-          (w) => w.name === "Source Copy"
+          (w) => w.name === "Source Copy",
         );
         expect(newWorkspaces).toHaveLength(1);
         const copy = newWorkspaces[0];

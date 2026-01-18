@@ -161,7 +161,7 @@ describe("POST /api/mcp/tools/execute", () => {
         "echo",
         { message: "Hello, World!" },
         undefined,
-        undefined
+        undefined,
       );
     });
 
@@ -177,7 +177,7 @@ describe("POST /api/mcp/tools/execute", () => {
         "no-args-tool",
         {},
         undefined,
-        undefined
+        undefined,
       );
     });
 
@@ -195,7 +195,7 @@ describe("POST /api/mcp/tools/execute", () => {
         "long-running",
         {},
         undefined,
-        { ttl: 30000 }
+        { ttl: 30000 },
       );
     });
 
@@ -209,9 +209,11 @@ describe("POST /api/mcp/tools/execute", () => {
       expect(res.status).toBe(200);
       expect(manager.setElicitationHandler).toHaveBeenCalledWith(
         "test-server",
-        expect.any(Function)
+        expect.any(Function),
       );
-      expect(manager.clearElicitationHandler).toHaveBeenCalledWith("test-server");
+      expect(manager.clearElicitationHandler).toHaveBeenCalledWith(
+        "test-server",
+      );
     });
   });
 

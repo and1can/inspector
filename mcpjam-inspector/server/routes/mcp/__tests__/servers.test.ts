@@ -38,7 +38,9 @@ const createMockMcpClientManager = (overrides: Record<string, any> = {}) => ({
   ...overrides,
 });
 
-function createApp(mcpClientManager: ReturnType<typeof createMockMcpClientManager>) {
+function createApp(
+  mcpClientManager: ReturnType<typeof createMockMcpClientManager>,
+) {
   const app = new Hono();
 
   // Middleware to inject mock mcpClientManager
@@ -129,13 +131,15 @@ describe("GET /api/mcp/servers/status/:serverId", () => {
     expect(data.serverId).toBe("server-1");
     expect(data.status).toBe("connected");
 
-    expect(mcpClientManager.getConnectionStatusByAttemptingPing).toHaveBeenCalledWith(
-      "server-1"
-    );
+    expect(
+      mcpClientManager.getConnectionStatusByAttemptingPing,
+    ).toHaveBeenCalledWith("server-1");
   });
 
   it("returns disconnected status for unhealthy server", async () => {
-    mcpClientManager.getConnectionStatusByAttemptingPing.mockReturnValue("disconnected");
+    mcpClientManager.getConnectionStatusByAttemptingPing.mockReturnValue(
+      "disconnected",
+    );
 
     const res = await app.request("/api/mcp/servers/status/server-2", {
       method: "GET",
@@ -147,9 +151,11 @@ describe("GET /api/mcp/servers/status/:serverId", () => {
   });
 
   it("returns 500 when status check fails", async () => {
-    mcpClientManager.getConnectionStatusByAttemptingPing.mockImplementation(() => {
-      throw new Error("Ping timeout");
-    });
+    mcpClientManager.getConnectionStatusByAttemptingPing.mockImplementation(
+      () => {
+        throw new Error("Ping timeout");
+      },
+    );
 
     const res = await app.request("/api/mcp/servers/status/server-1", {
       method: "GET",
@@ -241,7 +247,7 @@ describe("DELETE /api/mcp/servers/:serverId", () => {
 
   it("continues removal even if disconnect fails", async () => {
     mcpClientManager.disconnectServer.mockRejectedValue(
-      new Error("Already disconnected")
+      new Error("Already disconnected"),
     );
 
     const res = await app.request("/api/mcp/servers/server-1", {
@@ -313,10 +319,12 @@ describe("POST /api/mcp/servers/reconnect", () => {
       expect(data.message).toContain("Reconnected to server");
 
       // Verify disconnect was called before connect
-      expect(mcpClientManager.disconnectServer).toHaveBeenCalledWith("server-1");
+      expect(mcpClientManager.disconnectServer).toHaveBeenCalledWith(
+        "server-1",
+      );
       expect(mcpClientManager.connectToServer).toHaveBeenCalledWith(
         "server-1",
-        { command: "node", args: ["server.js"] }
+        { command: "node", args: ["server.js"] },
       );
     });
 
@@ -354,7 +362,9 @@ describe("POST /api/mcp/servers/reconnect", () => {
 
   describe("reconnection failures", () => {
     it("returns error when reconnection fails to establish connection", async () => {
-      mcpClientManager.getConnectionStatusByAttemptingPing.mockReturnValue("failed");
+      mcpClientManager.getConnectionStatusByAttemptingPing.mockReturnValue(
+        "failed",
+      );
 
       const res = await app.request("/api/mcp/servers/reconnect", {
         method: "POST",
@@ -374,7 +384,7 @@ describe("POST /api/mcp/servers/reconnect", () => {
 
     it("returns 500 when connectToServer throws", async () => {
       mcpClientManager.connectToServer.mockRejectedValue(
-        new Error("Connection refused")
+        new Error("Connection refused"),
       );
 
       const res = await app.request("/api/mcp/servers/reconnect", {

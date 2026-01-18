@@ -25,7 +25,10 @@ describe("validateToolOutput", () => {
     it("returns valid when content matches schema", () => {
       const result = {
         content: [
-          { type: "text", text: JSON.stringify({ message: "hello", count: 42 }) },
+          {
+            type: "text",
+            text: JSON.stringify({ message: "hello", count: 42 }),
+          },
         ],
       };
 

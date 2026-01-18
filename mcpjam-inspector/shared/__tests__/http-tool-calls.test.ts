@@ -295,7 +295,7 @@ describe("executeToolCallsFromMessages", () => {
       expect(messages).toHaveLength(2);
       expect((messages[1] as any).content[0].output.type).toBe("error-text");
       expect((messages[1] as any).content[0].output.value).toContain(
-        "Tool 'unknown_tool' not found"
+        "Tool 'unknown_tool' not found",
       );
     });
   });
@@ -449,7 +449,9 @@ describe("executeToolCallsFromMessages", () => {
     it("handles bigint in results by converting to string", async () => {
       const tools = {
         bigint_tool: {
-          execute: vi.fn().mockResolvedValue({ big: BigInt(12345678901234567890n) }),
+          execute: vi
+            .fn()
+            .mockResolvedValue({ big: BigInt(12345678901234567890n) }),
         },
       };
 
@@ -471,7 +473,7 @@ describe("executeToolCallsFromMessages", () => {
 
       expect((messages[1] as any).content[0].output.type).toBe("json");
       expect((messages[1] as any).content[0].output.value.big).toBe(
-        "12345678901234567890"
+        "12345678901234567890",
       );
     });
   });

@@ -149,7 +149,7 @@ export function addTokenToUrl(url: string): string {
  */
 export function authFetch(
   input: RequestInfo | URL,
-  init?: RequestInit
+  init?: RequestInit,
 ): Promise<Response> {
   const authHeaders = getAuthHeaders();
 

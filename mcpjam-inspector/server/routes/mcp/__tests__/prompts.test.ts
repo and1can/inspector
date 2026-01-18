@@ -11,7 +11,11 @@ const createMockMcpClientManager = (overrides: Record<string, any> = {}) => ({
         description: "Review code for best practices",
         arguments: [
           { name: "code", description: "The code to review", required: true },
-          { name: "language", description: "Programming language", required: false },
+          {
+            name: "language",
+            description: "Programming language",
+            required: false,
+          },
         ],
       },
       {
@@ -34,7 +38,9 @@ const createMockMcpClientManager = (overrides: Record<string, any> = {}) => ({
   ...overrides,
 });
 
-function createApp(mcpClientManager: ReturnType<typeof createMockMcpClientManager>) {
+function createApp(
+  mcpClientManager: ReturnType<typeof createMockMcpClientManager>,
+) {
   const app = new Hono();
 
   // Middleware to inject mock mcpClientManager
@@ -105,7 +111,7 @@ describe("POST /api/mcp/prompts/list", () => {
   describe("error handling", () => {
     it("returns 500 when listPrompts fails", async () => {
       mcpClientManager.listPrompts.mockRejectedValue(
-        new Error("Server not responding")
+        new Error("Server not responding"),
       );
 
       const res = await app.request("/api/mcp/prompts/list", {
@@ -193,7 +199,9 @@ describe("POST /api/mcp/prompts/list-multi", () => {
       const res = await app.request("/api/mcp/prompts/list-multi", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ serverIds: ["working-server", "failing-server"] }),
+        body: JSON.stringify({
+          serverIds: ["working-server", "failing-server"],
+        }),
       });
 
       expect(res.status).toBe(200);
@@ -329,7 +337,7 @@ describe("POST /api/mcp/prompts/get", () => {
   describe("error handling", () => {
     it("returns 500 when getPrompt fails", async () => {
       mcpClientManager.getPrompt.mockRejectedValue(
-        new Error("Prompt not found")
+        new Error("Prompt not found"),
       );
 
       const res = await app.request("/api/mcp/prompts/get", {

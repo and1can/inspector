@@ -59,7 +59,7 @@ describe("parseJsonConfig", () => {
     it("defaults args to empty array when not provided", () => {
       const json = JSON.stringify({
         mcpServers: {
-          "minimal": {
+          minimal: {
             command: "my-server-binary",
           },
         },
@@ -120,28 +120,32 @@ describe("parseJsonConfig", () => {
 
       const result = parseJsonConfig(json);
       expect(result).toHaveLength(3);
-      expect(result.map((s) => s.name)).toEqual(["stdio-1", "stdio-2", "http-1"]);
+      expect(result.map((s) => s.name)).toEqual([
+        "stdio-1",
+        "stdio-2",
+        "http-1",
+      ]);
     });
   });
 
   describe("error handling", () => {
     it("throws error for invalid JSON", () => {
       expect(() => parseJsonConfig("not valid json")).toThrow(
-        "Invalid JSON format"
+        "Invalid JSON format",
       );
     });
 
     it("throws error when mcpServers is missing", () => {
       const json = JSON.stringify({ servers: {} });
       expect(() => parseJsonConfig(json)).toThrow(
-        'missing or invalid "mcpServers"'
+        'missing or invalid "mcpServers"',
       );
     });
 
     it("throws error when mcpServers is not an object", () => {
       const json = JSON.stringify({ mcpServers: "not an object" });
       expect(() => parseJsonConfig(json)).toThrow(
-        'missing or invalid "mcpServers"'
+        'missing or invalid "mcpServers"',
       );
     });
 
@@ -237,7 +241,7 @@ describe("validateJsonConfig", () => {
       const result = validateJsonConfig(json);
       expect(result.success).toBe(false);
       expect(result.error).toContain(
-        'must have either "command" or "url" property'
+        'must have either "command" or "url" property',
       );
     });
 
@@ -254,7 +258,7 @@ describe("validateJsonConfig", () => {
       const result = validateJsonConfig(json);
       expect(result.success).toBe(false);
       expect(result.error).toContain(
-        'cannot have both "command" and "url" properties'
+        'cannot have both "command" and "url" properties',
       );
     });
 

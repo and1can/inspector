@@ -94,7 +94,7 @@ describe("MessageView", () => {
       expect(screen.getByTestId("part-text")).toBeInTheDocument();
       expect(screen.getByTestId("part-text")).toHaveAttribute(
         "data-role",
-        "user"
+        "user",
       );
     });
 
@@ -124,7 +124,7 @@ describe("MessageView", () => {
       render(<MessageView {...defaultProps} message={message} />);
 
       expect(
-        screen.queryByTestId("user-message-bubble")
+        screen.queryByTestId("user-message-bubble"),
       ).not.toBeInTheDocument();
       expect(screen.getByRole("article")).toBeInTheDocument();
     });
@@ -140,7 +140,7 @@ describe("MessageView", () => {
       expect(screen.getByTestId("part-text")).toBeInTheDocument();
       expect(screen.getByTestId("part-text")).toHaveAttribute(
         "data-role",
-        "assistant"
+        "assistant",
       );
     });
   });
@@ -154,7 +154,7 @@ describe("MessageView", () => {
       });
 
       const { container } = render(
-        <MessageView {...defaultProps} message={message} />
+        <MessageView {...defaultProps} message={message} />,
       );
 
       expect(container.firstChild).toBeNull();
@@ -168,7 +168,7 @@ describe("MessageView", () => {
       });
 
       const { container } = render(
-        <MessageView {...defaultProps} message={message} />
+        <MessageView {...defaultProps} message={message} />,
       );
 
       expect(container.firstChild).toBeNull();
@@ -181,7 +181,7 @@ describe("MessageView", () => {
       });
 
       const { container } = render(
-        <MessageView {...defaultProps} message={message} />
+        <MessageView {...defaultProps} message={message} />,
       );
 
       expect(container.firstChild).toBeNull();
@@ -236,7 +236,7 @@ describe("MessageView", () => {
           {...defaultProps}
           message={message}
           onSendFollowUp={onSendFollowUp}
-        />
+        />,
       );
 
       expect(screen.getByTestId("part-text")).toBeInTheDocument();
@@ -254,7 +254,7 @@ describe("MessageView", () => {
           {...defaultProps}
           message={message}
           onWidgetStateChange={onWidgetStateChange}
-        />
+        />,
       );
 
       expect(screen.getByTestId("part-text")).toBeInTheDocument();
@@ -273,7 +273,7 @@ describe("MessageView", () => {
           {...defaultProps}
           message={message}
           displayMode="fullscreen"
-        />
+        />,
       );
 
       expect(screen.getByTestId("part-text")).toBeInTheDocument();

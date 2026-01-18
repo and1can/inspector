@@ -35,7 +35,9 @@ const mockClipboard = {
 Object.assign(navigator, { clipboard: mockClipboard });
 
 describe("ServerConnectionCard", () => {
-  const createServer = (overrides: Partial<ServerWithName> = {}): ServerWithName => ({
+  const createServer = (
+    overrides: Partial<ServerWithName> = {},
+  ): ServerWithName => ({
     name: "test-server",
     connectionStatus: "connected",
     enabled: true,
@@ -160,7 +162,7 @@ describe("ServerConnectionCard", () => {
           server={server}
           {...defaultProps}
           onDisconnect={onDisconnect}
-        />
+        />,
       );
 
       const toggle = screen.getByRole("switch");
@@ -177,7 +179,7 @@ describe("ServerConnectionCard", () => {
           server={server}
           {...defaultProps}
           onReconnect={onReconnect}
-        />
+        />,
       );
 
       const toggle = screen.getByRole("switch");
@@ -219,7 +221,7 @@ describe("ServerConnectionCard", () => {
 
       expect(screen.getByText("Having trouble?")).toBeInTheDocument();
       expect(
-        screen.getByText("Check out our troubleshooting page")
+        screen.getByText("Check out our troubleshooting page"),
       ).toBeInTheDocument();
     });
   });
@@ -237,15 +239,18 @@ describe("ServerConnectionCard", () => {
 
       // Find the copy button (it's inside the command display area)
       const copyButtons = screen.getAllByRole("button");
-      const copyButton = copyButtons.find((btn) =>
-        btn.querySelector("svg")?.classList.contains("lucide-copy") ||
-        btn.className.includes("absolute")
+      const copyButton = copyButtons.find(
+        (btn) =>
+          btn.querySelector("svg")?.classList.contains("lucide-copy") ||
+          btn.className.includes("absolute"),
       );
 
       if (copyButton) {
         fireEvent.click(copyButton);
         await waitFor(() => {
-          expect(mockClipboard.writeText).toHaveBeenCalledWith("node server.js");
+          expect(mockClipboard.writeText).toHaveBeenCalledWith(
+            "node server.js",
+          );
         });
       }
     });
@@ -288,7 +293,7 @@ describe("ServerConnectionCard", () => {
           server={server}
           {...defaultProps}
           sharedTunnelUrl="https://tunnel.example.com"
-        />
+        />,
       );
 
       expect(screen.getByText("Copy Tunnel Url")).toBeInTheDocument();
@@ -301,7 +306,7 @@ describe("ServerConnectionCard", () => {
           server={server}
           {...defaultProps}
           sharedTunnelUrl="https://tunnel.example.com"
-        />
+        />,
       );
 
       expect(screen.queryByText("Copy Tunnel Url")).not.toBeInTheDocument();

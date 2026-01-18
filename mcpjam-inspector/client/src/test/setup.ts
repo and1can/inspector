@@ -74,7 +74,7 @@ global.fetch = vi.fn().mockImplementation(() =>
     text: () => Promise.resolve(""),
     status: 200,
     headers: new Headers(),
-  })
+  }),
 );
 
 // Suppress console errors during tests (can be enabled for debugging)

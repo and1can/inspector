@@ -23,7 +23,7 @@ describe("ToolItem", () => {
           name="test-tool"
           isSelected={false}
           onClick={vi.fn()}
-        />
+        />,
       );
 
       expect(screen.getByText("test-tool")).toBeInTheDocument();
@@ -37,7 +37,7 @@ describe("ToolItem", () => {
           name="test-tool"
           isSelected={false}
           onClick={vi.fn()}
-        />
+        />,
       );
 
       expect(screen.getByText("Custom description")).toBeInTheDocument();
@@ -51,7 +51,7 @@ describe("ToolItem", () => {
           name="test-tool"
           isSelected={false}
           onClick={vi.fn()}
-        />
+        />,
       );
 
       expect(screen.queryByText(/description/i)).not.toBeInTheDocument();
@@ -65,7 +65,7 @@ describe("ToolItem", () => {
           name="display-name"
           isSelected={false}
           onClick={vi.fn()}
-        />
+        />,
       );
 
       expect(screen.getByText("display-name")).toBeInTheDocument();
@@ -82,7 +82,7 @@ describe("ToolItem", () => {
           name="test-tool"
           isSelected={true}
           onClick={vi.fn()}
-        />
+        />,
       );
 
       const toolElement = container.firstChild as HTMLElement;
@@ -99,7 +99,7 @@ describe("ToolItem", () => {
           name="test-tool"
           isSelected={false}
           onClick={vi.fn()}
-        />
+        />,
       );
 
       const toolElement = container.firstChild as HTMLElement;
@@ -117,7 +117,7 @@ describe("ToolItem", () => {
           name="test-tool"
           isSelected={false}
           onClick={onClick}
-        />
+        />,
       );
 
       fireEvent.click(screen.getByText("test-tool"));
@@ -133,7 +133,7 @@ describe("ToolItem", () => {
           name="test-tool"
           isSelected={false}
           onClick={onClick}
-        />
+        />,
       );
 
       fireEvent.click(screen.getByText("Click me"));
@@ -150,7 +150,7 @@ describe("ToolItem", () => {
           name="test-tool"
           isSelected={false}
           onClick={vi.fn()}
-        />
+        />,
       );
 
       const toolElement = container.firstChild as HTMLElement;
@@ -167,7 +167,7 @@ describe("ToolItem", () => {
           name="test-tool"
           isSelected={false}
           onClick={vi.fn()}
-        />
+        />,
       );
 
       // Should render without crashing
@@ -183,7 +183,7 @@ describe("ToolItem", () => {
           name={longName}
           isSelected={false}
           onClick={vi.fn()}
-        />
+        />,
       );
 
       expect(screen.getByText(longName)).toBeInTheDocument();
@@ -198,7 +198,7 @@ describe("ToolItem", () => {
           name={specialName}
           isSelected={false}
           onClick={vi.fn()}
-        />
+        />,
       );
 
       expect(screen.getByText(specialName)).toBeInTheDocument();
@@ -213,7 +213,7 @@ describe("ToolItem", () => {
           name="test-tool"
           isSelected={false}
           onClick={vi.fn()}
-        />
+        />,
       );
 
       // Description should have line-clamp class

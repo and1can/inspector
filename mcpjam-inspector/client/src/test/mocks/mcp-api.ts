@@ -11,10 +11,16 @@ import { vi } from "vitest";
  * Default mock implementations for MCP API functions
  */
 export const mockMcpApi = {
-  testConnection: vi.fn().mockResolvedValue({ success: true, status: "connected" }),
-  deleteServer: vi.fn().mockResolvedValue({ success: true, message: "Disconnected" }),
+  testConnection: vi
+    .fn()
+    .mockResolvedValue({ success: true, status: "connected" }),
+  deleteServer: vi
+    .fn()
+    .mockResolvedValue({ success: true, message: "Disconnected" }),
   listServers: vi.fn().mockResolvedValue({ success: true, servers: [] }),
-  reconnectServer: vi.fn().mockResolvedValue({ success: true, status: "connected" }),
+  reconnectServer: vi
+    .fn()
+    .mockResolvedValue({ success: true, status: "connected" }),
   getInitializationInfo: vi.fn().mockResolvedValue({
     success: true,
     initInfo: {
@@ -31,10 +37,16 @@ export const mockMcpApi = {
  */
 export function createMockMcpApi() {
   return {
-    testConnection: vi.fn().mockResolvedValue({ success: true, status: "connected" }),
-    deleteServer: vi.fn().mockResolvedValue({ success: true, message: "Disconnected" }),
+    testConnection: vi
+      .fn()
+      .mockResolvedValue({ success: true, status: "connected" }),
+    deleteServer: vi
+      .fn()
+      .mockResolvedValue({ success: true, message: "Disconnected" }),
     listServers: vi.fn().mockResolvedValue({ success: true, servers: [] }),
-    reconnectServer: vi.fn().mockResolvedValue({ success: true, status: "connected" }),
+    reconnectServer: vi
+      .fn()
+      .mockResolvedValue({ success: true, status: "connected" }),
     getInitializationInfo: vi.fn().mockResolvedValue({
       success: true,
       initInfo: {

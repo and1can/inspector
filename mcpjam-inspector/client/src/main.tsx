@@ -114,7 +114,13 @@ if (isInIframe) {
       // Show error UI instead of crashing
       root.render(
         <StrictMode>
-          <div style={{ padding: "2rem", textAlign: "center", fontFamily: "system-ui" }}>
+          <div
+            style={{
+              padding: "2rem",
+              textAlign: "center",
+              fontFamily: "system-ui",
+            }}
+          >
             <h1 style={{ color: "#dc2626" }}>Authentication Error</h1>
             <p>Failed to establish secure session. Please refresh the page.</p>
             <p style={{ color: "#666", fontSize: "0.875rem" }}>
@@ -141,7 +147,10 @@ if (isInIframe) {
         {isPostHogDisabled ? (
           Providers
         ) : (
-          <PostHogProvider apiKey={getPostHogKey()} options={getPostHogOptions()}>
+          <PostHogProvider
+            apiKey={getPostHogKey()}
+            options={getPostHogOptions()}
+          >
             {Providers}
           </PostHogProvider>
         )}

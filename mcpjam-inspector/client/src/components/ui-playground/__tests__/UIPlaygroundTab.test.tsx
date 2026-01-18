@@ -90,7 +90,10 @@ vi.mock("../hooks", () => ({
     openSaveDialog: vi.fn(),
     closeSaveDialog: vi.fn(),
     handleSaveDialogSubmit: vi.fn(),
-    saveDialogState: { isOpen: false, defaults: { title: "", description: "" } },
+    saveDialogState: {
+      isOpen: false,
+      defaults: { title: "", description: "" },
+    },
   }),
   useToolExecution: vi.fn().mockReturnValue({
     pendingExecution: null,
@@ -213,8 +216,8 @@ describe("UIPlaygroundTab", () => {
       expect(screen.getByText("No Server Selected")).toBeInTheDocument();
       expect(
         screen.getByText(
-          "Connect to an MCP server to test ChatGPT Apps in the UI Playground."
-        )
+          "Connect to an MCP server to test ChatGPT Apps in the UI Playground.",
+        ),
       ).toBeInTheDocument();
     });
 
@@ -237,7 +240,10 @@ describe("UIPlaygroundTab", () => {
       });
 
       render(
-        <UIPlaygroundTab serverConfig={serverConfig} serverName="test-server" />
+        <UIPlaygroundTab
+          serverConfig={serverConfig}
+          serverName="test-server"
+        />,
       );
 
       await waitFor(() => {
@@ -249,7 +255,10 @@ describe("UIPlaygroundTab", () => {
       const serverConfig = createServerConfig();
 
       render(
-        <UIPlaygroundTab serverConfig={serverConfig} serverName="test-server" />
+        <UIPlaygroundTab
+          serverConfig={serverConfig}
+          serverName="test-server"
+        />,
       );
 
       await waitFor(() => {
@@ -269,7 +278,10 @@ describe("UIPlaygroundTab", () => {
       });
 
       render(
-        <UIPlaygroundTab serverConfig={serverConfig} serverName="test-server" />
+        <UIPlaygroundTab
+          serverConfig={serverConfig}
+          serverName="test-server"
+        />,
       );
 
       await waitFor(() => {
@@ -283,12 +295,15 @@ describe("UIPlaygroundTab", () => {
       mockListTools.mockRejectedValue(new Error("Network error"));
 
       render(
-        <UIPlaygroundTab serverConfig={serverConfig} serverName="test-server" />
+        <UIPlaygroundTab
+          serverConfig={serverConfig}
+          serverName="test-server"
+        />,
       );
 
       await waitFor(() => {
         expect(mockUIPlaygroundStore.setExecutionError).toHaveBeenCalledWith(
-          "Network error"
+          "Network error",
         );
       });
     });
@@ -300,7 +315,10 @@ describe("UIPlaygroundTab", () => {
       mockUIPlaygroundStore.isSidebarVisible = true;
 
       render(
-        <UIPlaygroundTab serverConfig={serverConfig} serverName="test-server" />
+        <UIPlaygroundTab
+          serverConfig={serverConfig}
+          serverName="test-server"
+        />,
       );
 
       await waitFor(() => {
@@ -313,7 +331,10 @@ describe("UIPlaygroundTab", () => {
       mockUIPlaygroundStore.isSidebarVisible = false;
 
       render(
-        <UIPlaygroundTab serverConfig={serverConfig} serverName="test-server" />
+        <UIPlaygroundTab
+          serverConfig={serverConfig}
+          serverName="test-server"
+        />,
       );
 
       await waitFor(() => {
@@ -325,7 +346,10 @@ describe("UIPlaygroundTab", () => {
       const serverConfig = createServerConfig();
 
       render(
-        <UIPlaygroundTab serverConfig={serverConfig} serverName="test-server" />
+        <UIPlaygroundTab
+          serverConfig={serverConfig}
+          serverName="test-server"
+        />,
       );
 
       await waitFor(() => {
@@ -337,15 +361,12 @@ describe("UIPlaygroundTab", () => {
       const serverConfig = createServerConfig();
 
       render(
-        <UIPlaygroundTab
-          serverConfig={serverConfig}
-          serverName="my-server"
-        />
+        <UIPlaygroundTab serverConfig={serverConfig} serverName="my-server" />,
       );
 
       await waitFor(() => {
         expect(screen.getByTestId("server-name")).toHaveTextContent(
-          "my-server"
+          "my-server",
         );
       });
     });
@@ -359,7 +380,10 @@ describe("UIPlaygroundTab", () => {
       };
 
       render(
-        <UIPlaygroundTab serverConfig={serverConfig} serverName="test-server" />
+        <UIPlaygroundTab
+          serverConfig={serverConfig}
+          serverName="test-server"
+        />,
       );
 
       await waitFor(() => {
@@ -369,7 +393,7 @@ describe("UIPlaygroundTab", () => {
       fireEvent.click(screen.getByTestId("tool-test-tool"));
 
       expect(mockUIPlaygroundStore.setSelectedTool).toHaveBeenCalledWith(
-        "test-tool"
+        "test-tool",
       );
     });
   });
@@ -380,7 +404,10 @@ describe("UIPlaygroundTab", () => {
       mockUIPlaygroundStore.isSidebarVisible = true;
 
       render(
-        <UIPlaygroundTab serverConfig={serverConfig} serverName="test-server" />
+        <UIPlaygroundTab
+          serverConfig={serverConfig}
+          serverName="test-server"
+        />,
       );
 
       await waitFor(() => {
@@ -397,7 +424,10 @@ describe("UIPlaygroundTab", () => {
       mockUIPlaygroundStore.isSidebarVisible = false;
 
       render(
-        <UIPlaygroundTab serverConfig={serverConfig} serverName="test-server" />
+        <UIPlaygroundTab
+          serverConfig={serverConfig}
+          serverName="test-server"
+        />,
       );
 
       await waitFor(() => {
@@ -416,7 +446,10 @@ describe("UIPlaygroundTab", () => {
       mockUIPlaygroundStore.isExecuting = true;
 
       render(
-        <UIPlaygroundTab serverConfig={serverConfig} serverName="test-server" />
+        <UIPlaygroundTab
+          serverConfig={serverConfig}
+          serverName="test-server"
+        />,
       );
 
       await waitFor(() => {
@@ -430,13 +463,16 @@ describe("UIPlaygroundTab", () => {
       const serverConfig = createServerConfig();
 
       render(
-        <UIPlaygroundTab serverConfig={serverConfig} serverName="test-server" />
+        <UIPlaygroundTab
+          serverConfig={serverConfig}
+          serverName="test-server"
+        />,
       );
 
       await waitFor(() => {
         expect(mockUIPlaygroundStore.updateGlobal).toHaveBeenCalledWith(
           "theme",
-          "light"
+          "light",
         );
       });
     });
@@ -447,7 +483,7 @@ describe("UIPlaygroundTab", () => {
       const serverConfig = createServerConfig();
 
       const { rerender } = render(
-        <UIPlaygroundTab serverConfig={serverConfig} serverName="server-1" />
+        <UIPlaygroundTab serverConfig={serverConfig} serverName="server-1" />,
       );
 
       await waitFor(() => {
@@ -455,7 +491,7 @@ describe("UIPlaygroundTab", () => {
       });
 
       rerender(
-        <UIPlaygroundTab serverConfig={serverConfig} serverName="server-2" />
+        <UIPlaygroundTab serverConfig={serverConfig} serverName="server-2" />,
       );
 
       await waitFor(() => {
@@ -467,14 +503,16 @@ describe("UIPlaygroundTab", () => {
       const serverConfig = createServerConfig();
 
       const { rerender } = render(
-        <UIPlaygroundTab serverConfig={serverConfig} serverName="server-1" />
+        <UIPlaygroundTab serverConfig={serverConfig} serverName="server-1" />,
       );
 
       await waitFor(() => {
         expect(mockListTools).toHaveBeenCalled();
       });
 
-      rerender(<UIPlaygroundTab serverConfig={undefined} serverName={undefined} />);
+      rerender(
+        <UIPlaygroundTab serverConfig={undefined} serverName={undefined} />,
+      );
 
       expect(screen.getByText("No Server Selected")).toBeInTheDocument();
     });

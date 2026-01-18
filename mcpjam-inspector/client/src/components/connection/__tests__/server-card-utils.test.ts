@@ -72,7 +72,7 @@ describe("getServerCommandDisplay", () => {
       args: ["-m", "mcp_server", "--port", "3000"],
     };
     expect(getServerCommandDisplay(config)).toBe(
-      "python -m mcp_server --port 3000"
+      "python -m mcp_server --port 3000",
     );
   });
 

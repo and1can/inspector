@@ -2,7 +2,11 @@
  * Test data factories for creating consistent test data.
  * Uses factory pattern to generate unique instances with sensible defaults.
  */
-import type { ServerWithName, Workspace, ConnectionStatus } from "@/state/app-types";
+import type {
+  ServerWithName,
+  Workspace,
+  ConnectionStatus,
+} from "@/state/app-types";
 import type { MCPServerConfig } from "@/sdk";
 
 // Counter for generating unique IDs
@@ -20,7 +24,7 @@ export function resetFactoryIds(): void {
  * Creates a server configuration object
  */
 export function createServerConfig(
-  overrides: Partial<MCPServerConfig> = {}
+  overrides: Partial<MCPServerConfig> = {},
 ): MCPServerConfig {
   return {
     command: "node",
@@ -34,7 +38,7 @@ export function createServerConfig(
  */
 export function createHttpServerConfig(
   url: string,
-  overrides: Partial<MCPServerConfig> = {}
+  overrides: Partial<MCPServerConfig> = {},
 ): MCPServerConfig {
   return {
     url: new URL(url),
@@ -46,7 +50,7 @@ export function createHttpServerConfig(
  * Creates a ServerWithName object with sensible defaults
  */
 export function createServer(
-  overrides: Partial<ServerWithName> = {}
+  overrides: Partial<ServerWithName> = {},
 ): ServerWithName {
   const name = overrides.name || uniqueId("server");
   return {
@@ -64,7 +68,7 @@ export function createServer(
  * Creates a connected server
  */
 export function createConnectedServer(
-  overrides: Partial<ServerWithName> = {}
+  overrides: Partial<ServerWithName> = {},
 ): ServerWithName {
   return createServer({
     connectionStatus: "connected",
@@ -78,7 +82,7 @@ export function createConnectedServer(
  */
 export function createOAuthServer(
   url: string,
-  overrides: Partial<ServerWithName> = {}
+  overrides: Partial<ServerWithName> = {},
 ): ServerWithName {
   return createServer({
     config: createHttpServerConfig(url),
@@ -96,9 +100,7 @@ export function createOAuthServer(
 /**
  * Creates a Workspace object with sensible defaults
  */
-export function createWorkspace(
-  overrides: Partial<Workspace> = {}
-): Workspace {
+export function createWorkspace(overrides: Partial<Workspace> = {}): Workspace {
   const id = overrides.id || uniqueId("workspace");
   return {
     id,
@@ -117,7 +119,7 @@ export function createWorkspace(
  */
 export function createWorkspaceWithServers(
   serverCount: number,
-  overrides: Partial<Workspace> = {}
+  overrides: Partial<Workspace> = {},
 ): Workspace {
   const servers: Record<string, ServerWithName> = {};
   for (let i = 0; i < serverCount; i++) {
@@ -136,7 +138,7 @@ export function createTool(
     description: string;
     inputSchema: object;
     outputSchema?: object;
-  }> = {}
+  }> = {},
 ) {
   const name = overrides.name || uniqueId("tool");
   return {
@@ -162,7 +164,7 @@ export function createResource(
     name: string;
     mimeType: string;
     description?: string;
-  }> = {}
+  }> = {},
 ) {
   const name = overrides.name || uniqueId("resource");
   return {
@@ -180,8 +182,12 @@ export function createPrompt(
   overrides: Partial<{
     name: string;
     description: string;
-    arguments?: Array<{ name: string; description?: string; required?: boolean }>;
-  }> = {}
+    arguments?: Array<{
+      name: string;
+      description?: string;
+      required?: boolean;
+    }>;
+  }> = {},
 ) {
   const name = overrides.name || uniqueId("prompt");
   return {
@@ -207,7 +213,7 @@ export function createInitializationInfo(
       name: string;
       version: string;
     };
-  }> = {}
+  }> = {},
 ) {
   return {
     protocolVersion: "2024-11-05",
@@ -231,7 +237,7 @@ export function createInitializationInfo(
  */
 export function createApiResponse<T>(
   data: T,
-  success = true
+  success = true,
 ): { success: boolean; data?: T; error?: string } {
   if (success) {
     return { success: true, data };
@@ -242,10 +248,7 @@ export function createApiResponse<T>(
 /**
  * Creates a mock fetch response
  */
-export function createFetchResponse<T>(
-  data: T,
-  status = 200
-): Response {
+export function createFetchResponse<T>(data: T, status = 200): Response {
   return {
     ok: status >= 200 && status < 300,
     status,
@@ -260,7 +263,7 @@ export function createFetchResponse<T>(
  */
 export function createMany<T>(
   factory: (index: number) => T,
-  count: number
+  count: number,
 ): T[] {
   return Array.from({ length: count }, (_, i) => factory(i));
 }

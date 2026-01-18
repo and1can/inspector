@@ -77,7 +77,11 @@ describe("Thread", () => {
 
     it("renders user messages", () => {
       const messages = [
-        createMessage({ id: "msg-1", role: "user", parts: [{ type: "text", text: "Hello" }] }),
+        createMessage({
+          id: "msg-1",
+          role: "user",
+          parts: [{ type: "text", text: "Hello" }],
+        }),
       ];
 
       render(<Thread {...defaultProps} messages={messages} />);
@@ -85,7 +89,7 @@ describe("Thread", () => {
       expect(screen.getByTestId("message-msg-1")).toBeInTheDocument();
       expect(screen.getByTestId("message-msg-1")).toHaveAttribute(
         "data-role",
-        "user"
+        "user",
       );
     });
 
@@ -103,7 +107,7 @@ describe("Thread", () => {
       expect(screen.getByTestId("message-msg-1")).toBeInTheDocument();
       expect(screen.getByTestId("message-msg-1")).toHaveAttribute(
         "data-role",
-        "assistant"
+        "assistant",
       );
     });
 
@@ -142,14 +146,16 @@ describe("Thread", () => {
     it("hides thinking indicator when not loading", () => {
       render(<Thread {...defaultProps} isLoading={false} />);
 
-      expect(screen.queryByTestId("thinking-indicator")).not.toBeInTheDocument();
+      expect(
+        screen.queryByTestId("thinking-indicator"),
+      ).not.toBeInTheDocument();
     });
 
     it("shows thinking indicator with model name", () => {
       render(<Thread {...defaultProps} isLoading={true} />);
 
       expect(screen.getByTestId("thinking-indicator")).toHaveTextContent(
-        "GPT-4"
+        "GPT-4",
       );
     });
   });
@@ -159,13 +165,11 @@ describe("Thread", () => {
       const messages = [createMessage({ id: "msg-1" })];
 
       const { container } = render(
-        <Thread {...defaultProps} messages={messages} />
+        <Thread {...defaultProps} messages={messages} />,
       );
 
       // Initially no PiP spacer
-      expect(
-        container.querySelector(".h-\\[480px\\]")
-      ).not.toBeInTheDocument();
+      expect(container.querySelector(".h-\\[480px\\]")).not.toBeInTheDocument();
     });
   });
 
@@ -175,7 +179,7 @@ describe("Thread", () => {
 
       // Overlay only shows when fullscreenWidgetId is set (handled by internal state)
       expect(
-        screen.queryByTestId("fullscreen-chat-overlay")
+        screen.queryByTestId("fullscreen-chat-overlay"),
       ).not.toBeInTheDocument();
     });
   });
@@ -190,7 +194,7 @@ describe("Thread", () => {
           {...defaultProps}
           messages={messages}
           sendFollowUpMessage={sendFollowUp}
-        />
+        />,
       );
 
       // The callback is passed down - we verify the component renders
@@ -203,7 +207,7 @@ describe("Thread", () => {
       const messages = [createMessage({ id: "msg-1" })];
 
       render(
-        <Thread {...defaultProps} messages={messages} displayMode="inline" />
+        <Thread {...defaultProps} messages={messages} displayMode="inline" />,
       );
 
       expect(screen.getByTestId("message-msg-1")).toBeInTheDocument();
@@ -219,7 +223,7 @@ describe("Thread", () => {
           messages={messages}
           displayMode="inline"
           onDisplayModeChange={onDisplayModeChange}
-        />
+        />,
       );
 
       // The callback is passed down to MessageView

@@ -94,7 +94,7 @@ describe("session-token module", () => {
       sessionToken.getAuthHeaders();
 
       expect(warnSpy).toHaveBeenCalledWith(
-        "[Auth] Session token not available"
+        "[Auth] Session token not available",
       );
     });
   });
@@ -118,7 +118,7 @@ describe("session-token module", () => {
 
     it("returns same-origin URLs as relative paths", () => {
       const result = sessionToken.addTokenToUrl(
-        `${window.location.origin}/api/mcp/stream`
+        `${window.location.origin}/api/mcp/stream`,
       );
 
       expect(result).toBe("/api/mcp/stream?_token=url-token");
@@ -145,7 +145,7 @@ describe("session-token module", () => {
       sessionToken.addTokenToUrl("/api/mcp/stream");
 
       expect(warnSpy).toHaveBeenCalledWith(
-        "[Auth] Session token not available for URL"
+        "[Auth] Session token not available for URL",
       );
     });
   });
@@ -179,7 +179,7 @@ describe("session-token module", () => {
       } as Response);
 
       await expect(sessionToken.initializeSessionToken()).rejects.toThrow(
-        "Failed to get session token: 500"
+        "Failed to get session token: 500",
       );
     });
 
@@ -231,7 +231,7 @@ describe("session-token module", () => {
                 json: () => Promise.resolve({ token: "dedup-token" }),
               } as Response);
             }, 10);
-          })
+          }),
       );
 
       // Fire multiple concurrent requests

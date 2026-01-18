@@ -227,7 +227,7 @@ describe("Auth Integration", () => {
   describe("query parameter authentication for SSE", () => {
     it("accepts SSE route with token in query parameter", async () => {
       const res = await app.request(
-        `/api/mcp/servers/rpc/stream?_token=${validToken}`
+        `/api/mcp/servers/rpc/stream?_token=${validToken}`,
       );
 
       expect(res.status).toBe(200);
@@ -235,7 +235,7 @@ describe("Auth Integration", () => {
 
     it("rejects SSE route with invalid query token", async () => {
       const res = await app.request(
-        "/api/mcp/servers/rpc/stream?_token=invalid"
+        "/api/mcp/servers/rpc/stream?_token=invalid",
       );
 
       expect(res.status).toBe(401);

@@ -75,7 +75,7 @@ vi.mock("../logger-view", () => ({
 
 describe("ToolsTab", () => {
   const createServerConfig = (
-    overrides: Partial<MCPServerConfig> = {}
+    overrides: Partial<MCPServerConfig> = {},
   ): MCPServerConfig =>
     ({
       transportType: "stdio",
@@ -101,8 +101,8 @@ describe("ToolsTab", () => {
       expect(screen.getByText("No Server Selected")).toBeInTheDocument();
       expect(
         screen.getByText(
-          "Connect to an MCP server to explore and test its available tools."
-        )
+          "Connect to an MCP server to explore and test its available tools.",
+        ),
       ).toBeInTheDocument();
     });
 
@@ -224,7 +224,7 @@ describe("ToolsTab", () => {
       // After selection, the execute button should be visible
       await waitFor(() => {
         expect(
-          screen.getByRole("button", { name: /execute/i })
+          screen.getByRole("button", { name: /execute/i }),
         ).toBeInTheDocument();
       });
     });
@@ -336,7 +336,7 @@ describe("ToolsTab", () => {
       // Wait for execute button to be available
       await waitFor(() => {
         expect(
-          screen.getByRole("button", { name: /execute/i })
+          screen.getByRole("button", { name: /execute/i }),
         ).toBeInTheDocument();
       });
 
@@ -349,7 +349,7 @@ describe("ToolsTab", () => {
           "test-server",
           "greet",
           expect.any(Object),
-          undefined
+          undefined,
         );
       });
     });
@@ -376,7 +376,7 @@ describe("ToolsTab", () => {
       });
 
       const { rerender } = render(
-        <ToolsTab serverConfig={serverConfig} serverName="test-server" />
+        <ToolsTab serverConfig={serverConfig} serverName="test-server" />,
       );
 
       await waitFor(() => {
@@ -393,11 +393,13 @@ describe("ToolsTab", () => {
       const serverConfig = createServerConfig();
 
       mockListTools.mockResolvedValue({
-        tools: [{ name: "tool-from-server-1", inputSchema: { type: "object" } }],
+        tools: [
+          { name: "tool-from-server-1", inputSchema: { type: "object" } },
+        ],
       });
 
       const { rerender } = render(
-        <ToolsTab serverConfig={serverConfig} serverName="server-1" />
+        <ToolsTab serverConfig={serverConfig} serverName="server-1" />,
       );
 
       await waitFor(() => {
@@ -405,12 +407,12 @@ describe("ToolsTab", () => {
       });
 
       mockListTools.mockResolvedValue({
-        tools: [{ name: "tool-from-server-2", inputSchema: { type: "object" } }],
+        tools: [
+          { name: "tool-from-server-2", inputSchema: { type: "object" } },
+        ],
       });
 
-      rerender(
-        <ToolsTab serverConfig={serverConfig} serverName="server-2" />
-      );
+      rerender(<ToolsTab serverConfig={serverConfig} serverName="server-2" />);
 
       await waitFor(() => {
         expect(mockListTools).toHaveBeenCalledWith("server-2");

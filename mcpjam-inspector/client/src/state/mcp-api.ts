@@ -46,9 +46,12 @@ export async function testConnection(
 }
 
 export async function deleteServer(serverId: string) {
-  const res = await authFetch(`/api/mcp/servers/${encodeURIComponent(serverId)}`, {
-    method: "DELETE",
-  });
+  const res = await authFetch(
+    `/api/mcp/servers/${encodeURIComponent(serverId)}`,
+    {
+      method: "DELETE",
+    },
+  );
   return res.json();
 }
 

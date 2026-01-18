@@ -24,20 +24,44 @@ vi.mock("lucide-react", () => ({
 // Mock UI components
 vi.mock("@/components/ui/button", () => ({
   Button: ({ children, onClick, className, ...props }: any) => (
-    <button onClick={onClick} className={className} {...props}>{children}</button>
+    <button onClick={onClick} className={className} {...props}>
+      {children}
+    </button>
   ),
 }));
 
 vi.mock("@/components/ui/tooltip", () => ({
   Tooltip: ({ children }: { children: React.ReactNode }) => <>{children}</>,
-  TooltipContent: ({ children }: { children: React.ReactNode }) => <div className="tooltip-content">{children}</div>,
-  TooltipTrigger: ({ children, asChild }: { children: React.ReactNode; asChild?: boolean }) => <>{children}</>,
+  TooltipContent: ({ children }: { children: React.ReactNode }) => (
+    <div className="tooltip-content">{children}</div>
+  ),
+  TooltipTrigger: ({
+    children,
+    asChild,
+  }: {
+    children: React.ReactNode;
+    asChild?: boolean;
+  }) => <>{children}</>,
 }));
 
 vi.mock("@/components/ui/popover", () => ({
-  Popover: ({ children, open }: { children: React.ReactNode; open?: boolean }) => <>{children}</>,
-  PopoverContent: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
-  PopoverTrigger: ({ children, asChild }: { children: React.ReactNode; asChild?: boolean }) => <>{children}</>,
+  Popover: ({
+    children,
+    open,
+  }: {
+    children: React.ReactNode;
+    open?: boolean;
+  }) => <>{children}</>,
+  PopoverContent: ({ children }: { children: React.ReactNode }) => (
+    <div>{children}</div>
+  ),
+  PopoverTrigger: ({
+    children,
+    asChild,
+  }: {
+    children: React.ReactNode;
+    asChild?: boolean;
+  }) => <>{children}</>,
 }));
 
 vi.mock("@/components/ui/input", () => ({
@@ -119,12 +143,16 @@ vi.mock("@/hooks/use-chat-session", () => ({
 
 // Mock use-stick-to-bottom
 vi.mock("use-stick-to-bottom", () => {
-  const StickToBottomComponent = ({ children }: { children: React.ReactNode }) => (
-    <div data-testid="stick-to-bottom">{children}</div>
-  );
-  StickToBottomComponent.Content = ({ children }: { children: React.ReactNode }) => (
-    <div data-testid="stick-to-bottom-content">{children}</div>
-  );
+  const StickToBottomComponent = ({
+    children,
+  }: {
+    children: React.ReactNode;
+  }) => <div data-testid="stick-to-bottom">{children}</div>;
+  StickToBottomComponent.Content = ({
+    children,
+  }: {
+    children: React.ReactNode;
+  }) => <div data-testid="stick-to-bottom-content">{children}</div>;
 
   return {
     StickToBottom: StickToBottomComponent,
@@ -213,7 +241,7 @@ vi.mock(
           <button onClick={onCancel}>Cancel</button>
         </div>
       ) : null,
-  })
+  }),
 );
 
 // Mock FullscreenChatOverlay
@@ -359,7 +387,7 @@ describe("PlaygroundMain", () => {
       render(<PlaygroundMain {...defaultProps} />);
 
       expect(
-        screen.getByText("Test ChatGPT Apps and MCP Apps")
+        screen.getByText("Test ChatGPT Apps and MCP Apps"),
       ).toBeInTheDocument();
     });
 
@@ -437,7 +465,7 @@ describe("PlaygroundMain", () => {
       render(<PlaygroundMain {...defaultProps} />);
 
       expect(
-        screen.getByPlaceholderText("Ask something to render UI...")
+        screen.getByPlaceholderText("Ask something to render UI..."),
       ).toBeInTheDocument();
     });
 
@@ -447,7 +475,7 @@ describe("PlaygroundMain", () => {
       render(<PlaygroundMain {...defaultProps} />);
 
       expect(
-        screen.getByPlaceholderText("Sign in to use chat")
+        screen.getByPlaceholderText("Sign in to use chat"),
       ).toBeInTheDocument();
     });
   });
@@ -463,7 +491,7 @@ describe("PlaygroundMain", () => {
           {...defaultProps}
           isExecuting={true}
           executingToolName="read_file"
-        />
+        />,
       );
 
       expect(screen.getByText("Invoking")).toBeInTheDocument();
@@ -481,7 +509,7 @@ describe("PlaygroundMain", () => {
           isExecuting={true}
           executingToolName="read_file"
           invokingMessage="Reading your file..."
-        />
+        />,
       );
 
       expect(screen.getByText("Reading your file...")).toBeInTheDocument();
@@ -499,7 +527,7 @@ describe("PlaygroundMain", () => {
 
       expect(screen.getByTestId("error-box")).toBeInTheDocument();
       expect(screen.getByTestId("error-box")).toHaveTextContent(
-        "Something went wrong"
+        "Something went wrong",
       );
     });
   });
@@ -515,7 +543,7 @@ describe("PlaygroundMain", () => {
       // Find trash icon button
       const buttons = screen.getAllByRole("button");
       const clearButton = buttons.find(
-        (btn) => btn.querySelector(".lucide-trash2") !== null
+        (btn) => btn.querySelector(".lucide-trash2") !== null,
       );
       expect(clearButton).toBeDefined();
     });
@@ -528,7 +556,7 @@ describe("PlaygroundMain", () => {
       // Should not have trash button
       const buttons = screen.getAllByRole("button");
       const clearButton = buttons.find(
-        (btn) => btn.querySelector(".lucide-trash2") !== null
+        (btn) => btn.querySelector(".lucide-trash2") !== null,
       );
       expect(clearButton).toBeUndefined();
     });
@@ -551,7 +579,7 @@ describe("PlaygroundMain", () => {
           {...defaultProps}
           deviceType="mobile"
           onDeviceTypeChange={onDeviceTypeChange}
-        />
+        />,
       );
 
       // Click on first device selector element
@@ -588,7 +616,7 @@ describe("PlaygroundMain", () => {
           {...defaultProps}
           pendingExecution={pendingExecution}
           onExecutionInjected={onExecutionInjected}
-        />
+        />,
       );
 
       await waitFor(() => {

@@ -178,7 +178,9 @@ export function createHonoApp() {
     const host = c.req.header("Host");
 
     if (!isLocalhostRequest(host)) {
-      appLogger.warn(`[Security] Token request denied - non-localhost Host: ${host}`);
+      appLogger.warn(
+        `[Security] Token request denied - non-localhost Host: ${host}`,
+      );
       return c.json({ error: "Token only available via localhost" }, 403);
     }
 
@@ -227,7 +229,9 @@ export function createHonoApp() {
           html = html.replace("</head>", `${tokenScript}</head>`);
         } else {
           // Non-localhost access - no token (security measure)
-          appLogger.warn(`[Security] Token not injected - non-localhost Host: ${host}`);
+          appLogger.warn(
+            `[Security] Token not injected - non-localhost Host: ${host}`,
+          );
           const warningScript = `<script>console.error("MCPJam: Access via localhost required for full functionality");</script>`;
           html = html.replace("</head>", `${warningScript}</head>`);
         }

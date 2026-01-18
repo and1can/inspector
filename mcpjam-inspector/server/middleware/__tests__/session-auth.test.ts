@@ -7,10 +7,7 @@
 
 import { describe, it, expect, beforeEach, vi } from "vitest";
 import { Hono } from "hono";
-import {
-  sessionAuthMiddleware,
-  scrubTokenFromUrl,
-} from "../session-auth.js";
+import { sessionAuthMiddleware, scrubTokenFromUrl } from "../session-auth.js";
 import {
   generateSessionToken,
   getSessionToken,
@@ -29,7 +26,7 @@ function createTestApp(): Hono {
   app.get("/api/mcp/test", (c) => c.json({ message: "protected route" }));
   app.post("/api/mcp/test", (c) => c.json({ message: "protected post route" }));
   app.get("/api/mcp/servers/rpc/stream", (c) =>
-    c.json({ message: "sse route" })
+    c.json({ message: "sse route" }),
   );
 
   // Unprotected routes
@@ -104,7 +101,7 @@ describe("sessionAuthMiddleware", () => {
         `/api/mcp/test?_token=invalid-query-token`,
         {
           headers: { "X-MCP-Session-Auth": `Bearer ${validToken}` },
-        }
+        },
       );
 
       // Should succeed because header token is valid
@@ -272,14 +269,14 @@ describe("scrubTokenFromUrl", () => {
   it("scrubs token from URL with multiple query params", () => {
     const url = "/api/test?serverId=foo&_token=abc123secret&other=value";
     expect(scrubTokenFromUrl(url)).toBe(
-      "/api/test?serverId=foo&_token=[REDACTED]&other=value"
+      "/api/test?serverId=foo&_token=[REDACTED]&other=value",
     );
   });
 
   it("scrubs token when it's the last param", () => {
     const url = "/api/test?serverId=foo&_token=abc123secret";
     expect(scrubTokenFromUrl(url)).toBe(
-      "/api/test?serverId=foo&_token=[REDACTED]"
+      "/api/test?serverId=foo&_token=[REDACTED]",
     );
   });
 

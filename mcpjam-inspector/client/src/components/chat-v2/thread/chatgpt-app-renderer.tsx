@@ -336,26 +336,29 @@ function useWidgetFetch(
         // Host-controlled values per SDK spec
         const userLocation = await getUserLocation(); // Coarse IP-based location
 
-        const storeResponse = await authFetch("/api/apps/chatgpt/widget/store", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            serverId,
-            uri: outputTemplate,
-            toolInput: resolvedToolInput,
-            toolOutput: resolvedToolOutput,
-            toolResponseMetadata,
-            toolId: resolvedToolCallId,
-            toolName,
-            theme: themeMode,
-            locale, // BCP 47 locale from host
-            deviceType, // Device type from host (playground setting or computed)
-            userLocation, // Coarse location { country, region, city } or null
-            cspMode, // CSP enforcement mode
-            capabilities, // Device capabilities { hover, touch }
-            safeAreaInsets, // Safe area insets { top, bottom, left, right }
-          }),
-        });
+        const storeResponse = await authFetch(
+          "/api/apps/chatgpt/widget/store",
+          {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              serverId,
+              uri: outputTemplate,
+              toolInput: resolvedToolInput,
+              toolOutput: resolvedToolOutput,
+              toolResponseMetadata,
+              toolId: resolvedToolCallId,
+              toolName,
+              theme: themeMode,
+              locale, // BCP 47 locale from host
+              deviceType, // Device type from host (playground setting or computed)
+              userLocation, // Coarse location { country, region, city } or null
+              cspMode, // CSP enforcement mode
+              capabilities, // Device capabilities { hover, touch }
+              safeAreaInsets, // Safe area insets { top, bottom, left, right }
+            }),
+          },
+        );
         if (!storeResponse.ok)
           throw new Error(
             `Failed to store widget data: ${storeResponse.statusText}`,

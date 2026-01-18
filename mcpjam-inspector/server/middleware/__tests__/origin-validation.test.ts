@@ -181,7 +181,8 @@ describe("originValidationMiddleware", () => {
 
   describe("custom allowed origins via environment variable", () => {
     it("allows custom origins from ALLOWED_ORIGINS env var", async () => {
-      process.env.ALLOWED_ORIGINS = "http://custom.example.com,http://another.com";
+      process.env.ALLOWED_ORIGINS =
+        "http://custom.example.com,http://another.com";
 
       // Need to recreate app to pick up new env
       app = createTestApp();
@@ -216,7 +217,8 @@ describe("originValidationMiddleware", () => {
     });
 
     it("trims whitespace from custom origins", async () => {
-      process.env.ALLOWED_ORIGINS = "  http://spacy.com  ,  http://another.com  ";
+      process.env.ALLOWED_ORIGINS =
+        "  http://spacy.com  ,  http://another.com  ";
 
       app = createTestApp();
 

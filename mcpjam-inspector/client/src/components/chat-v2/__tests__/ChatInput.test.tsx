@@ -172,7 +172,7 @@ describe("ChatInput", () => {
       // The submit button should be visually disabled
       const buttons = screen.getAllByRole("button");
       const submitButton = buttons.find(
-        (btn) => btn.querySelector("svg.lucide-arrow-up") !== null
+        (btn) => btn.querySelector("svg.lucide-arrow-up") !== null,
       );
       if (submitButton) {
         expect(submitButton).toBeDisabled();
@@ -184,7 +184,7 @@ describe("ChatInput", () => {
 
       const buttons = screen.getAllByRole("button");
       const submitButton = buttons.find(
-        (btn) => btn.querySelector("svg.lucide-arrow-up") !== null
+        (btn) => btn.querySelector("svg.lucide-arrow-up") !== null,
       );
       if (submitButton) {
         expect(submitButton).not.toBeDisabled();
@@ -215,7 +215,7 @@ describe("ChatInput", () => {
       // Stop button has Square icon
       const buttons = screen.getAllByRole("button");
       const stopButton = buttons.find(
-        (btn) => btn.querySelector("svg.lucide-square") !== null
+        (btn) => btn.querySelector("svg.lucide-square") !== null,
       );
       expect(stopButton).toBeDefined();
     });
@@ -226,7 +226,7 @@ describe("ChatInput", () => {
 
       const buttons = screen.getAllByRole("button");
       const stopButton = buttons.find(
-        (btn) => btn.querySelector("svg.lucide-square") !== null
+        (btn) => btn.querySelector("svg.lucide-square") !== null,
       );
       if (stopButton) {
         fireEvent.click(stopButton);
@@ -238,9 +238,7 @@ describe("ChatInput", () => {
   describe("model selection", () => {
     it("calls onModelChange when model is changed", () => {
       const onModelChange = vi.fn();
-      render(
-        <ChatInput {...defaultProps} onModelChange={onModelChange} />
-      );
+      render(<ChatInput {...defaultProps} onModelChange={onModelChange} />);
 
       fireEvent.click(screen.getByTestId("model-selector"));
 
@@ -251,14 +249,18 @@ describe("ChatInput", () => {
   describe("MCP prompt results", () => {
     it("renders MCP prompt cards when results exist", () => {
       const mcpPromptResults = [
-        { promptName: "test-prompt", result: "test result", serverName: "server" },
+        {
+          promptName: "test-prompt",
+          result: "test result",
+          serverName: "server",
+        },
       ];
 
       render(
         <ChatInput
           {...defaultProps}
           mcpPromptResults={mcpPromptResults as any}
-        />
+        />,
       );
 
       expect(screen.getByTestId("mcp-prompt-card")).toBeInTheDocument();
@@ -267,7 +269,11 @@ describe("ChatInput", () => {
     it("removes prompt result when card is dismissed", () => {
       const onChangeMcpPromptResults = vi.fn();
       const mcpPromptResults = [
-        { promptName: "test-prompt", result: "test result", serverName: "server" },
+        {
+          promptName: "test-prompt",
+          result: "test result",
+          serverName: "server",
+        },
       ];
 
       render(
@@ -275,7 +281,7 @@ describe("ChatInput", () => {
           {...defaultProps}
           mcpPromptResults={mcpPromptResults as any}
           onChangeMcpPromptResults={onChangeMcpPromptResults}
-        />
+        />,
       );
 
       fireEvent.click(screen.getByTestId("mcp-prompt-card"));
@@ -285,7 +291,11 @@ describe("ChatInput", () => {
 
     it("enables submit when MCP prompts exist even without text", () => {
       const mcpPromptResults = [
-        { promptName: "test-prompt", result: "test result", serverName: "server" },
+        {
+          promptName: "test-prompt",
+          result: "test result",
+          serverName: "server",
+        },
       ];
 
       render(
@@ -293,12 +303,12 @@ describe("ChatInput", () => {
           {...defaultProps}
           value=""
           mcpPromptResults={mcpPromptResults as any}
-        />
+        />,
       );
 
       const buttons = screen.getAllByRole("button");
       const submitButton = buttons.find(
-        (btn) => btn.querySelector("svg.lucide-arrow-up") !== null
+        (btn) => btn.querySelector("svg.lucide-arrow-up") !== null,
       );
       if (submitButton) {
         expect(submitButton).not.toBeDisabled();
@@ -309,9 +319,7 @@ describe("ChatInput", () => {
   describe("keyboard handling", () => {
     it("submits on Enter without Shift", () => {
       const onSubmit = vi.fn((e) => e.preventDefault());
-      render(
-        <ChatInput {...defaultProps} value="Hello" onSubmit={onSubmit} />
-      );
+      render(<ChatInput {...defaultProps} value="Hello" onSubmit={onSubmit} />);
 
       const textarea = screen.getByPlaceholderText("Type your message...");
       fireEvent.keyDown(textarea, { key: "Enter", shiftKey: false });
@@ -322,9 +330,7 @@ describe("ChatInput", () => {
 
     it("does not submit on Shift+Enter", () => {
       const onSubmit = vi.fn((e) => e.preventDefault());
-      render(
-        <ChatInput {...defaultProps} value="Hello" onSubmit={onSubmit} />
-      );
+      render(<ChatInput {...defaultProps} value="Hello" onSubmit={onSubmit} />);
 
       const textarea = screen.getByPlaceholderText("Type your message...");
       fireEvent.keyDown(textarea, { key: "Enter", shiftKey: true });
@@ -352,7 +358,7 @@ describe("ChatInput", () => {
             outputTokens: 50,
             totalTokens: 150,
           }}
-        />
+        />,
       );
 
       expect(screen.getByTestId("context")).toBeInTheDocument();

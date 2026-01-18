@@ -67,7 +67,9 @@ vi.mock("../chat-v2/chat-input/dialogs/confirm-chat-reset-dialog", () => ({
 }));
 
 describe("ActiveServerSelector", () => {
-  const createServer = (overrides: Partial<ServerWithName> = {}): ServerWithName =>
+  const createServer = (
+    overrides: Partial<ServerWithName> = {},
+  ): ServerWithName =>
     ({
       name: "test-server",
       connectionStatus: "connected",
@@ -108,7 +110,7 @@ describe("ActiveServerSelector", () => {
           {...defaultProps}
           serverConfigs={serverConfigs}
           selectedServer="server-1"
-        />
+        />,
       );
 
       expect(screen.getByText("server-1")).toBeInTheDocument();
@@ -138,7 +140,7 @@ describe("ActiveServerSelector", () => {
           {...defaultProps}
           serverConfigs={serverConfigs}
           selectedServer="stdio-server"
-        />
+        />,
       );
 
       expect(screen.getByText("STDIO")).toBeInTheDocument();
@@ -160,7 +162,7 @@ describe("ActiveServerSelector", () => {
           {...defaultProps}
           serverConfigs={serverConfigs}
           selectedServer="http-server"
-        />
+        />,
       );
 
       expect(screen.getByText("HTTP")).toBeInTheDocument();
@@ -181,7 +183,7 @@ describe("ActiveServerSelector", () => {
           serverConfigs={serverConfigs}
           selectedServer="server-1"
           onServerChange={onServerChange}
-        />
+        />,
       );
 
       fireEvent.click(screen.getByText("server-2"));
@@ -201,7 +203,7 @@ describe("ActiveServerSelector", () => {
           serverConfigs={serverConfigs}
           selectedServer="server-1"
           onServerChange={onServerChange}
-        />
+        />,
       );
 
       // Click on the same server
@@ -222,7 +224,7 @@ describe("ActiveServerSelector", () => {
           {...defaultProps}
           serverConfigs={serverConfigs}
           selectedServer="server-1"
-        />
+        />,
       );
 
       const selectedButton = screen.getByText("server-1").closest("button");
@@ -242,12 +244,14 @@ describe("ActiveServerSelector", () => {
           serverConfigs={serverConfigs}
           isMultiSelectEnabled={true}
           selectedMultipleServers={[]}
-        />
+        />,
       );
 
       // Check icon should be present (inside checkbox area)
       const serverButton = screen.getByText("server-1").closest("button");
-      expect(serverButton?.querySelector(".w-4.h-4.rounded")).toBeInTheDocument();
+      expect(
+        serverButton?.querySelector(".w-4.h-4.rounded"),
+      ).toBeInTheDocument();
     });
 
     it("calls onMultiServerToggle in multi-select mode", () => {
@@ -263,7 +267,7 @@ describe("ActiveServerSelector", () => {
           isMultiSelectEnabled={true}
           selectedMultipleServers={[]}
           onMultiServerToggle={onMultiServerToggle}
-        />
+        />,
       );
 
       fireEvent.click(screen.getByText("server-1"));
@@ -283,17 +287,19 @@ describe("ActiveServerSelector", () => {
           serverConfigs={serverConfigs}
           isMultiSelectEnabled={true}
           selectedMultipleServers={["server-1"]}
-        />
+        />,
       );
 
       // The selected server should have a check icon
       const selectedButton = screen.getByText("server-1").closest("button");
-      expect(selectedButton?.querySelector("svg.lucide-check")).toBeInTheDocument();
+      expect(
+        selectedButton?.querySelector("svg.lucide-check"),
+      ).toBeInTheDocument();
 
       // Unselected server should not have check icon
       const unselectedButton = screen.getByText("server-2").closest("button");
       expect(
-        unselectedButton?.querySelector("svg.lucide-check")
+        unselectedButton?.querySelector("svg.lucide-check"),
       ).not.toBeInTheDocument();
     });
   });
@@ -312,12 +318,10 @@ describe("ActiveServerSelector", () => {
           {...defaultProps}
           serverConfigs={serverConfigs}
           selectedServer="server-1"
-        />
+        />,
       );
 
-      const indicator = screen
-        .getByTitle("Connected")
-        .closest(".rounded-full");
+      const indicator = screen.getByTitle("Connected").closest(".rounded-full");
       expect(indicator?.className).toContain("bg-green");
     });
 
@@ -334,7 +338,7 @@ describe("ActiveServerSelector", () => {
           {...defaultProps}
           serverConfigs={serverConfigs}
           selectedServer="server-1"
-        />
+        />,
       );
 
       const indicator = screen
@@ -356,7 +360,7 @@ describe("ActiveServerSelector", () => {
           {...defaultProps}
           serverConfigs={serverConfigs}
           selectedServer="server-1"
-        />
+        />,
       );
 
       const indicator = screen.getByTitle("Failed").closest(".rounded-full");
@@ -410,7 +414,7 @@ describe("ActiveServerSelector", () => {
           serverConfigs={serverConfigs}
           selectedServer="server-1"
           hasMessages={true}
-        />
+        />,
       );
 
       fireEvent.click(screen.getByText("server-2"));
@@ -432,7 +436,7 @@ describe("ActiveServerSelector", () => {
           selectedServer="server-1"
           hasMessages={true}
           onServerChange={onServerChange}
-        />
+        />,
       );
 
       fireEvent.click(screen.getByText("server-2"));
@@ -455,7 +459,7 @@ describe("ActiveServerSelector", () => {
           selectedServer="server-1"
           hasMessages={true}
           onServerChange={onServerChange}
-        />
+        />,
       );
 
       fireEvent.click(screen.getByText("server-2"));
@@ -478,7 +482,7 @@ describe("ActiveServerSelector", () => {
           serverConfigs={serverConfigs}
           showOnlyOpenAIAppsServers={true}
           openAiAppOrMcpAppsServers={new Set(["openai-server"])}
-        />
+        />,
       );
 
       expect(screen.getByText("openai-server")).toBeInTheDocument();
@@ -500,7 +504,7 @@ describe("ActiveServerSelector", () => {
           serverConfigs={serverConfigs}
           selectedServer="non-existent"
           onServerChange={onServerChange}
-        />
+        />,
       );
 
       await waitFor(() => {
@@ -521,7 +525,7 @@ describe("ActiveServerSelector", () => {
           selectedServer="non-existent"
           isMultiSelectEnabled={true}
           onServerChange={onServerChange}
-        />
+        />,
       );
 
       // Give time for any effects to run

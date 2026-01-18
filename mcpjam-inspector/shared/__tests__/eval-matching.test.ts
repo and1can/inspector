@@ -14,8 +14,8 @@ describe("argumentsMatch", () => {
     expect(
       argumentsMatch(
         { name: "test", value: 123 },
-        { name: "test", value: 123, extra: "ignored" }
-      )
+        { name: "test", value: 123, extra: "ignored" },
+      ),
     ).toBe(true);
   });
 
@@ -31,21 +31,21 @@ describe("argumentsMatch", () => {
     expect(
       argumentsMatch(
         { config: { nested: true } },
-        { config: { nested: true } }
-      )
+        { config: { nested: true } },
+      ),
     ).toBe(true);
 
     expect(
       argumentsMatch(
         { config: { nested: true } },
-        { config: { nested: false } }
-      )
+        { config: { nested: false } },
+      ),
     ).toBe(false);
   });
 
   it("handles arrays", () => {
     expect(argumentsMatch({ items: [1, 2, 3] }, { items: [1, 2, 3] })).toBe(
-      true
+      true,
     );
 
     expect(argumentsMatch({ items: [1, 2, 3] }, { items: [1, 2] })).toBe(false);

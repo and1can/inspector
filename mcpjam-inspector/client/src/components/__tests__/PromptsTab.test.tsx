@@ -56,8 +56,8 @@ describe("PromptsTab", () => {
       expect(screen.getByText("No Server Selected")).toBeInTheDocument();
       expect(
         screen.getByText(
-          "Connect to an MCP server to explore and test its available prompts."
-        )
+          "Connect to an MCP server to explore and test its available prompts.",
+        ),
       ).toBeInTheDocument();
     });
 
@@ -77,7 +77,7 @@ describe("PromptsTab", () => {
       ]);
 
       render(
-        <PromptsTab serverConfig={serverConfig} serverName="test-server" />
+        <PromptsTab serverConfig={serverConfig} serverName="test-server" />,
       );
 
       await waitFor(() => {
@@ -94,7 +94,7 @@ describe("PromptsTab", () => {
       ]);
 
       render(
-        <PromptsTab serverConfig={serverConfig} serverName="test-server" />
+        <PromptsTab serverConfig={serverConfig} serverName="test-server" />,
       );
 
       // First prompt is auto-selected, so both names appear (list + header)
@@ -116,7 +116,7 @@ describe("PromptsTab", () => {
       ]);
 
       render(
-        <PromptsTab serverConfig={serverConfig} serverName="test-server" />
+        <PromptsTab serverConfig={serverConfig} serverName="test-server" />,
       );
 
       await waitFor(() => {
@@ -130,7 +130,7 @@ describe("PromptsTab", () => {
       mockListPrompts.mockResolvedValue([]);
 
       render(
-        <PromptsTab serverConfig={serverConfig} serverName="test-server" />
+        <PromptsTab serverConfig={serverConfig} serverName="test-server" />,
       );
 
       await waitFor(() => {
@@ -149,13 +149,13 @@ describe("PromptsTab", () => {
       ]);
 
       render(
-        <PromptsTab serverConfig={serverConfig} serverName="test-server" />
+        <PromptsTab serverConfig={serverConfig} serverName="test-server" />,
       );
 
       // First prompt should be auto-selected, showing Get Prompt button
       await waitFor(() => {
         expect(
-          screen.getByRole("button", { name: /get prompt/i })
+          screen.getByRole("button", { name: /get prompt/i }),
         ).toBeInTheDocument();
       });
     });
@@ -169,7 +169,7 @@ describe("PromptsTab", () => {
       ]);
 
       render(
-        <PromptsTab serverConfig={serverConfig} serverName="test-server" />
+        <PromptsTab serverConfig={serverConfig} serverName="test-server" />,
       );
 
       await waitFor(() => {
@@ -191,21 +191,19 @@ describe("PromptsTab", () => {
     it("gets prompt when Get Prompt button is clicked", async () => {
       const serverConfig = createServerConfig();
 
-      mockListPrompts.mockResolvedValue([
-        { name: "greeting", arguments: [] },
-      ]);
+      mockListPrompts.mockResolvedValue([{ name: "greeting", arguments: [] }]);
 
       mockGetPrompt.mockResolvedValue({
         content: [{ role: "user", content: { type: "text", text: "Hello!" } }],
       });
 
       render(
-        <PromptsTab serverConfig={serverConfig} serverName="test-server" />
+        <PromptsTab serverConfig={serverConfig} serverName="test-server" />,
       );
 
       await waitFor(() => {
         expect(
-          screen.getByRole("button", { name: /get prompt/i })
+          screen.getByRole("button", { name: /get prompt/i }),
         ).toBeInTheDocument();
       });
 
@@ -215,7 +213,7 @@ describe("PromptsTab", () => {
         expect(mockGetPrompt).toHaveBeenCalledWith(
           "test-server",
           "greeting",
-          {}
+          {},
         );
       });
     });
@@ -228,12 +226,12 @@ describe("PromptsTab", () => {
       mockGetPrompt.mockRejectedValue(new Error("Prompt not found"));
 
       render(
-        <PromptsTab serverConfig={serverConfig} serverName="test-server" />
+        <PromptsTab serverConfig={serverConfig} serverName="test-server" />,
       );
 
       await waitFor(() => {
         expect(
-          screen.getByRole("button", { name: /get prompt/i })
+          screen.getByRole("button", { name: /get prompt/i }),
         ).toBeInTheDocument();
       });
 
@@ -260,7 +258,7 @@ describe("PromptsTab", () => {
       ]);
 
       render(
-        <PromptsTab serverConfig={serverConfig} serverName="test-server" />
+        <PromptsTab serverConfig={serverConfig} serverName="test-server" />,
       );
 
       await waitFor(() => {
@@ -275,7 +273,7 @@ describe("PromptsTab", () => {
       mockListPrompts.mockResolvedValue([{ name: "simple-prompt" }]);
 
       render(
-        <PromptsTab serverConfig={serverConfig} serverName="test-server" />
+        <PromptsTab serverConfig={serverConfig} serverName="test-server" />,
       );
 
       await waitFor(() => {
@@ -296,7 +294,7 @@ describe("PromptsTab", () => {
       mockGetPrompt.mockResolvedValue({ content: "Hello!" });
 
       render(
-        <PromptsTab serverConfig={serverConfig} serverName="test-server" />
+        <PromptsTab serverConfig={serverConfig} serverName="test-server" />,
       );
 
       await waitFor(() => {
@@ -330,13 +328,13 @@ describe("PromptsTab", () => {
       ]);
 
       render(
-        <PromptsTab serverConfig={serverConfig} serverName="test-server" />
+        <PromptsTab serverConfig={serverConfig} serverName="test-server" />,
       );
 
       // Description may appear in both list and detail panel
       await waitFor(() => {
         const descriptions = screen.getAllByText(
-          "Analyze code for potential issues"
+          "Analyze code for potential issues",
         );
         expect(descriptions.length).toBeGreaterThanOrEqual(1);
       });
@@ -354,7 +352,7 @@ describe("PromptsTab", () => {
       ]);
 
       render(
-        <PromptsTab serverConfig={serverConfig} serverName="test-server" />
+        <PromptsTab serverConfig={serverConfig} serverName="test-server" />,
       );
 
       await waitFor(() => {
@@ -370,7 +368,7 @@ describe("PromptsTab", () => {
       mockListPrompts.mockResolvedValue([]);
 
       render(
-        <PromptsTab serverConfig={serverConfig} serverName="test-server" />
+        <PromptsTab serverConfig={serverConfig} serverName="test-server" />,
       );
 
       await waitFor(() => {
@@ -380,7 +378,7 @@ describe("PromptsTab", () => {
       // Find and click refresh button
       const buttons = screen.getAllByRole("button");
       const refreshButton = buttons.find((btn) =>
-        btn.querySelector(".lucide-refresh-cw")
+        btn.querySelector(".lucide-refresh-cw"),
       );
 
       if (refreshButton) {
@@ -408,7 +406,7 @@ describe("PromptsTab", () => {
       ]);
 
       render(
-        <PromptsTab serverConfig={serverConfig} serverName="test-server" />
+        <PromptsTab serverConfig={serverConfig} serverName="test-server" />,
       );
 
       await waitFor(() => {
