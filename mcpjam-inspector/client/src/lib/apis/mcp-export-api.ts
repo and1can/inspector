@@ -1,5 +1,7 @@
+import { authFetch } from "@/lib/session-token";
+
 export async function exportServerApi(serverId: string) {
-  const res = await fetch("/api/mcp/export/server", {
+  const res = await authFetch("/api/mcp/export/server", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ serverId }),

@@ -2,6 +2,8 @@
  * API client for MCP server tunnel management
  */
 
+import { authFetch } from "@/lib/session-token";
+
 const API_BASE = import.meta.env.VITE_API_BASE_URL || "http://localhost:6274";
 
 export interface TunnelResponse {
@@ -33,7 +35,7 @@ export async function createTunnel(
     headers["Authorization"] = `Bearer ${accessToken}`;
   }
 
-  const response = await fetch(`${API_BASE}/api/mcp/tunnels/create`, {
+  const response = await authFetch(`${API_BASE}/api/mcp/tunnels/create`, {
     method: "POST",
     headers,
   });
@@ -61,7 +63,7 @@ export async function getTunnel(
     headers["Authorization"] = `Bearer ${accessToken}`;
   }
 
-  const response = await fetch(`${API_BASE}/api/mcp/tunnels`, {
+  const response = await authFetch(`${API_BASE}/api/mcp/tunnels`, {
     method: "GET",
     headers,
   });
@@ -95,7 +97,7 @@ export async function getServerTunnel(
     headers["Authorization"] = `Bearer ${accessToken}`;
   }
 
-  const response = await fetch(
+  const response = await authFetch(
     `${API_BASE}/api/mcp/tunnels/server/${encodeURIComponent(serverId)}`,
     {
       method: "GET",
@@ -128,7 +130,7 @@ export async function closeTunnel(accessToken?: string): Promise<void> {
     headers["Authorization"] = `Bearer ${accessToken}`;
   }
 
-  const response = await fetch(`${API_BASE}/api/mcp/tunnels`, {
+  const response = await authFetch(`${API_BASE}/api/mcp/tunnels`, {
     method: "DELETE",
     headers,
   });
@@ -155,7 +157,7 @@ export async function cleanupOrphanedTunnels(
   }
 
   try {
-    const response = await fetch(
+    const response = await authFetch(
       `${API_BASE}/api/mcp/tunnels/cleanup-orphaned`,
       {
         method: "POST",

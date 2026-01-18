@@ -2,11 +2,13 @@
  * API helper for counting tokens in MCP server tools
  */
 
+import { authFetch } from "@/lib/session-token";
+
 export async function countMCPToolsTokens(
   selectedServers: string[],
   modelId: string,
 ): Promise<Record<string, number>> {
-  const res = await fetch("/api/mcp/tokenizer/count-tools", {
+  const res = await authFetch("/api/mcp/tokenizer/count-tools", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ selectedServers, modelId }),
@@ -36,7 +38,7 @@ export async function countTextTokens(
   text: string,
   modelId: string,
 ): Promise<number> {
-  const res = await fetch("/api/mcp/tokenizer/count-text", {
+  const res = await authFetch("/api/mcp/tokenizer/count-text", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ text, modelId }),

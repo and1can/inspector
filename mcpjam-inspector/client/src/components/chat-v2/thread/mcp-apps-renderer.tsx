@@ -28,6 +28,7 @@ import {
   SandboxedIframe,
   SandboxedIframeHandle,
 } from "@/components/ui/sandboxed-iframe";
+import { authFetch } from "@/lib/session-token";
 import { useTrafficLogStore, extractMethod } from "@/stores/traffic-log-store";
 import { useWidgetDebugStore } from "@/stores/widget-debug-store";
 import {
@@ -346,7 +347,7 @@ export function MCPAppsRenderer({
     const fetchWidgetHtml = async () => {
       try {
         // Store widget data first (same pattern as openai.ts)
-        const storeResponse = await fetch("/api/mcp/apps/widget/store", {
+        const storeResponse = await authFetch("/api/mcp/apps/widget/store", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
@@ -686,7 +687,7 @@ export function MCPAppsRenderer({
       };
 
       bridge.onreadresource = async ({ uri }) => {
-        const response = await fetch(`/api/mcp/resources/read`, {
+        const response = await authFetch(`/api/mcp/resources/read`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ serverId: serverIdRef.current, uri }),
@@ -699,7 +700,7 @@ export function MCPAppsRenderer({
       };
 
       bridge.onlistresources = async (params) => {
-        const response = await fetch(`/api/mcp/resources/list`, {
+        const response = await authFetch(`/api/mcp/resources/list`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
@@ -714,7 +715,7 @@ export function MCPAppsRenderer({
       };
 
       bridge.onlistresourcetemplates = async (params) => {
-        const response = await fetch(`/api/mcp/resource-templates/list`, {
+        const response = await authFetch(`/api/mcp/resource-templates/list`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
@@ -731,7 +732,7 @@ export function MCPAppsRenderer({
       };
 
       bridge.onlistprompts = async (params) => {
-        const response = await fetch(`/api/mcp/prompts/list`, {
+        const response = await authFetch(`/api/mcp/prompts/list`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({

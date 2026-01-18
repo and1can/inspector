@@ -9,6 +9,7 @@ import { Card } from "@/components/ui/card";
 import { Play, Loader2, Save } from "lucide-react";
 import posthog from "posthog-js";
 import { detectEnvironment, detectPlatform } from "@/lib/PosthogUtils";
+import { authFetch } from "@/lib/session-token";
 import {
   Tooltip,
   TooltipContent,
@@ -225,7 +226,7 @@ export function TestTemplateEditor({
       }
 
       try {
-        const response = await fetch("/api/mcp/list-tools", {
+        const response = await authFetch("/api/mcp/list-tools", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ serverIds }),
@@ -389,7 +390,7 @@ export function TestTemplateEditor({
         }
       }
 
-      const response = await fetch("/api/mcp/evals/run-test-case", {
+      const response = await authFetch("/api/mcp/evals/run-test-case", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({

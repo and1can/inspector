@@ -1,4 +1,5 @@
 import type { MCPPrompt } from "@/sdk";
+import { authFetch } from "@/lib/session-token";
 
 export interface PromptContentResponse {
   content: any;
@@ -10,7 +11,7 @@ export interface BatchPromptsResponse {
 }
 
 export async function listPrompts(serverId: string): Promise<MCPPrompt[]> {
-  const res = await fetch("/api/mcp/prompts/list", {
+  const res = await authFetch("/api/mcp/prompts/list", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ serverId }),
@@ -34,7 +35,7 @@ export async function getPrompt(
   name: string,
   args?: Record<string, string>,
 ): Promise<PromptContentResponse> {
-  const res = await fetch("/api/mcp/prompts/get", {
+  const res = await authFetch("/api/mcp/prompts/get", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ serverId, name, args }),
@@ -56,7 +57,7 @@ export async function getPrompt(
 export async function listPromptsForServers(
   serverIds: string[],
 ): Promise<BatchPromptsResponse> {
-  const res = await fetch("/api/mcp/prompts/list-multi", {
+  const res = await authFetch("/api/mcp/prompts/list-multi", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ serverIds }),
