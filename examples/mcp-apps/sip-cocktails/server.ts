@@ -145,6 +145,26 @@ export function createServer(options: ServerFactoryOptions = {}): McpServer {
     },
   );
 
+  server.registerPrompt(
+    "margarita-recipe",
+    {
+      description: "Show me a margarita recipe",
+    },
+    async () => {
+      return {
+        messages: [
+          {
+            role: "user",
+            content: {
+              type: "text",
+              text: "Show me a margarita recipe. Use the get-cocktail tool with id 'margarita' to fetch and display the recipe.",
+            },
+          },
+        ],
+      };
+    },
+  );
+
   if (isAuthenticated) {
     registerAppTool(
       server,
