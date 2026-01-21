@@ -7,36 +7,26 @@
  * @example
  * ```typescript
  * import { TestAgent, EvalsSuite } from "@mcpjam/sdk/evals";
- * import { MCPClientManager } from "@mcpjam/sdk";
- *
- * const manager = new MCPClientManager({
- *   asana: {
- *     url: new URL("https://mcp.asana.com/sse"),
- *     accessToken: process.env.ASANA_ACCESS_TOKEN,
- *   },
- * });
- *
- * await manager.connectToServer("asana");
  *
  * const agent = new TestAgent({
  *   tools: manager,
- *   serverIds: ["asana"],
  *   llm: "openai/gpt-4o",
  *   apiKey: process.env.OPENAI_API_KEY,
  * });
  *
- * const result = await agent.query("Create a project called 'Onboard Joe'");
+ * const suite = new EvalsSuite({ iterations: 30 });
+ * const results = await suite.run({
+ *   func: async () => {
+ *     const result = await agent.query("Create a project");
+ *     return result.toolsCalled().includes("create_project");
+ *   }
+ * });
  *
- * console.log(result.toolsCalled());     // ["asana_create_project"]
- * console.log(result.hasToolCall("asana_create_project")); // true
- * console.log(result.totalTokens());     // 1234
+ * console.log(`Accuracy: ${results.accuracy()}`);
  * ```
  */
 
-// =============================================================================
-// Type Exports
-// =============================================================================
-
+// Export all types
 export type {
   // Validator types
   Validator,
@@ -59,8 +49,8 @@ export type {
   // Evaluation result (aligned with server types)
   EvaluationResult,
 
-  // Query result (type interface - use QueryResult class for instances)
-  QueryResult as QueryResultInterface,
+  // Query result
+  QueryResult,
 
   // Validation types
   ValidationResult,
@@ -89,47 +79,9 @@ export type {
   EvalIterationWithResultFn,
 } from "./types.js";
 
-// =============================================================================
-// Model Factory Exports (Phase 2)
-// =============================================================================
-
-export {
-  createModel,
-  createModelFromString,
-  parseModelString,
-  type ModelProvider,
-  type ModelDefinition,
-  type BaseUrls,
-} from "./model-factory.js";
-
-// =============================================================================
-// Tool Extraction Exports (Phase 2)
-// =============================================================================
-
-export {
-  extractToolCalls,
-  extractToolNames,
-  extractUniqueToolNames,
-  type GenerateTextResult,
-} from "./tool-extraction.js";
-
-// =============================================================================
-// QueryResult Export (Phase 2)
-// =============================================================================
-
-export { QueryResult, type QueryResultOptions } from "./query-result.js";
-
-// =============================================================================
-// TestAgent Export (Phase 2)
-// =============================================================================
-
-export { TestAgent, type TestAgentOptions } from "./test-agent.js";
-
-// =============================================================================
-// Future Exports (Phases 3-6)
-// =============================================================================
-
-// Placeholder exports for classes that will be implemented in later phases:
-// export { EvalsSuite } from "./evals-suite.js";           // Phase 4
-// export { validate } from "./validators/index.js";         // Phase 3
-// export { matchToolCalls, argumentsMatch } from "./validators/tool-matching.js"; // Phase 3
+// Placeholder exports for classes that will be implemented in later phases
+// These are commented out until implementation:
+// export { TestAgent } from "./test-agent.js";
+// export { EvalsSuite } from "./evals-suite.js";
+// export { validate } from "./validators/index.js";
+// export { matchToolCalls, argumentsMatch } from "./validators/tool-matching.js";
