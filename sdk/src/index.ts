@@ -96,3 +96,29 @@ export type { TestAgentConfig, QueryResult } from "./TestAgent.js";
 // EvalsSuite
 export { EvalsSuite } from "./EvalsSuite.js";
 export type { EvalsSuiteConfig, EvalRunResult } from "./EvalsSuite.js";
+
+// Core SDK types
+export type {
+  LLMProvider,
+  CompatibleProtocol,
+  CustomProvider,
+  LLMConfig,
+  ToolCall,
+  TokenUsage,
+  QueryResultData,
+} from "./types.js";
+
+// Model factory utilities
+export {
+  parseLLMString,
+  createModelFromString,
+  parseModelIds,
+  createCustomProvider,
+  PROVIDER_PRESETS,
+} from "./model-factory.js";
+export type {
+  BaseUrls,
+  CreateModelOptions,
+  ParsedLLMString,
+  ProviderLanguageModel,
+} from "./model-factory.js";
