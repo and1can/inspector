@@ -44,7 +44,10 @@ export function matchToolCalls(expected: string[], actual: string[]): boolean {
  * matchToolCallsSubset(['add'], ['add', 'multiply']) // true
  * matchToolCallsSubset(['add', 'subtract'], ['add', 'multiply']) // false (missing subtract)
  */
-export function matchToolCallsSubset(expected: string[], actual: string[]): boolean {
+export function matchToolCallsSubset(
+  expected: string[],
+  actual: string[]
+): boolean {
   for (const tool of expected) {
     if (!actual.includes(tool)) {
       return false;
@@ -67,7 +70,10 @@ export function matchToolCallsSubset(expected: string[], actual: string[]): bool
  * matchAnyToolCall(['add', 'subtract'], ['multiply', 'divide']) // false
  * matchAnyToolCall([], ['add']) // false (empty expected)
  */
-export function matchAnyToolCall(expected: string[], actual: string[]): boolean {
+export function matchAnyToolCall(
+  expected: string[],
+  actual: string[]
+): boolean {
   if (expected.length === 0) {
     return false;
   }
