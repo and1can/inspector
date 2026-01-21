@@ -128,20 +128,24 @@ describe("model-factory", () => {
 
   describe("parseLLMString", () => {
     it("should parse simple provider/model string", () => {
-      const [provider, model] = parseLLMString("openai/gpt-4o");
-      expect(provider).toBe("openai");
-      expect(model).toBe("gpt-4o");
+      const result = parseLLMString("openai/gpt-4o");
+      expect(result).toEqual({
+        type: "builtin",
+        provider: "openai",
+        model: "gpt-4o",
+      });
     });
 
     it("should parse provider with model containing slashes", () => {
-      const [provider, model] = parseLLMString(
-        "openrouter/anthropic/claude-3-opus"
-      );
-      expect(provider).toBe("openrouter");
-      expect(model).toBe("anthropic/claude-3-opus");
+      const result = parseLLMString("openrouter/anthropic/claude-3-opus");
+      expect(result).toEqual({
+        type: "builtin",
+        provider: "openrouter",
+        model: "anthropic/claude-3-opus",
+      });
     });
 
-    it("should handle all valid providers", () => {
+    it("should handle all valid built-in providers", () => {
       const providers = [
         "anthropic",
         "openai",
@@ -150,18 +154,28 @@ describe("model-factory", () => {
         "google",
         "ollama",
         "mistral",
-        "litellm",
         "openrouter",
         "xai",
       ];
 
       for (const provider of providers) {
-        const [parsedProvider, parsedModel] = parseLLMString(
-          `${provider}/test-model`
-        );
-        expect(parsedProvider).toBe(provider);
-        expect(parsedModel).toBe("test-model");
+        const result = parseLLMString(`${provider}/test-model`);
+        expect(result).toEqual({
+          type: "builtin",
+          provider,
+          model: "test-model",
+        });
       }
+    });
+
+    it("should parse custom provider when registered", () => {
+      const customProviders = new Set(["litellm", "my-custom"]);
+      const result = parseLLMString("litellm/gpt-4", customProviders);
+      expect(result).toEqual({
+        type: "custom",
+        providerName: "litellm",
+        model: "gpt-4",
+      });
     });
 
     it("should throw error for invalid format without slash", () => {
@@ -313,9 +327,22 @@ describe("model-factory", () => {
       });
     });
 
-    describe("litellm provider", () => {
-      it("should create litellm model with default base URL", () => {
-        createModelFromString("litellm/gpt-4", defaultOptions);
+    describe("custom provider (litellm)", () => {
+      it("should create model from custom provider", () => {
+        const options: CreateModelOptions = {
+          apiKey: "test-api-key",
+          customProviders: {
+            litellm: {
+              name: "litellm",
+              protocol: "openai-compatible",
+              baseUrl: "http://localhost:4000",
+              modelIds: ["gpt-4"],
+              useChatCompletions: true,
+            },
+          },
+        };
+
+        createModelFromString("litellm/gpt-4", options);
 
         expect(createOpenAI).toHaveBeenCalledWith({
           apiKey: "test-api-key",
@@ -323,10 +350,18 @@ describe("model-factory", () => {
         });
       });
 
-      it("should use custom base URL when provided", () => {
+      it("should use custom base URL from provider config", () => {
         const options: CreateModelOptions = {
           apiKey: "test-api-key",
-          baseUrls: { litellm: "http://litellm.local:8080" },
+          customProviders: {
+            litellm: {
+              name: "litellm",
+              protocol: "openai-compatible",
+              baseUrl: "http://litellm.local:8080",
+              modelIds: ["gpt-4"],
+              useChatCompletions: true,
+            },
+          },
         };
 
         createModelFromString("litellm/gpt-4", options);
@@ -337,12 +372,22 @@ describe("model-factory", () => {
         });
       });
 
-      it("should use LITELLM_API_KEY env var when apiKey is empty", () => {
+      it("should use apiKeyEnvVar from custom provider config", () => {
         const originalEnv = process.env.LITELLM_API_KEY;
         process.env.LITELLM_API_KEY = "env-api-key";
 
         const options: CreateModelOptions = {
           apiKey: "",
+          customProviders: {
+            litellm: {
+              name: "litellm",
+              protocol: "openai-compatible",
+              baseUrl: "http://localhost:4000",
+              modelIds: ["gpt-4"],
+              apiKeyEnvVar: "LITELLM_API_KEY",
+              useChatCompletions: true,
+            },
+          },
         };
 
         createModelFromString("litellm/gpt-4", options);
@@ -432,13 +477,12 @@ describe("model-factory", () => {
     it("should allow all base URLs", () => {
       const baseUrls: BaseUrls = {
         ollama: "http://localhost:11434",
-        litellm: "http://localhost:4000",
         azure: "https://azure.openai.com",
         anthropic: "https://anthropic.com",
         openai: "https://openai.com",
       };
 
-      expect(Object.keys(baseUrls)).toHaveLength(5);
+      expect(Object.keys(baseUrls)).toHaveLength(4);
     });
   });
 });
