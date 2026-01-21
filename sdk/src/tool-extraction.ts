@@ -5,11 +5,13 @@
 import type { ToolCall } from "./types.js";
 
 /**
- * Represents a tool call from AI SDK's generateText result
+ * Represents a tool call from AI SDK's generateText result.
+ * Made flexible to handle different AI SDK versions.
  */
 interface AISDKToolCall {
   toolName: string;
-  args: Record<string, unknown>;
+  /** Arguments - 'args' in v3+ format */
+  args?: Record<string, unknown>;
   toolCallId?: string;
 }
 
@@ -22,16 +24,21 @@ interface AISDKStep {
 
 /**
  * Minimal interface for AI SDK's GenerateTextResult
- * We only extract what we need to avoid tight coupling
+ * We only extract what we need to avoid tight coupling.
+ * Supports both older (promptTokens/completionTokens) and newer (inputTokens/outputTokens) formats.
  */
 export interface GenerateTextResultLike {
   text: string;
   steps?: AISDKStep[];
   toolCalls?: AISDKToolCall[];
   usage?: {
-    promptTokens: number;
-    completionTokens: number;
+    // Older format
+    promptTokens?: number;
+    completionTokens?: number;
     totalTokens?: number;
+    // Newer format (AI SDK v6+)
+    inputTokens?: number;
+    outputTokens?: number;
   };
 }
 
