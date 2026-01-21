@@ -91,7 +91,26 @@ export {
 
 // TestAgent
 export { TestAgent } from "./TestAgent.js";
-export type { TestAgentConfig, QueryResult } from "./TestAgent.js";
+export type { TestAgentConfig } from "./TestAgent.js";
+
+// QueryResult class (preferred over TestAgent's interface)
+export { QueryResult } from "./QueryResult.js";
+
+// Tool extraction utilities
+export {
+  extractToolCalls,
+  extractToolNames,
+  type GenerateTextResultLike,
+} from "./tool-extraction.js";
+
+// Validators for tool call matching
+export {
+  matchToolCalls,
+  matchToolCallsSubset,
+  matchAnyToolCall,
+  matchToolCallCount,
+  matchNoToolCalls,
+} from "./validators.js";
 
 // EvalsSuite
 export { EvalsSuite } from "./EvalsSuite.js";
