@@ -2,7 +2,9 @@ import { QueryResult } from "../src/QueryResult";
 import type { QueryResultData } from "../src/types";
 
 describe("QueryResult", () => {
-  const createMockData = (overrides: Partial<QueryResultData> = {}): QueryResultData => ({
+  const createMockData = (
+    overrides: Partial<QueryResultData> = {}
+  ): QueryResultData => ({
     text: "Test response",
     toolCalls: [
       { toolName: "add", arguments: { a: 1, b: 2 } },
@@ -166,7 +168,9 @@ describe("QueryResult", () => {
     });
 
     it("should return error message", () => {
-      const result = new QueryResult(createMockData({ error: "Connection timeout" }));
+      const result = new QueryResult(
+        createMockData({ error: "Connection timeout" })
+      );
 
       expect(result.getError()).toBe("Connection timeout");
     });

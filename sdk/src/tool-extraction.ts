@@ -60,7 +60,11 @@ export function extractToolCalls(result: GenerateTextResultLike): ToolCall[] {
   }
 
   // If no steps, check top-level toolCalls (single-step result)
-  if (toolCalls.length === 0 && result.toolCalls && Array.isArray(result.toolCalls)) {
+  if (
+    toolCalls.length === 0 &&
+    result.toolCalls &&
+    Array.isArray(result.toolCalls)
+  ) {
     for (const tc of result.toolCalls) {
       toolCalls.push({
         toolName: tc.toolName,

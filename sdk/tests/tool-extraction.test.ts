@@ -119,7 +119,10 @@ describe("tool-extraction", () => {
         steps: [
           {
             toolCalls: [
-              { toolName: "noArgs", args: undefined as unknown as Record<string, unknown> },
+              {
+                toolName: "noArgs",
+                args: undefined as unknown as Record<string, unknown>,
+              },
             ],
           },
         ],
