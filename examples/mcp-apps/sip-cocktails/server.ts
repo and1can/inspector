@@ -146,9 +146,9 @@ export function createServer(options: ServerFactoryOptions = {}): McpServer {
   );
 
   server.registerPrompt(
-    "margarita-recipe",
+    "show-recipe",
     {
-      description: "Show me a margarita recipe",
+      description: "This prompt template demonstrates how to use the get-cocktail tool to fetch and display a cocktail recipe.",
     },
     async () => {
       return {
@@ -157,7 +157,7 @@ export function createServer(options: ServerFactoryOptions = {}): McpServer {
             role: "user",
             content: {
               type: "text",
-              text: "Show me a margarita recipe. Use the get-cocktail tool with id 'margarita' to fetch and display the recipe.",
+              text: "Show me a margarita recipe.",
             },
           },
         ],
