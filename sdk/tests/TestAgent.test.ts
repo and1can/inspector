@@ -232,7 +232,9 @@ describe("TestAgent", () => {
     });
 
     it("should return error result on LLM failure", async () => {
-      mockGenerateText.mockRejectedValueOnce(new Error("API rate limit exceeded"));
+      mockGenerateText.mockRejectedValueOnce(
+        new Error("API rate limit exceeded")
+      );
 
       const agent = new TestAgent({
         tools: {},

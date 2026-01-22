@@ -27,7 +27,9 @@ export interface TestAgentConfig {
   /** Maximum number of agentic steps/tool calls (default: 10) */
   maxSteps?: number;
   /** Custom providers registry for non-standard LLM providers */
-  customProviders?: Map<string, CustomProvider> | Record<string, CustomProvider>;
+  customProviders?:
+    | Map<string, CustomProvider>
+    | Record<string, CustomProvider>;
 }
 
 /**
@@ -118,13 +120,9 @@ export class TestAgent {
       // Handle both old and new usage formats
       const usage = result.usage;
       const inputTokens =
-        (usage as any)?.inputTokens ??
-        (usage as any)?.promptTokens ??
-        0;
+        (usage as any)?.inputTokens ?? (usage as any)?.promptTokens ?? 0;
       const outputTokens =
-        (usage as any)?.outputTokens ??
-        (usage as any)?.completionTokens ??
-        0;
+        (usage as any)?.outputTokens ?? (usage as any)?.completionTokens ?? 0;
 
       this.lastResult = QueryResult.from({
         text: result.text,
@@ -132,7 +130,8 @@ export class TestAgent {
         usage: {
           inputTokens,
           outputTokens,
-          totalTokens: (usage as any)?.totalTokens ?? inputTokens + outputTokens,
+          totalTokens:
+            (usage as any)?.totalTokens ?? inputTokens + outputTokens,
         },
         latencyMs,
       });
