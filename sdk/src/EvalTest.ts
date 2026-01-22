@@ -1,5 +1,5 @@
 import type { TestAgent } from "./TestAgent.js";
-import type { QueryResult } from "./QueryResult.js";
+import type { PromptResult } from "./PromptResult.js";
 import type { LatencyBreakdown } from "./types.js";
 import { calculateLatencyStats, type LatencyStats } from "./percentiles.js";
 import {
@@ -14,21 +14,20 @@ import {
  */
 export interface EvalTestConfig {
   name: string;
-  query?: string;
+  prompt?: string;
   expectTools?: string[];
   expectExactTools?: string[];
   expectAnyTool?: string[];
   expectNoTools?: boolean;
-  validator?: (result: QueryResult) => boolean | Promise<boolean>;
-  conversation?: (agent: TestAgent) => Promise<ConversationResult>;
-}
 
-/**
- * Result of a multi-turn conversation evaluation
- */
-export interface ConversationResult {
-  pass: boolean;
-  results: QueryResult[];
+  /**
+   * Unified test function for validation.
+   * - Single-turn (when `prompt` is provided): receives PromptResult, returns boolean
+   * - Multi-turn (when no `prompt`): receives TestAgent, returns boolean
+   */
+  test?:
+    | ((result: PromptResult) => boolean | Promise<boolean>)
+    | ((agent: TestAgent) => boolean | Promise<boolean>);
 }
 
 /**
@@ -51,6 +50,8 @@ export interface IterationResult {
   tokens: number;
   error?: string;
   retryCount?: number;
+  /** The prompt results from this iteration (multi-turn tests only) */
+  prompts?: PromptResult[];
 }
 
 /**
@@ -109,18 +110,10 @@ class Semaphore {
 function createValidator(
   config: Pick<
     EvalTestConfig,
-    | "expectTools"
-    | "expectExactTools"
-    | "expectAnyTool"
-    | "expectNoTools"
-    | "validator"
+    "expectTools" | "expectExactTools" | "expectAnyTool" | "expectNoTools"
   >
-): (result: QueryResult) => boolean | Promise<boolean> {
-  if (config.validator) {
-    return config.validator;
-  }
-
-  return (result: QueryResult) => {
+): (result: PromptResult) => boolean | Promise<boolean> {
+  return (result: PromptResult) => {
     const toolsCalled = result.toolsCalled();
 
     if (config.expectTools) {
@@ -178,7 +171,7 @@ function sleep(ms: number): Promise<void> {
  * ```ts
  * const test = new EvalTest({
  *   name: "addition",
- *   query: "Add 2+3",
+ *   prompt: "Add 2+3",
  *   expectTools: ["add"],
  * });
  * await test.run(agent, { iterations: 30 });
@@ -208,17 +201,9 @@ export class EvalTest {
     const semaphore = new Semaphore(concurrency);
     let completedCount = 0;
 
-    if (this.config.conversation) {
-      return this.runConversation(
-        agent,
-        options.iterations,
-        semaphore,
-        retries,
-        timeoutMs,
-        onProgress,
-        () => ++completedCount
-      );
-    } else if (this.config.query) {
+    // Single-turn: has prompt string
+    // Multi-turn: has test function but no prompt
+    if (this.config.prompt) {
       return this.runSingleTurn(
         agent,
         options.iterations,
@@ -228,8 +213,18 @@ export class EvalTest {
         onProgress,
         () => ++completedCount
       );
+    } else if (this.config.test) {
+      return this.runConversation(
+        agent,
+        options.iterations,
+        semaphore,
+        retries,
+        timeoutMs,
+        onProgress,
+        () => ++completedCount
+      );
     } else {
-      throw new Error("Invalid config: must provide 'query' or 'conversation'");
+      throw new Error("Invalid config: must provide 'prompt' or 'test'");
     }
   }
 
@@ -242,8 +237,13 @@ export class EvalTest {
     onProgress: ((completed: number, total: number) => void) | undefined,
     incrementCompleted: () => number
   ): Promise<EvalRunResult> {
-    const query = this.config.query!;
-    const validator = createValidator(this.config);
+    const promptMsg = this.config.prompt!;
+    // Use config.test as validator if provided, otherwise use declarative expectations
+    const validator = this.config.test
+      ? (this.config.test as (
+          result: PromptResult
+        ) => boolean | Promise<boolean>)
+      : createValidator(this.config);
     const iterationResults: IterationResult[] = [];
     const total = iterations;
 
@@ -254,7 +254,10 @@ export class EvalTest {
 
         for (let attempt = 0; attempt <= retries; attempt++) {
           try {
-            const result = await withTimeout(agent.query(query), timeoutMs);
+            const result = await withTimeout(
+              agent.prompt(promptMsg),
+              timeoutMs
+            );
 
             const passed = await validator(result);
             const latency = result.getLatency();
@@ -313,7 +316,9 @@ export class EvalTest {
     onProgress: ((completed: number, total: number) => void) | undefined,
     incrementCompleted: () => number
   ): Promise<EvalRunResult> {
-    const conversation = this.config.conversation!;
+    const testFn = this.config.test! as (
+      agent: TestAgent
+    ) => boolean | Promise<boolean>;
     const iterationResults: IterationResult[] = [];
     const total = iterations;
 
@@ -324,22 +329,32 @@ export class EvalTest {
 
         for (let attempt = 0; attempt <= retries; attempt++) {
           try {
-            const convResult = await withTimeout(
-              conversation(agent),
+            // Create a fresh agent clone for this iteration to avoid race conditions
+            // when multiple iterations run concurrently
+            const iterationAgent = agent.withOptions({});
+
+            const passed = await withTimeout(
+              Promise.resolve(testFn(iterationAgent)),
               timeoutMs
             );
 
-            const latencies = convResult.results.map((r) => r.getLatency());
-            const tokens = convResult.results.reduce(
+            // Get metrics from this iteration's prompt history
+            const promptResults = iterationAgent.getPromptHistory();
+            const latencies = promptResults.map((r) => r.getLatency());
+            const tokens = promptResults.reduce(
               (sum, r) => sum + r.totalTokens(),
               0
             );
 
             return {
-              passed: convResult.pass,
-              latencies,
+              passed,
+              latencies:
+                latencies.length > 0
+                  ? latencies
+                  : [{ e2eMs: 0, llmMs: 0, mcpMs: 0 }],
               tokens,
               retryCount: attempt,
+              prompts: promptResults,
             };
           } catch (error) {
             lastError = error instanceof Error ? error.message : String(error);
@@ -509,5 +524,35 @@ export class EvalTest {
    */
   getConfig(): EvalTestConfig {
     return this.config;
+  }
+
+  /**
+   * Get all iteration details from the last run
+   */
+  getAllIterations(): IterationResult[] {
+    if (!this.lastRunResult) {
+      throw new Error("No run results available. Call run() first.");
+    }
+    return [...this.lastRunResult.iterationDetails];
+  }
+
+  /**
+   * Get only the failed iterations from the last run
+   */
+  getFailedIterations(): IterationResult[] {
+    if (!this.lastRunResult) {
+      throw new Error("No run results available. Call run() first.");
+    }
+    return this.lastRunResult.iterationDetails.filter((r) => !r.passed);
+  }
+
+  /**
+   * Get only the successful iterations from the last run
+   */
+  getSuccessfulIterations(): IterationResult[] {
+    if (!this.lastRunResult) {
+      throw new Error("No run results available. Call run() first.");
+    }
+    return this.lastRunResult.iterationDetails.filter((r) => r.passed);
   }
 }
