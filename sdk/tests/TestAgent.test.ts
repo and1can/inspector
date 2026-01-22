@@ -173,8 +173,8 @@ describe("TestAgent", () => {
           },
         ],
         usage: {
-          promptTokens: 10,
-          completionTokens: 5,
+          inputTokens: 10,
+          outputTokens: 5,
           totalTokens: 15,
         },
       } as any);
@@ -194,7 +194,9 @@ describe("TestAgent", () => {
       expect(result.inputTokens()).toBe(10);
       expect(result.outputTokens()).toBe(5);
       expect(result.totalTokens()).toBe(15);
-      expect(result.e2eLatencyMs).toBeGreaterThanOrEqual(0);
+      expect(result.e2eLatencyMs()).toBeGreaterThanOrEqual(0);
+      expect(result.llmLatencyMs()).toBeGreaterThanOrEqual(0);
+      expect(result.mcpLatencyMs()).toBeGreaterThanOrEqual(0);
     });
 
     it("should extract tool calls from result steps", async () => {
@@ -208,7 +210,7 @@ describe("TestAgent", () => {
             toolCalls: [{ toolName: "subtract", args: { a: 5, b: 3 } }],
           },
         ],
-        usage: { promptTokens: 20, completionTokens: 10, totalTokens: 30 },
+        usage: { inputTokens: 20, outputTokens: 10, totalTokens: 30 },
       } as any);
 
       const agent = new TestAgent({
@@ -249,6 +251,32 @@ describe("TestAgent", () => {
       expect(result.getError()).toBe("API rate limit exceeded");
       expect(result.text).toBe("");
       expect(result.toolsCalled()).toEqual([]);
+      // Verify latency is tracked even on error
+      expect(result.e2eLatencyMs()).toBeGreaterThanOrEqual(0);
+    });
+
+    it("should provide latency breakdown with getLatency()", async () => {
+      mockGenerateText.mockResolvedValueOnce({
+        text: "Done",
+        steps: [],
+        usage: { inputTokens: 1, outputTokens: 1, totalTokens: 2 },
+      } as any);
+
+      const agent = new TestAgent({
+        tools: {},
+        llm: "openai/gpt-4o",
+        apiKey: "test-api-key",
+      });
+
+      const result = await agent.query("Test");
+
+      const latency = result.getLatency();
+      expect(latency).toHaveProperty("e2eMs");
+      expect(latency).toHaveProperty("llmMs");
+      expect(latency).toHaveProperty("mcpMs");
+      expect(latency.e2eMs).toBeGreaterThanOrEqual(0);
+      expect(latency.llmMs).toBeGreaterThanOrEqual(0);
+      expect(latency.mcpMs).toBeGreaterThanOrEqual(0);
     });
 
     it("should handle non-Error exceptions", async () => {
@@ -270,7 +298,7 @@ describe("TestAgent", () => {
       mockGenerateText.mockResolvedValueOnce({
         text: "OK",
         steps: [],
-        usage: { promptTokens: 1, completionTokens: 1, totalTokens: 2 },
+        usage: { inputTokens: 1, outputTokens: 1, totalTokens: 2 },
       } as any);
 
       const agent = new TestAgent({
@@ -293,7 +321,7 @@ describe("TestAgent", () => {
       mockGenerateText.mockResolvedValueOnce({
         text: "OK",
         steps: [],
-        usage: { promptTokens: 1, completionTokens: 1, totalTokens: 2 },
+        usage: { inputTokens: 1, outputTokens: 1, totalTokens: 2 },
       } as any);
 
       const agent = new TestAgent({
@@ -313,9 +341,16 @@ describe("TestAgent", () => {
           prompt: "What is 2+2?",
           temperature: 0.3,
           stopWhen: { type: "stepCount", value: 15 },
-          tools: mockToolSet,
         })
       );
+
+      // Verify tools are passed (instrumented for latency tracking)
+      const callArgs = mockGenerateText.mock.calls[0][0] as any;
+      expect(callArgs.tools).toBeDefined();
+      expect(Object.keys(callArgs.tools)).toEqual(Object.keys(mockToolSet));
+
+      // Verify onStepFinish callback is provided for latency tracking
+      expect(callArgs.onStepFinish).toBeInstanceOf(Function);
     });
 
     it("should handle empty usage data", async () => {
@@ -354,7 +389,7 @@ describe("TestAgent", () => {
       mockGenerateText.mockResolvedValueOnce({
         text: "Done",
         steps: [{ toolCalls: [{ toolName: "add", args: {} }] }],
-        usage: { promptTokens: 1, completionTokens: 1, totalTokens: 2 },
+        usage: { inputTokens: 1, outputTokens: 1, totalTokens: 2 },
       } as any);
 
       const agent = new TestAgent({
@@ -373,12 +408,12 @@ describe("TestAgent", () => {
         .mockResolvedValueOnce({
           text: "Added",
           steps: [{ toolCalls: [{ toolName: "add", args: {} }] }],
-          usage: { promptTokens: 1, completionTokens: 1, totalTokens: 2 },
+          usage: { inputTokens: 1, outputTokens: 1, totalTokens: 2 },
         } as any)
         .mockResolvedValueOnce({
           text: "Subtracted",
           steps: [{ toolCalls: [{ toolName: "subtract", args: {} }] }],
-          usage: { promptTokens: 1, completionTokens: 1, totalTokens: 2 },
+          usage: { inputTokens: 1, outputTokens: 1, totalTokens: 2 },
         } as any);
 
       const agent = new TestAgent({
@@ -430,7 +465,7 @@ describe("TestAgent", () => {
       mockGenerateText.mockResolvedValueOnce({
         text: "Original",
         steps: [{ toolCalls: [{ toolName: "add", args: {} }] }],
-        usage: { promptTokens: 1, completionTokens: 1, totalTokens: 2 },
+        usage: { inputTokens: 1, outputTokens: 1, totalTokens: 2 },
       } as any);
 
       const agent = new TestAgent({
@@ -465,7 +500,7 @@ describe("TestAgent", () => {
       mockGenerateText.mockResolvedValueOnce({
         text: "The answer",
         steps: [],
-        usage: { promptTokens: 5, completionTokens: 3, totalTokens: 8 },
+        usage: { inputTokens: 5, outputTokens: 3, totalTokens: 8 },
       } as any);
 
       const agent = new TestAgent({
