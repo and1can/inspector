@@ -11,7 +11,10 @@ import type { Transport } from "@modelcontextprotocol/sdk/shared/transport.js";
 import type {
   ElicitRequest,
   ElicitResult,
+  CallToolResult,
+  Tool as BaseTool,
 } from "@modelcontextprotocol/sdk/types.js";
+import type { ToolSet } from "ai";
 
 // Re-export ElicitResult for convenience
 export type { ElicitResult };
@@ -318,3 +321,40 @@ export type MCPResourceTemplateListResult = Awaited<
 export type MCPResourceTemplate =
   MCPResourceTemplateListResult["resourceTemplates"][number];
 export type MCPServerSummary = ServerSummary;
+
+// ============================================================================
+// Executable Tool Types
+// ============================================================================
+
+/**
+ * An MCP tool with an execute function pre-wired to call the manager.
+ * Extends the official MCP SDK Tool type.
+ * Returned by MCPClientManager.getTools().
+ */
+/** Options for tool execution */
+export interface ToolExecuteOptions {
+  /** Abort signal for cancellation */
+  signal?: AbortSignal;
+}
+
+export interface Tool extends BaseTool {
+  /** Execute the tool with the given arguments */
+  execute: (
+    args: Record<string, unknown>,
+    options?: ToolExecuteOptions
+  ) => Promise<CallToolResult>;
+  _meta?: {
+    _serverId: string;
+    [key: string]: unknown;
+  };
+}
+
+// Re-export base type for users who need it
+export type { BaseTool };
+
+/**
+ * AI SDK compatible tool set (Record<string, CoreTool>).
+ * Returned by MCPClientManager.getToolsForAiSdk().
+ * Can be passed directly to AI SDK's generateText().
+ */
+export type AiSdkTool = ToolSet;

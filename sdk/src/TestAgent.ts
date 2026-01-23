@@ -2,20 +2,23 @@
  * TestAgent - Runs LLM prompts with tool calling for evals
  */
 
-import { generateText, stepCountIs } from "ai";
+import { generateText, stepCountIs, dynamicTool, jsonSchema } from "ai";
 import type { ToolSet, CoreMessage, CoreUserMessage } from "ai";
+import { CallToolResultSchema } from "@modelcontextprotocol/sdk/types.js";
 import { createModelFromString } from "./model-factory.js";
 import type { CreateModelOptions } from "./model-factory.js";
 import { extractToolCalls } from "./tool-extraction.js";
 import { PromptResult } from "./PromptResult.js";
 import type { CustomProvider } from "./types.js";
+import type { Tool, AiSdkTool } from "./mcp-client-manager/types.js";
+import { ensureJsonSchemaObject } from "./mcp-client-manager/tool-converters.js";
 
 /**
  * Configuration for creating a TestAgent
  */
 export interface TestAgentConfig {
-  /** Tools to provide to the LLM (AI SDK ToolSet format from manager.getToolsForAiSdk()) */
-  tools: ToolSet;
+  /** Tools to provide to the LLM (Tool[] from manager.getTools() or AiSdkTool from manager.getToolsForAiSdk()) */
+  tools: Tool[] | AiSdkTool;
   /** LLM provider and model string (e.g., "openai/gpt-4o", "anthropic/claude-3-5-sonnet-20241022") */
   model: string;
   /** API key for the LLM provider */
@@ -30,6 +33,47 @@ export interface TestAgentConfig {
   customProviders?:
     | Map<string, CustomProvider>
     | Record<string, CustomProvider>;
+}
+
+/**
+ * Type guard to check if tools is Tool[] (from getTools())
+ */
+function isToolArray(tools: Tool[] | AiSdkTool): tools is Tool[] {
+  return Array.isArray(tools);
+}
+
+/**
+ * Converts Tool[] to AI SDK ToolSet format
+ */
+function convertToToolSet(tools: Tool[]): ToolSet {
+  const toolSet: ToolSet = {};
+  for (const tool of tools) {
+    // Filter out app-only tools (visibility: ["app"]) per SEP-1865
+    const visibility = (tool._meta?.ui as any)?.visibility as
+      | Array<"model" | "app">
+      | undefined;
+    if (visibility && visibility.length === 1 && visibility[0] === "app") {
+      continue;
+    }
+
+    const converted = dynamicTool({
+      description: tool.description,
+      inputSchema: jsonSchema(ensureJsonSchemaObject(tool.inputSchema)),
+      execute: async (args, options) => {
+        options?.abortSignal?.throwIfAborted?.();
+        const result = await tool.execute(args as Record<string, unknown>);
+        return CallToolResultSchema.parse(result);
+      },
+    });
+
+    // Preserve _serverId like getToolsForAiSdk() does
+    if (tool._meta?._serverId) {
+      (converted as any)._serverId = tool._meta._serverId;
+    }
+
+    toolSet[tool.name] = converted;
+  }
+  return toolSet;
 }
 
 /**
@@ -76,7 +120,10 @@ export class TestAgent {
    * @param config - Agent configuration
    */
   constructor(config: TestAgentConfig) {
-    this.tools = config.tools;
+    // Convert Tool[] to ToolSet if needed
+    this.tools = isToolArray(config.tools)
+      ? convertToToolSet(config.tools)
+      : config.tools;
     this.model = config.model;
     this.apiKey = config.apiKey;
     this.systemPrompt = config.systemPrompt ?? "You are a helpful assistant.";

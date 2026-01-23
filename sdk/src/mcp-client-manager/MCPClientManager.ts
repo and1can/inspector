@@ -18,8 +18,8 @@ import type { RequestOptions } from "@modelcontextprotocol/sdk/shared/protocol.j
 import type {
   LoggingLevel,
   ServerCapabilities,
+  CallToolResult,
 } from "@modelcontextprotocol/sdk/types.js";
-import type { ToolSet } from "ai";
 
 import type {
   MCPClientManagerConfig,
@@ -47,6 +47,8 @@ import type {
   ElicitResult,
   ProgressHandler,
   RpcLogger,
+  Tool,
+  AiSdkTool,
 } from "./types.js";
 
 import {
@@ -365,19 +367,49 @@ export class MCPClientManager {
 
   /**
    * Gets tools from multiple servers (or all servers if none specified).
+   * Returns tools with execute functions pre-wired to call this manager.
+   *
+   * @param serverIds - Server IDs to get tools from (or all if omitted)
+   * @returns Array of executable tools
+   *
+   * @example
+   * ```typescript
+   * const tools = await manager.getTools(["asana"]);
+   * const agent = new TestAgent({ tools, model: "openai/gpt-4o", apiKey });
+   * ```
    */
-  async getTools(serverIds?: string[]): Promise<ListToolsResult> {
-    const targetIds = serverIds?.length ? serverIds : this.listServers();
+  async getTools(serverIds?: string[]): Promise<Tool[]> {
+    const targetIds = serverIds !== undefined ? serverIds : this.listServers();
 
     const toolLists = await Promise.all(
       targetIds.map(async (serverId) => {
         await this.ensureConnected(serverId);
         const result = await this.listTools(serverId);
-        return result.tools;
+
+        // Attach execute function to each tool
+        return result.tools.map((tool) => ({
+          ...tool,
+          _meta: { ...tool._meta, _serverId: serverId },
+          execute: async (
+            args: Record<string, unknown>,
+            options?: { signal?: AbortSignal }
+          ): Promise<CallToolResult> => {
+            // When called without taskOptions, executeTool always returns CallToolResult
+            const requestOptions = options?.signal
+              ? { signal: options.signal }
+              : undefined;
+            return this.executeTool(
+              serverId,
+              tool.name,
+              args,
+              requestOptions
+            ) as Promise<CallToolResult>;
+          },
+        }));
       })
     );
 
-    return { tools: toolLists.flat() } as ListToolsResult;
+    return toolLists.flat();
   }
 
   /**
@@ -393,12 +425,12 @@ export class MCPClientManager {
    *
    * @param serverIds - Server IDs to get tools from (or all if omitted)
    * @param options - Schema options
-   * @returns ToolSet compatible with Vercel AI SDK
+   * @returns AiSdkTool compatible with Vercel AI SDK's generateText()
    */
   async getToolsForAiSdk(
     serverIds?: string[] | string,
     options: { schemas?: ToolSchemaOverrides | "automatic" } = {}
-  ): Promise<ToolSet> {
+  ): Promise<AiSdkTool> {
     const ids = Array.isArray(serverIds)
       ? serverIds
       : serverIds
@@ -411,19 +443,7 @@ export class MCPClientManager {
           await this.ensureConnected(id);
           const listToolsResult = await this.listTools(id);
 
-          // Filter out app-only tools (visibility: ["app"]) per SEP-1865
-          const filteredTools = {
-            ...listToolsResult,
-            tools: listToolsResult.tools.filter((tool) => {
-              const visibility = (tool._meta?.ui as any)?.visibility as
-                | Array<"model" | "app">
-                | undefined;
-              if (!visibility) return true;
-              return !(visibility.length === 1 && visibility[0] === "app");
-            }),
-          };
-
-          const tools = await convertMCPToolsToVercelTools(filteredTools, {
+          const tools = await convertMCPToolsToVercelTools(listToolsResult, {
             schemas: options.schemas,
             callTool: async ({ name, args, options: callOptions }) => {
               const requestOptions = callOptions?.abortSignal
@@ -446,7 +466,7 @@ export class MCPClientManager {
           return tools;
         } catch (error) {
           if (isMethodUnavailableError(error, "tools/list")) {
-            return {} as ToolSet;
+            return {} as AiSdkTool;
           }
           throw error;
         }
@@ -454,7 +474,7 @@ export class MCPClientManager {
     );
 
     // Flatten (last-in wins for name collisions)
-    const flattened: ToolSet = {};
+    const flattened: AiSdkTool = {};
     for (const toolset of perServerTools) {
       Object.assign(flattened, toolset);
     }
