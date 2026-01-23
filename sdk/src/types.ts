@@ -2,6 +2,21 @@
  * Core types for SDK evals functionality
  */
 
+// Re-export AI SDK message types for users
+import type {
+  CoreMessage,
+  CoreUserMessage,
+  CoreAssistantMessage,
+  CoreToolMessage,
+} from "ai";
+
+export type {
+  CoreMessage,
+  CoreUserMessage,
+  CoreAssistantMessage,
+  CoreToolMessage,
+};
+
 /**
  * Built-in LLM providers with native SDK support
  */
@@ -87,6 +102,10 @@ export interface LatencyBreakdown {
  * Raw prompt result data (used internally)
  */
 export interface PromptResultData {
+  /** The original prompt/query that was sent */
+  prompt: string;
+  /** The full conversation history (user, assistant, tool messages) */
+  messages: CoreMessage[];
   text: string;
   toolCalls: ToolCall[];
   usage: TokenUsage;

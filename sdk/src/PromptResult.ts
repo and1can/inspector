@@ -7,6 +7,10 @@ import type {
   TokenUsage,
   PromptResultData,
   LatencyBreakdown,
+  CoreMessage,
+  CoreUserMessage,
+  CoreAssistantMessage,
+  CoreToolMessage,
 } from "./types.js";
 
 /**
@@ -14,8 +18,14 @@ import type {
  * Provides convenient methods to inspect tool calls, token usage, and errors.
  */
 export class PromptResult {
+  /** The original prompt/query that was sent */
+  readonly prompt: string;
+
   /** The text response from the LLM */
   readonly text: string;
+
+  /** The full conversation history */
+  private readonly _messages: CoreMessage[];
 
   /** Latency breakdown (e2e, llm, mcp) */
   private readonly _latency: LatencyBreakdown;
@@ -34,11 +44,65 @@ export class PromptResult {
    * @param data - The raw prompt result data
    */
   constructor(data: PromptResultData) {
+    this.prompt = data.prompt;
+    this._messages = data.messages;
     this.text = data.text;
     this._latency = data.latency;
     this._toolCalls = data.toolCalls;
     this._usage = data.usage;
     this._error = data.error;
+  }
+
+  /**
+   * Get the original query/prompt that was sent.
+   *
+   * @returns The original prompt string
+   */
+  getPrompt(): string {
+    return this.prompt;
+  }
+
+  /**
+   * Get the full conversation history (user, assistant, tool messages).
+   * Returns a copy to prevent external modification.
+   *
+   * @returns Array of CoreMessage objects
+   */
+  getMessages(): CoreMessage[] {
+    return [...this._messages];
+  }
+
+  /**
+   * Get only user messages from the conversation.
+   *
+   * @returns Array of CoreUserMessage objects
+   */
+  getUserMessages(): CoreUserMessage[] {
+    return this._messages.filter(
+      (m): m is CoreUserMessage => m.role === "user"
+    );
+  }
+
+  /**
+   * Get only assistant messages from the conversation.
+   *
+   * @returns Array of CoreAssistantMessage objects
+   */
+  getAssistantMessages(): CoreAssistantMessage[] {
+    return this._messages.filter(
+      (m): m is CoreAssistantMessage => m.role === "assistant"
+    );
+  }
+
+  /**
+   * Get only tool result messages from the conversation.
+   *
+   * @returns Array of CoreToolMessage objects
+   */
+  getToolMessages(): CoreToolMessage[] {
+    return this._messages.filter(
+      (m): m is CoreToolMessage => m.role === "tool"
+    );
   }
 
   /**
@@ -198,7 +262,8 @@ export class PromptResult {
    */
   static error(
     error: string,
-    latency: LatencyBreakdown | number = 0
+    latency: LatencyBreakdown | number = 0,
+    prompt: string = ""
   ): PromptResult {
     const latencyBreakdown: LatencyBreakdown =
       typeof latency === "number"
@@ -206,6 +271,8 @@ export class PromptResult {
         : latency;
 
     return new PromptResult({
+      prompt,
+      messages: [],
       text: "",
       toolCalls: [],
       usage: { inputTokens: 0, outputTokens: 0, totalTokens: 0 },

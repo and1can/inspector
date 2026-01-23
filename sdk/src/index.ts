@@ -144,6 +144,11 @@ export type {
   TokenUsage,
   LatencyBreakdown,
   PromptResultData,
+  // AI SDK message types (re-exported for convenience)
+  CoreMessage,
+  CoreUserMessage,
+  CoreAssistantMessage,
+  CoreToolMessage,
 } from "./types.js";
 
 // Percentile utilities

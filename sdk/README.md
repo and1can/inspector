@@ -294,6 +294,14 @@ When you call `testAgent.prompt()`, you get back a `PromptResult` object with ri
 ```ts
 const result = await testAgent.prompt("Add 2 and 3");
 
+// Original prompt and conversation history
+result.prompt;                           // "Add 2 and 3" - original query
+result.getPrompt();                      // Same as above
+result.getMessages();                    // Full conversation: user, assistant, tool messages
+result.getUserMessages();                // Only user messages
+result.getAssistantMessages();           // Only assistant messages
+result.getToolMessages();                // Only tool result messages
+
 // Tool calls
 result.toolsCalled();                    // string[] - e.g., ["add"]
 result.hasToolCall("add");               // boolean
@@ -317,6 +325,18 @@ result.getError();                       // string | undefined
 
 // Response text
 result.text;                             // LLM response text
+```
+
+The `getMessages()` method returns an array of AI SDK `CoreMessage` objects showing the full conversation:
+
+```ts
+const messages = result.getMessages();
+// [
+//   { role: "user", content: "Add 2 and 3" },
+//   { role: "assistant", content: [{ type: "tool-call", toolName: "add", args: { a: 2, b: 3 } }] },
+//   { role: "tool", content: [{ type: "tool-result", result: 5 }] },
+//   { role: "assistant", content: "The result of adding 2 and 3 is 5." }
+// ]
 ```
 
 ### `EvalTest` - Single Test Scenario
@@ -385,6 +405,17 @@ console.log("All:", test.getAllIterations().length);
 console.log("Failed:", test.getFailedIterations().length);
 console.log("Successful:", test.getSuccessfulIterations().length);
 console.log("Errors:", test.getFailedIterations().map(i => i.error));
+
+// Access full prompt/response details for each iteration
+for (const iteration of test.getResults().iterationDetails) {
+  if (iteration.prompts) {
+    for (const promptResult of iteration.prompts) {
+      console.log("Query:", promptResult.getPrompt());
+      console.log("Messages:", promptResult.getMessages());
+      console.log("Response:", promptResult.text);
+    }
+  }
+}
 ```
 
 #### Run Options

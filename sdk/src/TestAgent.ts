@@ -3,7 +3,7 @@
  */
 
 import { generateText, stepCountIs } from "ai";
-import type { ToolSet } from "ai";
+import type { ToolSet, CoreMessage, CoreUserMessage } from "ai";
 import { createModelFromString } from "./model-factory.js";
 import type { CreateModelOptions } from "./model-factory.js";
 import { extractToolCalls } from "./tool-extraction.js";
@@ -173,7 +173,24 @@ export class TestAgent {
       const inputTokens = usage?.inputTokens ?? 0;
       const outputTokens = usage?.outputTokens ?? 0;
 
+      // Build full message history
+      const messages: CoreMessage[] = [];
+
+      // Add user message first
+      const userMessage: CoreUserMessage = {
+        role: "user",
+        content: message,
+      };
+      messages.push(userMessage);
+
+      // Add response messages (assistant + tool messages from agentic loop)
+      if (result.response?.messages) {
+        messages.push(...result.response.messages);
+      }
+
       this.lastResult = PromptResult.from({
+        prompt: message,
+        messages,
         text: result.text,
         toolCalls,
         usage: {
@@ -191,11 +208,15 @@ export class TestAgent {
       const errorMessage =
         error instanceof Error ? error.message : String(error);
 
-      this.lastResult = PromptResult.error(errorMessage, {
-        e2eMs,
-        llmMs: totalLlmMs,
-        mcpMs: totalMcpMs,
-      });
+      this.lastResult = PromptResult.error(
+        errorMessage,
+        {
+          e2eMs,
+          llmMs: totalLlmMs,
+          mcpMs: totalMcpMs,
+        },
+        message
+      );
       this.promptHistory.push(this.lastResult);
       return this.lastResult;
     }
