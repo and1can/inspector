@@ -60,7 +60,7 @@ describe("TestAgent", () => {
     it("should create an instance with config", () => {
       const agent = new TestAgent({
         tools: {},
-        llm: "openai/gpt-4o",
+        model: "openai/gpt-4o",
         apiKey: "test-api-key",
       });
 
@@ -70,7 +70,7 @@ describe("TestAgent", () => {
     it("should accept optional parameters", () => {
       const agent = new TestAgent({
         tools: mockToolSet,
-        llm: "openai/gpt-4o",
+        model: "openai/gpt-4o",
         apiKey: "test-api-key",
         systemPrompt: "You are a test assistant.",
         temperature: 0.5,
@@ -86,7 +86,7 @@ describe("TestAgent", () => {
     it("should use default values for optional parameters", () => {
       const agent = new TestAgent({
         tools: {},
-        llm: "openai/gpt-4o",
+        model: "openai/gpt-4o",
         apiKey: "test-api-key",
       });
 
@@ -100,7 +100,7 @@ describe("TestAgent", () => {
     it("should return the configured tools", () => {
       const agent = new TestAgent({
         tools: mockToolSet,
-        llm: "openai/gpt-4o",
+        model: "openai/gpt-4o",
         apiKey: "test-api-key",
       });
 
@@ -110,17 +110,17 @@ describe("TestAgent", () => {
     it("should return the configured LLM", () => {
       const agent = new TestAgent({
         tools: {},
-        llm: "anthropic/claude-3-5-sonnet-20241022",
+        model: "anthropic/claude-3-5-sonnet-20241022",
         apiKey: "test-api-key",
       });
 
-      expect(agent.getLlm()).toBe("anthropic/claude-3-5-sonnet-20241022");
+      expect(agent.getModel()).toBe("anthropic/claude-3-5-sonnet-20241022");
     });
 
     it("should return the configured API key", () => {
       const agent = new TestAgent({
         tools: {},
-        llm: "openai/gpt-4o",
+        model: "openai/gpt-4o",
         apiKey: "my-secret-key",
       });
 
@@ -130,7 +130,7 @@ describe("TestAgent", () => {
     it("should update system prompt", () => {
       const agent = new TestAgent({
         tools: {},
-        llm: "openai/gpt-4o",
+        model: "openai/gpt-4o",
         apiKey: "test-api-key",
       });
 
@@ -141,7 +141,7 @@ describe("TestAgent", () => {
     it("should validate temperature range", () => {
       const agent = new TestAgent({
         tools: {},
-        llm: "openai/gpt-4o",
+        model: "openai/gpt-4o",
         apiKey: "test-api-key",
       });
 
@@ -181,7 +181,7 @@ describe("TestAgent", () => {
 
       const agent = new TestAgent({
         tools: mockToolSet,
-        llm: "openai/gpt-4o",
+        model: "openai/gpt-4o",
         apiKey: "test-api-key",
       });
 
@@ -215,7 +215,7 @@ describe("TestAgent", () => {
 
       const agent = new TestAgent({
         tools: mockToolSet,
-        llm: "openai/gpt-4o",
+        model: "openai/gpt-4o",
         apiKey: "test-api-key",
       });
 
@@ -240,7 +240,7 @@ describe("TestAgent", () => {
 
       const agent = new TestAgent({
         tools: {},
-        llm: "openai/gpt-4o",
+        model: "openai/gpt-4o",
         apiKey: "test-api-key",
       });
 
@@ -264,7 +264,7 @@ describe("TestAgent", () => {
 
       const agent = new TestAgent({
         tools: {},
-        llm: "openai/gpt-4o",
+        model: "openai/gpt-4o",
         apiKey: "test-api-key",
       });
 
@@ -284,7 +284,7 @@ describe("TestAgent", () => {
 
       const agent = new TestAgent({
         tools: {},
-        llm: "openai/gpt-4o",
+        model: "openai/gpt-4o",
         apiKey: "test-api-key",
       });
 
@@ -303,7 +303,7 @@ describe("TestAgent", () => {
 
       const agent = new TestAgent({
         tools: {},
-        llm: "anthropic/claude-3-5-sonnet-20241022",
+        model: "anthropic/claude-3-5-sonnet-20241022",
         apiKey: "my-api-key",
       });
 
@@ -326,7 +326,7 @@ describe("TestAgent", () => {
 
       const agent = new TestAgent({
         tools: mockToolSet,
-        llm: "openai/gpt-4o",
+        model: "openai/gpt-4o",
         apiKey: "test-key",
         systemPrompt: "You are a math tutor.",
         temperature: 0.3,
@@ -362,7 +362,7 @@ describe("TestAgent", () => {
 
       const agent = new TestAgent({
         tools: {},
-        llm: "openai/gpt-4o",
+        model: "openai/gpt-4o",
         apiKey: "test-key",
       });
 
@@ -378,7 +378,7 @@ describe("TestAgent", () => {
     it("should return empty array if no prompt has been run", () => {
       const agent = new TestAgent({
         tools: {},
-        llm: "openai/gpt-4o",
+        model: "openai/gpt-4o",
         apiKey: "test-key",
       });
 
@@ -394,7 +394,7 @@ describe("TestAgent", () => {
 
       const agent = new TestAgent({
         tools: mockToolSet,
-        llm: "openai/gpt-4o",
+        model: "openai/gpt-4o",
         apiKey: "test-key",
       });
 
@@ -418,7 +418,7 @@ describe("TestAgent", () => {
 
       const agent = new TestAgent({
         tools: mockToolSet,
-        llm: "openai/gpt-4o",
+        model: "openai/gpt-4o",
         apiKey: "test-key",
       });
 
@@ -434,7 +434,7 @@ describe("TestAgent", () => {
     it("should create a new agent with merged options", () => {
       const agent = new TestAgent({
         tools: mockToolSet,
-        llm: "openai/gpt-4o",
+        model: "openai/gpt-4o",
         apiKey: "original-key",
         systemPrompt: "Original prompt",
         temperature: 0.7,
@@ -442,12 +442,12 @@ describe("TestAgent", () => {
       });
 
       const newAgent = agent.withOptions({
-        llm: "anthropic/claude-3-5-sonnet-20241022",
+        model: "anthropic/claude-3-5-sonnet-20241022",
         temperature: 0.3,
       });
 
       // New agent has updated values
-      expect(newAgent.getLlm()).toBe("anthropic/claude-3-5-sonnet-20241022");
+      expect(newAgent.getModel()).toBe("anthropic/claude-3-5-sonnet-20241022");
       expect(newAgent.getTemperature()).toBe(0.3);
 
       // New agent inherits unchanged values
@@ -457,7 +457,7 @@ describe("TestAgent", () => {
       expect(newAgent.getMaxSteps()).toBe(10);
 
       // Original agent is unchanged
-      expect(agent.getLlm()).toBe("openai/gpt-4o");
+      expect(agent.getModel()).toBe("openai/gpt-4o");
       expect(agent.getTemperature()).toBe(0.7);
     });
 
@@ -470,7 +470,7 @@ describe("TestAgent", () => {
 
       const agent = new TestAgent({
         tools: mockToolSet,
-        llm: "openai/gpt-4o",
+        model: "openai/gpt-4o",
         apiKey: "key",
       });
 
@@ -489,7 +489,7 @@ describe("TestAgent", () => {
     it("should return undefined if no prompt has been run", () => {
       const agent = new TestAgent({
         tools: {},
-        llm: "openai/gpt-4o",
+        model: "openai/gpt-4o",
         apiKey: "test-key",
       });
 
@@ -505,7 +505,7 @@ describe("TestAgent", () => {
 
       const agent = new TestAgent({
         tools: {},
-        llm: "openai/gpt-4o",
+        model: "openai/gpt-4o",
         apiKey: "test-key",
       });
 

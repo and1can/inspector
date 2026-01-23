@@ -264,7 +264,7 @@ Here's how MCP evals works:
 ```ts
 const testAgent = new TestAgent({
     tools: await manager.getToolsForAiSdk(),
-    llm: "openai/gpt-4o",
+    model: "openai/gpt-4o",
     apiKey: process.env.OPENAI_API_KEY,
     systemPrompt: "You are an ...",
     temperature: 0.8,
@@ -548,7 +548,7 @@ await manager.connectToServer("asana");
 
 const testAgent = new TestAgent({
   tools: await manager.getToolsForAiSdk(["asana"]),
-  llm: "openai/gpt-4o",
+  model: "openai/gpt-4o",
   apiKey: process.env.OPENAI_API_KEY,
   systemPrompt: "You are an assistant with access to Asana.",
   temperature: 0.8,
@@ -595,7 +595,7 @@ describe("Asana MCP Server Evals", () => {
 
     testAgent = new TestAgent({
       tools: await manager.getToolsForAiSdk(["asana"]),
-      llm: "openai/gpt-4o",
+      model: "openai/gpt-4o",
       apiKey: process.env.OPENAI_API_KEY,
     });
 

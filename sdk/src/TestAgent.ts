@@ -17,7 +17,7 @@ export interface TestAgentConfig {
   /** Tools to provide to the LLM (AI SDK ToolSet format from manager.getToolsForAiSdk()) */
   tools: ToolSet;
   /** LLM provider and model string (e.g., "openai/gpt-4o", "anthropic/claude-3-5-sonnet-20241022") */
-  llm: string;
+  model: string;
   /** API key for the LLM provider */
   apiKey: string;
   /** System prompt for the LLM (default: "You are a helpful assistant.") */
@@ -45,7 +45,7 @@ export interface TestAgentConfig {
  *
  * const agent = new TestAgent({
  *   tools: await manager.getToolsForAiSdk(["everything"]),
- *   llm: "openai/gpt-4o",
+ *   model: "openai/gpt-4o",
  *   apiKey: process.env.OPENAI_API_KEY!,
  * });
  *
@@ -56,7 +56,7 @@ export interface TestAgentConfig {
  */
 export class TestAgent {
   private readonly tools: ToolSet;
-  private readonly llm: string;
+  private readonly model: string;
   private readonly apiKey: string;
   private systemPrompt: string;
   private temperature: number;
@@ -77,7 +77,7 @@ export class TestAgent {
    */
   constructor(config: TestAgentConfig) {
     this.tools = config.tools;
-    this.llm = config.llm;
+    this.model = config.model;
     this.apiKey = config.apiKey;
     this.systemPrompt = config.systemPrompt ?? "You are a helpful assistant.";
     this.temperature = config.temperature ?? 0.7;
@@ -134,7 +134,7 @@ export class TestAgent {
         apiKey: this.apiKey,
         customProviders: this.customProviders,
       };
-      const model = createModelFromString(this.llm, modelOptions);
+      const model = createModelFromString(this.model, modelOptions);
 
       // Instrument tools to track MCP execution time
       const instrumentedTools = this.createInstrumentedTools((ms) => {
@@ -245,7 +245,7 @@ export class TestAgent {
   withOptions(options: Partial<TestAgentConfig>): TestAgent {
     return new TestAgent({
       tools: options.tools ?? this.tools,
-      llm: options.llm ?? this.llm,
+      model: options.model ?? this.model,
       apiKey: options.apiKey ?? this.apiKey,
       systemPrompt: options.systemPrompt ?? this.systemPrompt,
       temperature: options.temperature ?? this.temperature,
@@ -264,8 +264,8 @@ export class TestAgent {
   /**
    * Get the LLM provider/model string
    */
-  getLlm(): string {
-    return this.llm;
+  getModel(): string {
+    return this.model;
   }
 
   /**
