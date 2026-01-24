@@ -78,6 +78,14 @@ export {
   formatError,
 } from "./mcp-client-manager/index.js";
 
+// Error classes
+export {
+  MCPError,
+  MCPAuthError,
+  isAuthError,
+  isMCPAuthError,
+} from "./mcp-client-manager/index.js";
+
 // Task capability utilities
 export {
   supportsTasksForToolCalls,
