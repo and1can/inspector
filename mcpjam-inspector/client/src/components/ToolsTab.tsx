@@ -294,7 +294,7 @@ export function ToolsTab({ serverConfig, serverName }: ToolsTabProps) {
     });
   }, []);
 
-  const fetchTools = async () => {
+  const fetchTools = async (reset = false) => {
     if (!serverName) {
       logger.warn("Cannot fetch tools: no serverId available");
       return;
@@ -302,13 +302,15 @@ export function ToolsTab({ serverConfig, serverName }: ToolsTabProps) {
 
     setFetchingTools(true);
     setError("");
-    setSelectedTool("");
-    setFormFields([]);
-    setResult(null);
-    setStructuredResult(null);
-    setShowStructured(false);
-    setValidationErrors(undefined);
-    setUnstructuredValidationResult("not_applicable");
+    if (reset) {
+      setSelectedTool("");
+      setFormFields([]);
+      setResult(null);
+      setStructuredResult(null);
+      setShowStructured(false);
+      setValidationErrors(undefined);
+      setUnstructuredValidationResult("not_applicable");
+    }
 
     try {
       // Call to get all of the tools for server
@@ -608,6 +610,10 @@ export function ToolsTab({ serverConfig, serverName }: ToolsTabProps) {
     setIsSaveDialogOpen(true);
   };
 
+  const handleToolRefresh = () => {
+    void fetchTools(true);
+  };
+
   const filteredSavedRequests = searchQuery.trim()
     ? savedRequests.filter((tool) => {
         const haystack =
@@ -652,7 +658,7 @@ export function ToolsTab({ serverConfig, serverName }: ToolsTabProps) {
               fetchingTools={fetchingTools}
               searchQuery={searchQuery}
               onSearchQueryChange={setSearchQuery}
-              onRefresh={fetchTools}
+              onRefresh={handleToolRefresh}
               onSelectTool={setSelectedTool}
               savedRequests={filteredSavedRequests}
               highlightedRequestId={highlightedRequestId}
