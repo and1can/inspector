@@ -69,6 +69,14 @@ if (isInIframe) {
   }
 
   const workosClientOptions = (() => {
+    const envApiHostname = import.meta.env.VITE_WORKOS_API_HOSTNAME as
+      | string
+      | undefined;
+    if (envApiHostname) {
+      return { apiHostname: envApiHostname };
+    }
+
+    // Dev mode: proxy through Vite dev server to avoid CORS
     if (typeof window === "undefined") return {};
     const disableProxy =
       (import.meta.env.VITE_WORKOS_DISABLE_LOCAL_PROXY as
@@ -85,8 +93,6 @@ if (isInIframe) {
   })();
 
   const convex = new ConvexReactClient(convexUrl);
-
-  console.log("workosClientOptions", workosClientOptions);
 
   const Providers = (
     <AuthKitProvider

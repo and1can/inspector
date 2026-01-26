@@ -11,23 +11,31 @@ WORKDIR /usr/src/app
 FROM base AS deps
 
 # Download dependencies as a separate step to take advantage of Docker's caching.
-# Leverage a cache mount to /root/.npm to speed up subsequent builds.
-# Leverage bind mounts to package.json and package-lock.json to avoid having to copy them
-# into this layer.
-RUN --mount=type=bind,source=package.json,target=package.json \
-    --mount=type=bind,source=package-lock.json,target=package-lock.json \
-    --mount=type=cache,target=/root/.npm \
-    npm ci --legacy-peer-deps
+COPY package.json package-lock.json ./
+RUN npm ci --legacy-peer-deps
 
-RUN --mount=type=bind,source=sdk/package.json,target=sdk/package.json \
-    --mount=type=bind,source=sdk/package-lock.json,target=sdk/package-lock.json \
-    --mount=type=cache,target=/root/.npm \
-    npm ci --legacy-peer-deps --prefix sdk
+COPY sdk/package.json sdk/package-lock.json ./sdk/
+RUN npm ci --legacy-peer-deps --prefix sdk
 ################################################################################
 # Create a stage for building the application.
 FROM deps AS build
 
 ENV NODE_OPTIONS="--max-old-space-size=4096"
+
+# Build-time arguments for Vite environment variables
+# These are baked into the client bundle during build
+# On Railway: set VITE_MCPJAM_HOSTED_MODE=true as a build-time variable
+ARG VITE_MCPJAM_HOSTED_MODE
+ENV VITE_MCPJAM_HOSTED_MODE=${VITE_MCPJAM_HOSTED_MODE}
+
+ARG VITE_WORKOS_API_HOSTNAME
+ENV VITE_WORKOS_API_HOSTNAME=${VITE_WORKOS_API_HOSTNAME}
+
+ARG VITE_CONVEX_URL
+ENV VITE_CONVEX_URL=${VITE_CONVEX_URL}
+
+ARG VITE_WORKOS_CLIENT_ID
+ENV VITE_WORKOS_CLIENT_ID=${VITE_WORKOS_CLIENT_ID}
 
 # Layer 1: Copy configuration files (rarely change)
 COPY tsconfig.json package.json ./

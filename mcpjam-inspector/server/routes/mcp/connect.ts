@@ -1,5 +1,6 @@
 import { Hono } from "hono";
 import "../../types/hono"; // Type extensions
+import { HOSTED_MODE } from "../../config";
 
 const connect = new Hono();
 
@@ -35,6 +36,31 @@ connect.post("/", async (c) => {
         serverConfig.url.href
       ) {
         serverConfig.url = new URL(serverConfig.url.href);
+      }
+    }
+
+    // Block STDIO connections in hosted mode (security: prevents RCE)
+    if (HOSTED_MODE && serverConfig.command) {
+      return c.json(
+        {
+          success: false,
+          error: "STDIO transport is disabled in the web app",
+        },
+        403,
+      );
+    }
+
+    // Enforce HTTPS in hosted mode
+    if (HOSTED_MODE && serverConfig.url) {
+      if (serverConfig.url.protocol !== "https:") {
+        return c.json(
+          {
+            success: false,
+            error:
+              "HTTPS is required in the web app. Please use an https:// URL.",
+          },
+          400,
+        );
       }
     }
 

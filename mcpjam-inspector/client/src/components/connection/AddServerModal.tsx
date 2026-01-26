@@ -13,6 +13,7 @@ import {
 import { ChevronDown, ChevronRight } from "lucide-react";
 import { ServerFormData } from "@/shared/types.js";
 import { detectEnvironment, detectPlatform } from "@/lib/PosthogUtils";
+import { HOSTED_MODE } from "@/lib/config";
 import { usePostHog } from "posthog-js/react";
 import { useServerForm } from "./hooks/use-server-form";
 import { AuthenticationSection } from "./shared/AuthenticationSection";
@@ -41,7 +42,8 @@ export function AddServerModal({
       if (initialData.name) {
         formState.setName(initialData.name);
       }
-      if (initialData.type) {
+      // Only set type if it's allowed (STDIO is disabled in web app)
+      if (initialData.type && !(HOSTED_MODE && initialData.type === "stdio")) {
         formState.setType(initialData.type);
       }
       if (initialData.command) {
@@ -155,7 +157,7 @@ export function AddServerModal({
             <label className="block text-sm font-medium text-foreground">
               Connection Type
             </label>
-            {formState.type === "stdio" ? (
+            {formState.type === "stdio" && !HOSTED_MODE ? (
               <div className="flex">
                 <Select
                   value={formState.type}
@@ -188,6 +190,8 @@ export function AddServerModal({
                 <Select
                   value={formState.type}
                   onValueChange={(value: "stdio" | "http") => {
+                    // STDIO is disabled in web app
+                    if (value === "stdio" && HOSTED_MODE) return;
                     const currentValue = formState.url;
                     formState.setType(value);
                     if (value === "stdio" && currentValue) {
@@ -199,7 +203,9 @@ export function AddServerModal({
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="stdio">STDIO</SelectItem>
+                    {!HOSTED_MODE && (
+                      <SelectItem value="stdio">STDIO</SelectItem>
+                    )}
                     <SelectItem value="http">HTTP</SelectItem>
                   </SelectContent>
                 </Select>
