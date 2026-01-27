@@ -21,12 +21,10 @@ import {
   SidebarContent,
   SidebarFooter,
   SidebarHeader,
-  SidebarMenu,
-  SidebarMenuItem,
 } from "@/components/ui/sidebar";
 import { usePreferencesStore } from "@/stores/preferences/preferences-provider";
 import { MCPIcon } from "@/components/ui/mcp-icon";
-import { ThemeSwitcher } from "@/components/sidebar/theme-switcher";
+import { SidebarUser } from "@/components/sidebar/sidebar-user";
 import {
   listTools,
   type ListToolsResultWithMetadata,
@@ -263,11 +261,7 @@ export function MCPSidebar({
         ))}
       </SidebarContent>
       <SidebarFooter>
-        <SidebarMenu>
-          <SidebarMenuItem>
-            <ThemeSwitcher />
-          </SidebarMenuItem>
-        </SidebarMenu>
+        <SidebarUser />
       </SidebarFooter>
     </Sidebar>
   );
