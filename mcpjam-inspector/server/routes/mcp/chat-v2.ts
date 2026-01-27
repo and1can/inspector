@@ -144,6 +144,9 @@ chatV2.post("/", async (c) => {
               break;
             }
 
+            // Track length before processing new messages to identify inherited tool calls
+            const messageHistoryLenBeforeStep = messageHistory.length;
+
             for (const m of json.messages as any[]) {
               if (m?.role === "assistant" && Array.isArray(m.content)) {
                 for (const item of m.content) {
@@ -175,6 +178,46 @@ chatV2.post("/", async (c) => {
 
             const beforeLen = messageHistory.length;
             if (hasUnresolvedToolCalls(messageHistory as any)) {
+              // Collect existing tool result IDs from message history
+              const existingToolResultIds = new Set<string>();
+              for (const msg of messageHistory) {
+                if (
+                  msg?.role === "tool" &&
+                  Array.isArray((msg as any).content)
+                ) {
+                  for (const c of (msg as any).content) {
+                    if (c?.type === "tool-result") {
+                      existingToolResultIds.add(c.toolCallId);
+                    }
+                  }
+                }
+              }
+
+              // Emit tool-input-available ONLY for inherited unresolved tool calls
+              // (i.e., tool calls that existed before this step, not new ones from this step)
+              // New tool calls already had tool-input-available emitted above (lines 164-169)
+              for (let i = 0; i < messageHistoryLenBeforeStep; i++) {
+                const msg = messageHistory[i];
+                if (
+                  msg?.role === "assistant" &&
+                  Array.isArray((msg as any).content)
+                ) {
+                  for (const item of (msg as any).content) {
+                    if (
+                      item?.type === "tool-call" &&
+                      !existingToolResultIds.has(item.toolCallId)
+                    ) {
+                      writer.write({
+                        type: "tool-input-available",
+                        toolCallId: item.toolCallId,
+                        toolName: item.toolName ?? item.name,
+                        input: item.input ?? item.parameters ?? item.args ?? {},
+                      } as any);
+                    }
+                  }
+                }
+              }
+
               await executeToolCallsFromMessages(messageHistory, {
                 clientManager: mcpClientManager,
               });
