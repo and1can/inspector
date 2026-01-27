@@ -21,10 +21,11 @@ const createMockMcpClientManager = (overrides: Record<string, any> = {}) => ({
     {
       id: "server-2",
       status: "disconnected",
-      config: { url: new URL("http://localhost:3000") },
+      config: { url: "http://localhost:3000" },
     },
   ]),
   getConnectionStatus: vi.fn().mockReturnValue("connected"),
+  pingServer: vi.fn().mockReturnValue("connected"),
   getInitializationInfo: vi.fn().mockReturnValue({
     protocolVersion: "2024-11-05",
     capabilities: { tools: {}, resources: {} },
@@ -131,13 +132,11 @@ describe("GET /api/mcp/servers/status/:serverId", () => {
     expect(data.serverId).toBe("server-1");
     expect(data.status).toBe("connected");
 
-    expect(mcpClientManager.getConnectionStatus).toHaveBeenCalledWith(
-      "server-1",
-    );
+    expect(mcpClientManager.pingServer).toHaveBeenCalledWith("server-1");
   });
 
   it("returns disconnected status for unhealthy server", async () => {
-    mcpClientManager.getConnectionStatus.mockReturnValue("disconnected");
+    mcpClientManager.pingServer.mockReturnValue("disconnected");
 
     const res = await app.request("/api/mcp/servers/status/server-2", {
       method: "GET",
@@ -149,7 +148,7 @@ describe("GET /api/mcp/servers/status/:serverId", () => {
   });
 
   it("returns 500 when status check fails", async () => {
-    mcpClientManager.getConnectionStatus.mockImplementation(() => {
+    mcpClientManager.pingServer.mockImplementation(() => {
       throw new Error("Ping timeout");
     });
 
@@ -324,7 +323,7 @@ describe("POST /api/mcp/servers/reconnect", () => {
       );
     });
 
-    it("normalizes URL string to URL object", async () => {
+    it("passes URL string as-is", async () => {
       const res = await app.request("/api/mcp/servers/reconnect", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -336,11 +335,10 @@ describe("POST /api/mcp/servers/reconnect", () => {
 
       expect(res.status).toBe(200);
       const callArgs = mcpClientManager.connectToServer.mock.calls[0][1];
-      expect(callArgs.url).toBeInstanceOf(URL);
-      expect(callArgs.url.href).toBe("http://localhost:3000/mcp");
+      expect(callArgs.url).toBe("http://localhost:3000/mcp");
     });
 
-    it("normalizes URL object with href property", async () => {
+    it("normalizes URL object with href property to string", async () => {
       const res = await app.request("/api/mcp/servers/reconnect", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -352,7 +350,7 @@ describe("POST /api/mcp/servers/reconnect", () => {
 
       expect(res.status).toBe(200);
       const callArgs = mcpClientManager.connectToServer.mock.calls[0][1];
-      expect(callArgs.url.href).toBe("http://localhost:4000/api");
+      expect(callArgs.url).toBe("http://localhost:4000/api");
     });
   });
 
