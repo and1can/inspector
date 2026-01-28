@@ -1,5 +1,5 @@
 import { ModelDefinition } from "@/shared/types.js";
-import { generateId, type UIMessage } from "ai";
+import { generateId, type UIMessage, type DynamicToolUIPart } from "ai";
 import type { MCPPromptResult } from "../chat-input/prompts/mcp-prompts-popover";
 import type { SkillResult } from "../chat-input/skills/skill-types";
 import azureLogo from "/azure_logo.png";
@@ -232,35 +232,58 @@ export function buildMcpPromptMessages(
 }
 
 /**
- * Builds UIMessages from skill results.
- * Skills are injected as user messages with format: [skill:name] content
- * If additional files are selected, they are appended with their file paths.
+ * Builds UIMessages that simulate the LLM calling loadSkill tool.
+ * Creates assistant messages with tool invocations instead of user messages.
  */
-export function buildSkillMessages(skillResults: SkillResult[]): UIMessage[] {
+export function buildSkillToolMessages(
+  skillResults: SkillResult[],
+): UIMessage[] {
   const messages: UIMessage[] = [];
 
   for (const skill of skillResults) {
     if (!skill.content) continue;
 
-    // Build the combined content: main SKILL.md + any selected files
-    let combinedContent = `[skill:${skill.name}]\n\n${skill.content}`;
+    const toolCallId = `skill-load-${skill.name}-${generateId()}`;
 
-    // Add selected files if any
+    // Format output to match server-side loadSkill response
+    const skillOutput = `# Skill: ${skill.name}\n\n${skill.content}`;
+
+    // Build parts array
+    const parts: UIMessage["parts"] = [];
+
+    // Add loadSkill tool part
+    const loadSkillPart: DynamicToolUIPart = {
+      type: "dynamic-tool",
+      toolCallId,
+      toolName: "loadSkill",
+      state: "output-available",
+      input: { name: skill.name },
+      output: skillOutput,
+    };
+    parts.push(loadSkillPart);
+
+    // Add readSkillFile parts for selected files
     if (skill.selectedFiles && skill.selectedFiles.length > 0) {
       for (const file of skill.selectedFiles) {
-        combinedContent += `\n\n--- File: ${file.path} ---\n${file.content}`;
+        const fileToolCallId = `skill-file-${generateId()}`;
+
+        const readFilePart: DynamicToolUIPart = {
+          type: "dynamic-tool",
+          toolCallId: fileToolCallId,
+          toolName: "readSkillFile",
+          state: "output-available",
+          input: { name: skill.name, path: file.path },
+          output: `# File: ${file.path}\n\n\`\`\`\n${file.content}\n\`\`\``,
+        };
+        parts.push(readFilePart);
       }
     }
 
+    // Create assistant message with tool invocations
     messages.push({
-      id: `skill-${skill.name}-${generateId()}`,
-      role: "user",
-      parts: [
-        {
-          type: "text",
-          text: combinedContent,
-        },
-      ],
+      id: `assistant-skill-${skill.name}-${generateId()}`,
+      role: "assistant",
+      parts,
     });
   }
 

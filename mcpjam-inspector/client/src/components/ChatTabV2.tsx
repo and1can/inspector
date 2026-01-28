@@ -25,7 +25,7 @@ import {
   STARTER_PROMPTS,
   formatErrorMessage,
   buildMcpPromptMessages,
-  buildSkillMessages,
+  buildSkillToolMessages,
 } from "@/components/chat-v2/shared/chat-helpers";
 import { useJsonRpcPanelVisibility } from "@/hooks/use-json-rpc-panel";
 import { CollapsedPanelStrip } from "@/components/ui/collapsed-panel-strip";
@@ -395,7 +395,7 @@ export function ChatTabV2({
       }
 
       // Build messages from skills
-      const skillMessages = buildSkillMessages(skillResults);
+      const skillMessages = buildSkillToolMessages(skillResults);
       if (skillMessages.length > 0) {
         setMessages((prev) => [...prev, ...skillMessages]);
       }
