@@ -1,6 +1,7 @@
 import { ModelDefinition } from "@/shared/types.js";
 import { generateId, type UIMessage } from "ai";
 import type { MCPPromptResult } from "../chat-input/prompts/mcp-prompts-popover";
+import type { SkillResult } from "../chat-input/skills/skill-types";
 import azureLogo from "/azure_logo.png";
 import claudeLogo from "/claude_logo.png";
 import openaiLogo from "/openai_logo.png";
@@ -224,6 +225,42 @@ export function buildMcpPromptMessages(
           },
         ],
       });
+    });
+  }
+
+  return messages;
+}
+
+/**
+ * Builds UIMessages from skill results.
+ * Skills are injected as user messages with format: [skill:name] content
+ * If additional files are selected, they are appended with their file paths.
+ */
+export function buildSkillMessages(skillResults: SkillResult[]): UIMessage[] {
+  const messages: UIMessage[] = [];
+
+  for (const skill of skillResults) {
+    if (!skill.content) continue;
+
+    // Build the combined content: main SKILL.md + any selected files
+    let combinedContent = `[skill:${skill.name}]\n\n${skill.content}`;
+
+    // Add selected files if any
+    if (skill.selectedFiles && skill.selectedFiles.length > 0) {
+      for (const file of skill.selectedFiles) {
+        combinedContent += `\n\n--- File: ${file.path} ---\n${file.content}`;
+      }
+    }
+
+    messages.push({
+      id: `skill-${skill.name}-${generateId()}`,
+      role: "user",
+      parts: [
+        {
+          type: "text",
+          text: combinedContent,
+        },
+      ],
     });
   }
 
