@@ -1,7 +1,7 @@
 {
   "name": "@mcpjam/inspector",
   "productName": "MCPJam Inspector",
-  "version": "1.5.3",
+  "version": "1.5.4",
   "type": "module",
   "description": "MCPJam Inspector",
   "license": "Apache-2.0",
@@ -59,7 +59,7 @@
     "start": "cross-env NODE_ENV=production node bin/start.js",
     "prettier-fix": "prettier --write .",
     "install:deps": "npm install --legacy-peer-deps && npm --prefix ../sdk install --legacy-peer-deps",
-    "docker:build": "docker build -t mcpjam/mcp-inspector:local .",
+    "docker:build": "docker build -t mcpjam/mcp-inspector:local -f Dockerfile ..",
     "docker:start": "docker run -d -p 127.0.0.1:6274:6274 --name mcp-inspector --pull=never mcpjam/mcp-inspector:local",
     "docker:stop": "docker stop mcp-inspector && docker rm mcp-inspector || true",
     "docker:dev": "npm run docker:stop; npm run docker:build && npm run docker:start",
