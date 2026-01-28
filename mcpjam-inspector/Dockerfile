@@ -4,7 +4,9 @@ ARG NODE_VERSION=20.20.0
 
 FROM node:${NODE_VERSION}-alpine AS base
 
-WORKDIR /usr/src/app
+# Use /usr/src/app/mcpjam-inspector as working directory to preserve sibling structure
+# This matches local dev where sdk is at ../sdk relative to mcpjam-inspector
+WORKDIR /usr/src/app/mcpjam-inspector
 
 ################################################################################
 # Create a stage for installing production dependecies.
@@ -14,8 +16,9 @@ FROM base AS deps
 COPY mcpjam-inspector/package.json mcpjam-inspector/package-lock.json ./
 RUN npm ci --legacy-peer-deps
 
-COPY sdk/package.json sdk/package-lock.json ./sdk/
-RUN npm ci --legacy-peer-deps --prefix sdk
+# SDK is at ../sdk (sibling directory) to match local dev structure
+COPY sdk/package.json sdk/package-lock.json ../sdk/
+RUN npm ci --legacy-peer-deps --prefix ../sdk
 ################################################################################
 # Create a stage for building the application.
 FROM deps AS build
@@ -41,7 +44,7 @@ ENV VITE_WORKOS_CLIENT_ID=${VITE_WORKOS_CLIENT_ID}
 COPY mcpjam-inspector/tsconfig.json mcpjam-inspector/package.json ./
 COPY mcpjam-inspector/lib/tsconfig.json mcpjam-inspector/lib/tsup.config.ts ./lib/
 COPY mcpjam-inspector/server/tsconfig.json mcpjam-inspector/server/tsup.config.ts ./server/
-COPY sdk/tsconfig.json sdk/tsup.config.ts sdk/package.json ./sdk/
+COPY sdk/tsconfig.json sdk/tsup.config.ts sdk/package.json ../sdk/
 
 # Layer 2: Copy static files that don't need building
 COPY mcpjam-inspector/bin ./bin
@@ -50,7 +53,7 @@ COPY mcpjam-inspector/bin ./bin
 COPY mcpjam-inspector/shared ./shared
 
 # Layer 4: Build SDK first (changes infrequently, required by server and client)
-COPY sdk/src ./sdk/src
+COPY sdk/src ../sdk/src
 RUN npm run build:sdk
 
 # Layer 5: Build lib (changes infrequently)
@@ -83,16 +86,16 @@ USER node
 
 # Copy package.json so that package manager commands can be used.
 COPY mcpjam-inspector/package.json .
-COPY sdk/package.json ./sdk/
+COPY sdk/package.json ../sdk/
 
 # Copy the production dependencies from the deps stage and also
 # the built application from the build stage into the image.
-COPY --from=deps /usr/src/app/node_modules ./node_modules
-COPY --from=deps /usr/src/app/sdk/node_modules ./sdk/node_modules
-COPY --from=build /usr/src/app/bin ./bin
-COPY --from=build /usr/src/app/dist ./dist
-COPY --from=build /usr/src/app/sdk/dist ./sdk/dist
-COPY --from=build /usr/src/app/.env.production ./.env.production
+COPY --from=deps /usr/src/app/mcpjam-inspector/node_modules ./node_modules
+COPY --from=deps /usr/src/app/sdk/node_modules ../sdk/node_modules
+COPY --from=build /usr/src/app/mcpjam-inspector/bin ./bin
+COPY --from=build /usr/src/app/mcpjam-inspector/dist ./dist
+COPY --from=build /usr/src/app/sdk/dist ../sdk/dist
+COPY --from=build /usr/src/app/mcpjam-inspector/.env.production ./.env.production
 
 # Expose the port that the application listens on.
 EXPOSE 6274
