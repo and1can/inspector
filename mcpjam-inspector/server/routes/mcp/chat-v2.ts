@@ -203,6 +203,16 @@ chatV2.post("/", async (c) => {
 
             for (const m of json.messages as any[]) {
               if (m?.role === "assistant" && Array.isArray(m.content)) {
+                // Attach token usage metadata to assistant messages
+                if (json.usage) {
+                  m.metadata = {
+                    inputTokens:
+                      json.usage.inputTokens ?? json.usage.promptTokens,
+                    outputTokens:
+                      json.usage.outputTokens ?? json.usage.completionTokens,
+                    totalTokens: json.usage.totalTokens,
+                  };
+                }
                 for (const item of m.content) {
                   if (item?.type === "text" && typeof item.text === "string") {
                     writer.write({ type: "text-start", id: msgId } as any);
@@ -325,11 +335,13 @@ chatV2.post("/", async (c) => {
       openai: body.openaiBaseUrl,
     });
 
+    const transformedMessages = await convertToModelMessages(messages);
+
     const result = streamText({
       model: llmModel,
       messages: scrubChatGPTAppsToolResultsForBackend(
         scrubMcpAppsToolResultsForBackend(
-          (await convertToModelMessages(messages)) as ModelMessage[],
+          transformedMessages as ModelMessage[],
           mcpClientManager,
           selectedServers,
         ),

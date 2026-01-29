@@ -4,7 +4,7 @@ import { cn } from "@/lib/chat-utils";
 import { Button } from "@/components/ui/button";
 import { TextareaAutosize } from "@/components/ui/textarea-autosize";
 import { PromptsPopover } from "@/components/chat-v2/chat-input/prompts/mcp-prompts-popover";
-import { ArrowUp, Square } from "lucide-react";
+import { ArrowUp, Square, Scan } from "lucide-react";
 import {
   Tooltip,
   TooltipContent,
@@ -72,6 +72,9 @@ interface ChatInputProps {
   onChangeSkillResults: (skillResults: SkillResult[]) => void;
   /** When true, shows icons only for a more compact layout */
   compact?: boolean;
+  /** X-Ray mode toggle */
+  xrayMode?: boolean;
+  onXrayModeChange?: (enabled: boolean) => void;
 }
 
 export function ChatInput({
@@ -105,6 +108,8 @@ export function ChatInput({
   skillResults,
   onChangeSkillResults,
   compact = false,
+  xrayMode = false,
+  onXrayModeChange,
 }: ChatInputProps) {
   const formRef = useRef<HTMLFormElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -266,8 +271,8 @@ export function ChatInput({
           autoFocus={!disabled}
         />
 
-        <div className="flex items-center justify-between gap-2 px-2 flex-wrap min-w-0">
-          <div className="flex items-center gap-1 min-w-0 flex-shrink overflow-hidden">
+        <div className="flex items-center justify-between gap-2 px-2 min-w-0">
+          <div className="flex items-center gap-1 min-w-0 flex-1 overflow-hidden">
             <ModelSelector
               currentModel={currentModel}
               availableModels={availableModels}
@@ -290,9 +295,29 @@ export function ChatInput({
               currentModel={currentModel}
               compact={compact}
             />
+            {onXrayModeChange && (
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    type="button"
+                    variant={xrayMode ? "secondary" : "ghost"}
+                    size="icon"
+                    onClick={() => onXrayModeChange(!xrayMode)}
+                    className="h-8 w-8"
+                  >
+                    <Scan className="h-4 w-4" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  {xrayMode
+                    ? "Hide X-Ray view"
+                    : "See what is sent to the model"}
+                </TooltipContent>
+              </Tooltip>
+            )}
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-shrink-0">
             <Context
               usedTokens={tokenUsage?.totalTokens ?? 0}
               usage={
