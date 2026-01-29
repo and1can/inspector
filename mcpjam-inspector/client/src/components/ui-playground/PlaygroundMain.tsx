@@ -52,6 +52,11 @@ import { createDeterministicToolMessages } from "./playground-helpers";
 import type { MCPPromptResult } from "@/components/chat-v2/chat-input/prompts/mcp-prompts-popover";
 import type { SkillResult } from "@/components/chat-v2/chat-input/skills/skill-types";
 import {
+  type FileAttachment,
+  attachmentsToFileUIParts,
+  revokeFileAttachmentUrls,
+} from "@/components/chat-v2/chat-input/attachments/file-utils";
+import {
   useUIPlaygroundStore,
   DEVICE_VIEWPORT_CONFIGS,
   type DeviceType,
@@ -256,6 +261,7 @@ export function PlaygroundMain({
   const [mcpPromptResults, setMcpPromptResults] = useState<MCPPromptResult[]>(
     [],
   );
+  const [fileAttachments, setFileAttachments] = useState<FileAttachment[]>([]);
   const [skillResults, setSkillResults] = useState<SkillResult[]>([]);
   const [modelContextQueue, setModelContextQueue] = useState<
     {
@@ -476,13 +482,11 @@ export function PlaygroundMain({
   };
 
   // Submit handler
-  const onSubmit = (event: FormEvent<HTMLFormElement>) => {
+  const onSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    if (
-      (input.trim() || mcpPromptResults.length > 0) &&
-      status === "ready" &&
-      !submitBlocked
-    ) {
+    const hasContent =
+      input.trim() || mcpPromptResults.length > 0 || fileAttachments.length > 0;
+    if (hasContent && status === "ready" && !submitBlocked) {
       if (displayMode === "fullscreen" && isWidgetFullscreen) {
         setIsFullscreenChatOpen(true);
       }
@@ -518,9 +522,18 @@ export function PlaygroundMain({
         setMessages((prev) => [...prev, ...contextMessages]);
       }
 
-      sendMessage({ text: input });
+      // Convert file attachments to FileUIPart[] format for the AI SDK
+      const files =
+        fileAttachments.length > 0
+          ? await attachmentsToFileUIParts(fileAttachments)
+          : undefined;
+
+      sendMessage({ text: input, files });
       setInput("");
       setMcpPromptResults([]);
+      // Revoke object URLs and clear file attachments
+      revokeFileAttachmentUrls(fileAttachments);
+      setFileAttachments([]);
       setModelContextQueue([]); // Clear after sending
     }
   };
@@ -568,6 +581,8 @@ export function PlaygroundMain({
     skillResults,
     onChangeSkillResults: setSkillResults,
     compact: isCompact,
+    fileAttachments,
+    onChangeFileAttachments: setFileAttachments,
     xrayMode,
     onXrayModeChange: setXrayMode,
   };

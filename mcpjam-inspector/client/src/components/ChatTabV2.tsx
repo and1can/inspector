@@ -22,6 +22,12 @@ import { StickToBottom, useStickToBottomContext } from "use-stick-to-bottom";
 import { type MCPPromptResult } from "@/components/chat-v2/chat-input/prompts/mcp-prompts-popover";
 import type { SkillResult } from "@/components/chat-v2/chat-input/skills/skill-types";
 import {
+  type FileAttachment,
+  type FileUIPart,
+  attachmentsToFileUIParts,
+  revokeFileAttachmentUrls,
+} from "@/components/chat-v2/chat-input/attachments/file-utils";
+import {
   STARTER_PROMPTS,
   formatErrorMessage,
   buildMcpPromptMessages,
@@ -72,6 +78,7 @@ export function ChatTabV2({
   const [mcpPromptResults, setMcpPromptResults] = useState<MCPPromptResult[]>(
     [],
   );
+  const [fileAttachments, setFileAttachments] = useState<FileAttachment[]>([]);
   const [skillResults, setSkillResults] = useState<SkillResult[]>([]);
   const [widgetStateQueue, setWidgetStateQueue] = useState<
     { toolCallId: string; state: unknown }[]
@@ -379,10 +386,14 @@ export function ChatTabV2({
     signUp();
   };
 
-  const onSubmit = (event: FormEvent<HTMLFormElement>) => {
+  const onSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    const hasResults = mcpPromptResults.length > 0 || skillResults.length > 0;
-    if ((input.trim() || hasResults) && status === "ready" && !submitBlocked) {
+    const hasContent =
+      input.trim() ||
+      mcpPromptResults.length > 0 ||
+      skillResults.length > 0 ||
+      fileAttachments.length > 0;
+    if (hasContent && status === "ready" && !submitBlocked) {
       posthog.capture("send_message", {
         location: "chat_tab",
         platform: detectPlatform(),
@@ -427,10 +438,19 @@ export function ChatTabV2({
         setMessages((prev) => [...prev, ...contextMessages]);
       }
 
-      sendMessage({ text: input });
+      // Convert file attachments to FileUIPart[] format for the AI SDK
+      const files =
+        fileAttachments.length > 0
+          ? await attachmentsToFileUIParts(fileAttachments)
+          : undefined;
+
+      sendMessage({ text: input, files });
       setInput("");
       setMcpPromptResults([]);
       setSkillResults([]);
+      // Revoke object URLs and clear file attachments
+      revokeFileAttachmentUrls(fileAttachments);
+      setFileAttachments([]);
       setModelContextQueue([]); // Clear after sending
     }
   };
@@ -450,6 +470,9 @@ export function ChatTabV2({
     });
     sendMessage({ text: prompt });
     setInput("");
+    // Clear any pending file attachments
+    revokeFileAttachmentUrls(fileAttachments);
+    setFileAttachments([]);
   };
 
   const sharedChatInputProps = {
@@ -481,6 +504,8 @@ export function ChatTabV2({
     systemPromptTokenCountLoading,
     mcpPromptResults,
     onChangeMcpPromptResults: setMcpPromptResults,
+    fileAttachments,
+    onChangeFileAttachments: setFileAttachments,
     skillResults,
     onChangeSkillResults: setSkillResults,
     xrayMode,
