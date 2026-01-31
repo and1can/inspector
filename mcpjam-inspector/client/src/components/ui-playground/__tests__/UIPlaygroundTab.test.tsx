@@ -489,7 +489,6 @@ describe("UIPlaygroundTab", () => {
       await waitFor(() => {
         expect(mockListTools).toHaveBeenCalledWith({
           serverId: "server-1",
-          cursor: undefined,
         });
       });
 
@@ -500,7 +499,6 @@ describe("UIPlaygroundTab", () => {
       await waitFor(() => {
         expect(mockListTools).toHaveBeenCalledWith({
           serverId: "server-2",
-          cursor: undefined,
         });
       });
     });
