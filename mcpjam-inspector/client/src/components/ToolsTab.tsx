@@ -310,6 +310,7 @@ export function ToolsTab({ serverConfig, serverName }: ToolsTabProps) {
       setValidationErrors(undefined);
       setUnstructuredValidationResult("not_applicable");
       setTools({});
+      setCursor(undefined);
     } else {
       setFetchingTools(true);
     }
