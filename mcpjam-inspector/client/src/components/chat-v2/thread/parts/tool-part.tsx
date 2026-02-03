@@ -17,7 +17,6 @@ import { UIType } from "@/lib/mcp-ui/mcp-apps-utils";
 import {
   getToolNameFromType,
   getToolStateMeta,
-  safeStringify,
   type ToolState,
   isDynamicTool,
 } from "../thread-helpers";
@@ -28,6 +27,7 @@ import {
 } from "@/components/ui/tooltip";
 import { Badge } from "@/components/ui/badge";
 import { CspDebugPanel } from "../csp-debug-panel";
+import { JsonEditor } from "@/components/ui/json-editor";
 
 export function ToolPart({
   part,
@@ -286,9 +286,15 @@ export function ToolPart({
                   <div className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground/70">
                     Input
                   </div>
-                  <pre className="whitespace-pre-wrap break-words rounded-md border border-border/30 bg-muted/20 p-2 text-[11px] leading-relaxed max-h-[300px] overflow-auto">
-                    {safeStringify(inputData)}
-                  </pre>
+                  <div className="rounded-md border border-border/30 bg-muted/20 max-h-[300px] overflow-auto">
+                    <JsonEditor
+                      viewOnly
+                      value={inputData}
+                      className="p-2 text-[11px]"
+                      collapsible
+                      defaultExpandDepth={2}
+                    />
+                  </div>
                 </div>
               )}
               {hasOutput && (
@@ -296,9 +302,15 @@ export function ToolPart({
                   <div className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground/70">
                     Result
                   </div>
-                  <pre className="whitespace-pre-wrap break-words rounded-md border border-border/30 bg-muted/20 p-2 text-[11px] leading-relaxed max-h-[300px] overflow-auto">
-                    {safeStringify(outputData)}
-                  </pre>
+                  <div className="rounded-md border border-border/30 bg-muted/20 max-h-[300px] overflow-auto">
+                    <JsonEditor
+                      viewOnly
+                      value={outputData}
+                      className="p-2 text-[11px]"
+                      collapsible
+                      defaultExpandDepth={2}
+                    />
+                  </div>
                 </div>
               )}
               {hasError && (
@@ -329,11 +341,21 @@ export function ToolPart({
                   {new Date(widgetDebugInfo.updatedAt).toLocaleTimeString()}
                 </div>
               </div>
-              <pre className="whitespace-pre-wrap break-words rounded-md border border-border/30 bg-muted/20 p-2 text-[11px] leading-relaxed max-h-[300px] overflow-auto">
-                {widgetDebugInfo.widgetState
-                  ? safeStringify(widgetDebugInfo.widgetState)
-                  : "null (no state set)"}
-              </pre>
+              <div className="rounded-md border border-border/30 bg-muted/20 max-h-[300px] overflow-auto">
+                {widgetDebugInfo.widgetState ? (
+                  <JsonEditor
+                    viewOnly
+                    value={widgetDebugInfo.widgetState}
+                    className="p-2 text-[11px]"
+                    collapsible
+                    defaultExpandDepth={2}
+                  />
+                ) : (
+                  <div className="p-2 text-[11px] text-muted-foreground">
+                    null (no state set)
+                  </div>
+                )}
+              </div>
               <div className="text-[9px] text-muted-foreground/50 mt-2">
                 Tip: Widget state persists across follow-up turns. Keep under 4k
                 tokens.
@@ -369,9 +391,15 @@ export function ToolPart({
                       <div className="text-[10px] font-medium text-muted-foreground">
                         Content (for model)
                       </div>
-                      <pre className="whitespace-pre-wrap break-words rounded-md border border-border/30 bg-muted/20 p-2 text-[11px] leading-relaxed max-h-[200px] overflow-auto">
-                        {safeStringify(widgetDebugInfo.modelContext.content)}
-                      </pre>
+                      <div className="rounded-md border border-border/30 bg-muted/20 max-h-[200px] overflow-auto">
+                        <JsonEditor
+                          viewOnly
+                          value={widgetDebugInfo.modelContext.content}
+                          className="p-2 text-[11px]"
+                          collapsible
+                          defaultExpandDepth={2}
+                        />
+                      </div>
                     </div>
                   )}
 
@@ -380,11 +408,15 @@ export function ToolPart({
                       <div className="text-[10px] font-medium text-muted-foreground">
                         Structured Content
                       </div>
-                      <pre className="whitespace-pre-wrap break-words rounded-md border border-border/30 bg-muted/20 p-2 text-[11px] leading-relaxed max-h-[200px] overflow-auto">
-                        {safeStringify(
-                          widgetDebugInfo.modelContext.structuredContent,
-                        )}
-                      </pre>
+                      <div className="rounded-md border border-border/30 bg-muted/20 max-h-[200px] overflow-auto">
+                        <JsonEditor
+                          viewOnly
+                          value={widgetDebugInfo.modelContext.structuredContent}
+                          className="p-2 text-[11px]"
+                          collapsible
+                          defaultExpandDepth={2}
+                        />
+                      </div>
                     </div>
                   )}
 
@@ -408,9 +440,15 @@ export function ToolPart({
                   <div className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground/70">
                     Input
                   </div>
-                  <pre className="whitespace-pre-wrap break-words rounded-md border border-border/30 bg-muted/20 p-2 text-[11px] leading-relaxed">
-                    {safeStringify(inputData)}
-                  </pre>
+                  <div className="rounded-md border border-border/30 bg-muted/20 max-h-[300px] overflow-auto">
+                    <JsonEditor
+                      viewOnly
+                      value={inputData}
+                      className="p-2 text-[11px]"
+                      collapsible
+                      defaultExpandDepth={2}
+                    />
+                  </div>
                 </div>
               )}
 
@@ -419,9 +457,15 @@ export function ToolPart({
                   <div className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground/70">
                     Result
                   </div>
-                  <pre className="whitespace-pre-wrap break-words rounded-md border border-border/30 bg-muted/20 p-2 text-[11px] leading-relaxed">
-                    {safeStringify(outputData)}
-                  </pre>
+                  <div className="rounded-md border border-border/30 bg-muted/20 max-h-[300px] overflow-auto">
+                    <JsonEditor
+                      viewOnly
+                      value={outputData}
+                      className="p-2 text-[11px]"
+                      collapsible
+                      defaultExpandDepth={2}
+                    />
+                  </div>
                 </div>
               )}
 
