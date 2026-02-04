@@ -8,7 +8,6 @@ import {
   BookOpen,
   FlaskConical,
   Workflow,
-  FileCode,
   Anvil,
   ListTodo,
   SquareSlash,
@@ -100,11 +99,6 @@ const navigationSections = [
         title: "Resources",
         url: "#resources",
         icon: BookOpen,
-      },
-      {
-        title: "Resource Templates",
-        url: "#resource-templates",
-        icon: FileCode,
       },
       {
         title: "Prompts",
