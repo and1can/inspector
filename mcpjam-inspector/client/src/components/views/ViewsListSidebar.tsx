@@ -29,7 +29,6 @@ export function ViewsListSidebar({
   duplicatingViewId,
   isLoading,
 }: ViewsListSidebarProps) {
-    if (editingViewId && inputRef.current) {
   return (
     <>
       {/* Header */}
