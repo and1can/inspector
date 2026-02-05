@@ -14,7 +14,7 @@ import {
   SquareSlash,
   MessageCircleQuestionIcon,
 } from "lucide-react";
-import posthog from "posthog-js";
+import { usePostHog } from "posthog-js/react";
 
 import { NavMain } from "@/components/sidebar/nav-main";
 import {
@@ -151,6 +151,7 @@ export function MCPSidebar({
   servers = {},
   ...props
 }: MCPSidebarProps) {
+  const posthog = usePostHog();
   const themeMode = usePreferencesStore((s) => s.themeMode);
   const [toolsDataMap, setToolsDataMap] = useState<
     Record<string, ListToolsResultWithMetadata | null>
