@@ -1,7 +1,8 @@
-import { useState } from "react";
+import { useState, useCallback, useMemo } from "react";
 import { ToolUIPart, DynamicToolUIPart, UITools } from "ai";
 import { UIMessage } from "@ai-sdk/react";
 import type { ContentBlock } from "@modelcontextprotocol/sdk/types.js";
+import { useConvexAuth } from "convex/react";
 
 import { ChatGPTAppRenderer } from "./chatgpt-app-renderer";
 import { MCPAppsRenderer } from "./mcp-apps-renderer";
@@ -13,6 +14,8 @@ import { SourceDocumentPart } from "./parts/source-document-part";
 import { JsonPart } from "./parts/json-part";
 import { TextPart } from "./parts/text-part";
 import { MCPUIResourcePart } from "./parts/mcp-ui-resource-part";
+import { useViewQueries } from "@/hooks/useViews";
+import { useSaveView, type ToolDataForSave } from "@/hooks/useSaveView";
 import { type DisplayMode } from "@/stores/ui-playground-store";
 import {
   callTool,
@@ -33,6 +36,8 @@ import {
   isDynamicTool,
   isToolPart,
 } from "./thread-helpers";
+import { useSharedAppState } from "@/state/app-state-context";
+import { useWidgetDebugStore } from "@/stores/widget-debug-store";
 
 export function PartSwitch({
   part,
@@ -79,9 +84,99 @@ export function PartSwitch({
     DisplayMode[] | undefined
   >();
 
+  // Get auth and app state for saving views
+  const { isAuthenticated } = useConvexAuth();
+  const appState = useSharedAppState();
+
+  // Get the Convex workspace ID (sharedWorkspaceId) from the active workspace
+  const activeWorkspace = appState.workspaces[appState.activeWorkspaceId];
+  const convexWorkspaceId = activeWorkspace?.sharedWorkspaceId ?? null;
+
+  const toolInfoFromPart =
+    isToolPart(part) || isDynamicTool(part)
+      ? getToolInfo(part as ToolUIPart<UITools> | DynamicToolUIPart)
+      : null;
+
+  // Prefer the tool's server when saving views to avoid cross-server mismatch
+  const currentServerName =
+    (toolInfoFromPart
+      ? getToolServerId(toolInfoFromPart.toolName, toolServerMap)
+      : undefined) ??
+    appState.selectedServer ??
+    "unknown";
+
+  // Get existing view names for duplicate handling
+  const { sortedViews } = useViewQueries({
+    isAuthenticated,
+    workspaceId: convexWorkspaceId,
+  });
+  const existingViewNames = useMemo(
+    () => new Set(sortedViews.map((v) => v.name)),
+    [sortedViews],
+  );
+
+  // Instant save hook
+  const { saveViewInstant, isSaving } = useSaveView({
+    isAuthenticated,
+    workspaceId: convexWorkspaceId,
+    serverName: currentServerName,
+    existingViewNames,
+  });
+
+  // Get widget debug info for the current tool
+  const toolCallId =
+    isToolPart(part) || isDynamicTool(part)
+      ? ((part as any).toolCallId as string | undefined)
+      : undefined;
+  const widgetDebugInfo = useWidgetDebugStore((s) =>
+    toolCallId ? s.widgets.get(toolCallId) : undefined,
+  );
+
+  // Create save view handler for a specific tool (instant save)
+  const createSaveViewHandler = useCallback(
+    (
+      toolName: string,
+      input: unknown,
+      output: unknown,
+      errorText: string | undefined,
+      toolState: "output-available" | "output-error",
+      uiType: UIType,
+      resourceUri?: string,
+      outputTemplate?: string,
+      toolMetadata?: Record<string, unknown>,
+    ) => {
+      return async () => {
+        const data: ToolDataForSave = {
+          uiType,
+          toolName,
+          toolCallId,
+          input,
+          output,
+          errorText,
+          state: toolState,
+          widgetDebugInfo: widgetDebugInfo
+            ? {
+                csp: widgetDebugInfo.csp,
+                protocol: widgetDebugInfo.protocol,
+                modelContext: widgetDebugInfo.modelContext,
+              }
+            : undefined,
+          resourceUri,
+          outputTemplate,
+          toolMetadata,
+          // Include cached widget HTML for offline rendering (MCP Apps only)
+          widgetHtml: widgetDebugInfo?.widgetHtml,
+        };
+
+        await saveViewInstant(data);
+      };
+    },
+    [toolCallId, widgetDebugInfo, saveViewInstant],
+  );
+
   if (isToolPart(part) || isDynamicTool(part)) {
     const toolPart = part as ToolUIPart<UITools> | DynamicToolUIPart;
-    const toolInfo = getToolInfo(toolPart);
+    const toolInfo = toolInfoFromPart ?? getToolInfo(toolPart);
     const partToolMeta = toolsMetadata[toolInfo.toolName];
     const uiType = detectUIType(partToolMeta, toolInfo.rawOutput);
     const uiResourceUri = getUIResourceUri(uiType, partToolMeta);
@@ -89,10 +184,58 @@ export function PartSwitch({
       uiType === UIType.MCP_UI ? extractUIResource(toolInfo.rawOutput) : null;
     const serverId = getToolServerId(toolInfo.toolName, toolServerMap);
 
+    // Determine why save might be disabled
+    const hasOutput =
+      toolInfo.output !== undefined ||
+      toolInfo.rawOutput !== undefined ||
+      toolInfo.toolState === "output-available" ||
+      toolInfo.toolState === "output-error";
+
+    // Can save if we have output (or output-available state) or error
+    const canSaveView = isAuthenticated && !!convexWorkspaceId && hasOutput;
+
+    // Compute reason for disabled state
+    let saveDisabledReason: string | undefined;
+    if (!isAuthenticated) {
+      saveDisabledReason = "Sign in to save views";
+    } else if (!convexWorkspaceId) {
+      saveDisabledReason = "Select a shared workspace to save views";
+    } else if (!hasOutput) {
+      saveDisabledReason = "No output to save";
+    }
+
+    // Create handler for this specific tool
+    // Use rawOutput as fallback if output is undefined
+    const outputToSave = toolInfo.output ?? toolInfo.rawOutput;
+    // OpenAI outputTemplate is stored under "openai/outputTemplate" key
+    const outputTemplate = partToolMeta?.["openai/outputTemplate"] as
+      | string
+      | undefined;
+    const handleSaveView = createSaveViewHandler(
+      toolInfo.toolName,
+      toolInfo.input,
+      outputToSave,
+      toolInfo.errorText,
+      toolInfo.toolState === "output-error"
+        ? "output-error"
+        : "output-available",
+      uiType || UIType.MCP_APPS,
+      uiResourceUri ?? undefined,
+      outputTemplate,
+      partToolMeta as Record<string, unknown> | undefined,
+    );
+
     if (uiResource) {
       return (
         <>
-          <ToolPart part={toolPart} uiType={uiType} />
+          <ToolPart
+            part={toolPart}
+            uiType={uiType}
+            onSaveView={handleSaveView}
+            canSaveView={canSaveView}
+            saveDisabledReason={saveDisabledReason}
+            isSaving={isSaving}
+          />
           <MCPUIResourcePart
             resource={uiResource.resource}
             onSendFollowUp={onSendFollowUp}
@@ -108,7 +251,13 @@ export function PartSwitch({
       if (toolInfo.toolState !== "output-available") {
         return (
           <>
-            <ToolPart part={toolPart} uiType={uiType} />
+            <ToolPart
+              part={toolPart}
+              uiType={uiType}
+              onSaveView={handleSaveView}
+              canSaveView={false}
+              isSaving={isSaving}
+            />
             <div className="border border-border/40 rounded-md bg-muted/30 text-xs text-muted-foreground px-3 py-2">
               Waiting for tool to finish executing...
             </div>
@@ -119,7 +268,14 @@ export function PartSwitch({
       if (!serverId) {
         return (
           <>
-            <ToolPart part={toolPart} uiType={uiType} />
+            <ToolPart
+              part={toolPart}
+              uiType={uiType}
+              onSaveView={handleSaveView}
+              canSaveView={canSaveView}
+              saveDisabledReason={saveDisabledReason}
+              isSaving={isSaving}
+            />
             <div className="border border-destructive/40 bg-destructive/10 text-destructive text-xs rounded-md px-3 py-2">
               Failed to load tool server id.
             </div>
@@ -140,6 +296,10 @@ export function PartSwitch({
             onExitFullscreen={onExitFullscreen}
             onRequestPip={onRequestPip}
             onExitPip={onExitPip}
+            onSaveView={handleSaveView}
+            canSaveView={canSaveView}
+            saveDisabledReason={saveDisabledReason}
+            isSaving={isSaving}
           />
           <ChatGPTAppRenderer
             serverId={serverId}
@@ -175,7 +335,14 @@ export function PartSwitch({
       if (!serverId || !uiResourceUri || !toolInfo.toolCallId) {
         return (
           <>
-            <ToolPart part={toolPart} uiType={uiType} />
+            <ToolPart
+              part={toolPart}
+              uiType={uiType}
+              onSaveView={handleSaveView}
+              canSaveView={canSaveView}
+              saveDisabledReason={saveDisabledReason}
+              isSaving={isSaving}
+            />
             <div className="border border-destructive/40 bg-destructive/10 text-destructive text-xs rounded-md px-3 py-2">
               Failed to load server id or resource uri for MCP App.
             </div>
@@ -197,6 +364,10 @@ export function PartSwitch({
             onRequestPip={onRequestPip}
             onExitPip={onExitPip}
             appSupportedDisplayModes={appSupportedDisplayModes}
+            onSaveView={handleSaveView}
+            canSaveView={canSaveView}
+            saveDisabledReason={saveDisabledReason}
+            isSaving={isSaving}
           />
           <MCPAppsRenderer
             serverId={serverId}
@@ -228,7 +399,16 @@ export function PartSwitch({
         </>
       );
     }
-    return <ToolPart part={toolPart} uiType={uiType} />;
+    return (
+      <ToolPart
+        part={toolPart}
+        uiType={uiType}
+        onSaveView={handleSaveView}
+        canSaveView={canSaveView}
+        saveDisabledReason={saveDisabledReason}
+        isSaving={isSaving}
+      />
+    );
   }
 
   if (isDataPart(part)) {

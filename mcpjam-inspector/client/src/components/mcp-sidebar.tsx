@@ -9,6 +9,7 @@ import {
   FlaskConical,
   Workflow,
   Anvil,
+  Layers,
   ListTodo,
   SquareSlash,
   MessageCircleQuestionIcon,
@@ -60,6 +61,11 @@ const navigationSections = [
         title: "App Builder",
         url: "#app-builder",
         icon: Anvil,
+      },
+      {
+        title: "Views",
+        url: "#views",
+        icon: Layers,
       },
       {
         title: "Test Cases",
