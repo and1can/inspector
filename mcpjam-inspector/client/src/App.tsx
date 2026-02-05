@@ -296,9 +296,11 @@ export default function App() {
     shouldShowActiveServerSelector
       ? {
           serverConfigs:
-            activeTab === "oauth-flow" || activeTab === "views"
+            activeTab === "oauth-flow"
               ? appState.servers
-              : connectedOrConnectingServerConfigs,
+              : activeTab === "views"
+                ? workspaceServers
+                : connectedOrConnectingServerConfigs,
           selectedServer: appState.selectedServer,
           onServerChange: setSelectedServer,
           onConnect: handleConnect,
