@@ -71,6 +71,15 @@ describe("useJsonEditor", () => {
       );
       expect(boolResult.current.content).toBe("true");
     });
+
+    it("falls back to null for undefined initial value", () => {
+      const { result } = renderHook(() =>
+        useJsonEditor({ initialValue: undefined }),
+      );
+
+      expect(result.current.content).toBe("null");
+      expect(result.current.isValid).toBe(true);
+    });
   });
 
   describe("onChange and onRawChange callbacks", () => {
@@ -125,23 +134,62 @@ describe("useJsonEditor", () => {
 
       expect(onRawChange).toHaveBeenCalledWith('{"valid": true}');
     });
+
+    it("does not call onChange for whitespace-only valid edits", () => {
+      const onChange = vi.fn();
+      const onRawChange = vi.fn();
+      const { result } = renderHook(() =>
+        useJsonEditor({
+          initialContent: '{"unchanged": true}',
+          onChange,
+          onRawChange,
+        }),
+      );
+
+      act(() => {
+        result.current.setContent('{\n  "unchanged": true\n}\n');
+      });
+
+      expect(onRawChange).toHaveBeenCalledWith('{\n  "unchanged": true\n}\n');
+      expect(onChange).not.toHaveBeenCalled();
+    });
+
+    it("still calls onChange when parsed JSON changes after whitespace edits", () => {
+      const onChange = vi.fn();
+      const { result } = renderHook(() =>
+        useJsonEditor({
+          initialContent: '{"count": 1}',
+          onChange,
+        }),
+      );
+
+      act(() => {
+        result.current.setContent('{\n  "count": 1\n}\n');
+      });
+
+      expect(onChange).not.toHaveBeenCalled();
+
+      act(() => {
+        result.current.setContent('{\n  "count": 2\n}\n');
+      });
+
+      expect(onChange).toHaveBeenCalledWith({ count: 2 });
+    });
   });
 
   describe("validation", () => {
-    it("starts with isValid true (validation happens on edit)", () => {
-      // Note: The hook doesn't validate on initial mount - only when content changes
+    it("validates initial content immediately", () => {
       const { result: validResult } = renderHook(() =>
         useJsonEditor({ initialContent: '{"valid": true}' }),
       );
       expect(validResult.current.isValid).toBe(true);
       expect(validResult.current.validationError).toBeNull();
 
-      // Even invalid initial content starts as "valid" until edited
       const { result: invalidResult } = renderHook(() =>
         useJsonEditor({ initialContent: "{invalid" }),
       );
-      // Initial state is valid=true since validation error is null on mount
-      expect(invalidResult.current.isValid).toBe(true);
+      expect(invalidResult.current.isValid).toBe(false);
+      expect(invalidResult.current.validationError).toEqual(expect.any(String));
     });
 
     it("calls onValidationError callback with error", () => {
@@ -222,6 +270,23 @@ describe("useJsonEditor", () => {
       expect(result.current.content).toBe(expectedContent);
     });
 
+    it("resets content to initial raw content when provided", () => {
+      const initialContent = '{"raw": "original"}';
+      const { result } = renderHook(() =>
+        useJsonEditor({ initialContent, initialValue: { ignored: true } }),
+      );
+
+      act(() => {
+        result.current.setContent('{"raw": "changed"}');
+      });
+
+      act(() => {
+        result.current.reset();
+      });
+
+      expect(result.current.content).toBe(initialContent);
+    });
+
     it("clears validation error on reset", () => {
       const onValidationError = vi.fn();
       const { result } = renderHook(() =>
@@ -263,6 +328,30 @@ describe("useJsonEditor", () => {
       });
 
       expect(onValidationError).toHaveBeenCalledWith(null);
+    });
+
+    it("notifies change callbacks on reset", () => {
+      const onChange = vi.fn();
+      const onRawChange = vi.fn();
+      const initialValue = { original: true };
+      const expectedContent = JSON.stringify(initialValue, null, 2);
+      const { result } = renderHook(() =>
+        useJsonEditor({ initialValue, onChange, onRawChange }),
+      );
+
+      act(() => {
+        result.current.setContent('{"changed": true}');
+      });
+
+      onChange.mockClear();
+      onRawChange.mockClear();
+
+      act(() => {
+        result.current.reset();
+      });
+
+      expect(onRawChange).toHaveBeenCalledWith(expectedContent);
+      expect(onChange).toHaveBeenCalledWith(initialValue);
     });
   });
 
@@ -417,6 +506,38 @@ describe("useJsonEditor", () => {
 
       // After undo, we're back to valid content
       expect(result.current.isValid).toBe(true);
+    });
+
+    it("undo and redo notify parent callbacks with restored state", () => {
+      const onChange = vi.fn();
+      const onRawChange = vi.fn();
+      const { result } = renderHook(() =>
+        useJsonEditor({ initialContent: '{"v": 1}', onChange, onRawChange }),
+      );
+
+      act(() => {
+        result.current.setContent('{"v": 2}');
+      });
+
+      onChange.mockClear();
+      onRawChange.mockClear();
+
+      act(() => {
+        result.current.undo();
+      });
+
+      expect(onRawChange).toHaveBeenCalledWith('{"v": 1}');
+      expect(onChange).toHaveBeenCalledWith({ v: 1 });
+
+      onChange.mockClear();
+      onRawChange.mockClear();
+
+      act(() => {
+        result.current.redo();
+      });
+
+      expect(onRawChange).toHaveBeenCalledWith('{"v": 2}');
+      expect(onChange).toHaveBeenCalledWith({ v: 2 });
     });
   });
 
