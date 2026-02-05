@@ -1,6 +1,6 @@
-import { useState, useRef, useEffect } from "react";
 import { Trash2, Pencil, Copy } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { InlineEditableText } from "@/components/ui/inline-editable-text";
 import { cn } from "@/lib/utils";
 import { type AnyView } from "@/hooks/useViews";
 
@@ -29,69 +29,7 @@ export function ViewsListSidebar({
   duplicatingViewId,
   isLoading,
 }: ViewsListSidebarProps) {
-  // Inline editing state
-  const [editingViewId, setEditingViewId] = useState<string | null>(null);
-  const [editingName, setEditingName] = useState("");
-  const [isSavingName, setIsSavingName] = useState(false);
-  const inputRef = useRef<HTMLInputElement>(null);
-
-  // Focus input when editing starts
-  useEffect(() => {
     if (editingViewId && inputRef.current) {
-      inputRef.current.focus();
-      inputRef.current.select();
-    }
-  }, [editingViewId]);
-
-  const handleStartEditing = (view: AnyView, e: React.MouseEvent) => {
-    e.stopPropagation();
-    setEditingViewId(view._id);
-    setEditingName(view.name);
-  };
-
-  const handleSaveName = async (view: AnyView) => {
-    const trimmedName = editingName.trim();
-
-    // If name unchanged or empty, cancel
-    if (!trimmedName || trimmedName === view.name) {
-      setEditingViewId(null);
-      setEditingName("");
-      return;
-    }
-
-    if (!onRenameView) {
-      setEditingViewId(null);
-      setEditingName("");
-      return;
-    }
-
-    setIsSavingName(true);
-    try {
-      await onRenameView(view, trimmedName);
-      setEditingViewId(null);
-      setEditingName("");
-    } catch (error) {
-      console.error("Failed to save name:", error);
-      // Keep editing on error so user can retry
-    } finally {
-      setIsSavingName(false);
-    }
-  };
-
-  const handleCancelEditing = () => {
-    setEditingViewId(null);
-    setEditingName("");
-  };
-
-  const handleKeyDown = (e: React.KeyboardEvent, view: AnyView) => {
-    if (e.key === "Enter") {
-      e.preventDefault();
-      handleSaveName(view);
-    } else if (e.key === "Escape") {
-      handleCancelEditing();
-    }
-  };
-
   return (
     <>
       {/* Header */}
@@ -121,43 +59,28 @@ export function ViewsListSidebar({
                   key={view._id}
                   onClick={() => onSelectView(view._id)}
                   className={cn(
-                    "group flex items-center gap-3 px-4 py-2 cursor-pointer transition-colors",
+                    "group flex items-center gap-3 px-4 py-3 cursor-pointer transition-colors",
                     isSelected ? "bg-accent" : "hover:bg-accent/50",
                   )}
                 >
                   <div className="flex-1 min-w-0 flex items-center gap-2">
-                    {editingViewId === view._id ? (
-                      <input
-                        ref={inputRef}
-                        type="text"
-                        value={editingName}
-                        onChange={(e) => setEditingName(e.target.value)}
-                        onBlur={() => handleSaveName(view)}
-                        onKeyDown={(e) => handleKeyDown(e, view)}
-                        onClick={(e) => e.stopPropagation()}
-                        disabled={isSavingName}
-                        className={cn(
-                          "flex-1 px-1.5 py-0.5 text-sm bg-background border border-input rounded focus:outline-none focus:ring-1 focus:ring-ring",
-                          isSavingName && "opacity-50",
-                        )}
-                      />
-                    ) : (
-                      <>
-                        <span
-                          onClick={(e) => handleStartEditing(view, e)}
-                          className={cn(
-                            "truncate text-sm cursor-text",
-                            isSelected ? "font-medium" : "font-normal",
-                          )}
-                          title="Click to rename"
-                        >
-                          {view.name}
-                        </span>
-                        <span className="text-xs text-muted-foreground truncate shrink-0">
-                          {view.toolName}
-                        </span>
-                      </>
-                    )}
+                    <InlineEditableText
+                      value={view.name}
+                      onSave={
+                        onRenameView
+                          ? (newName) => onRenameView(view, newName)
+                          : undefined
+                      }
+                      disabled={!onRenameView}
+                      onClick={(e) => e.stopPropagation()}
+                      className={cn(
+                        "text-sm",
+                        isSelected ? "font-medium" : "font-normal",
+                      )}
+                    />
+                    <span className="text-xs text-muted-foreground truncate shrink-0">
+                      {view.toolName}
+                    </span>
                   </div>
 
                   <div

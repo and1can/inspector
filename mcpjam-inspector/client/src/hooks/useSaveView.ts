@@ -300,19 +300,17 @@ export function useSaveView({
     ],
   );
 
-  // Instant save: uses tool name as view name with automatic duplicate handling
+  // Instant save: uses server-tool name as view name with automatic duplicate handling
   const saveViewInstant = useCallback(
     async (toolData: ToolDataForSave) => {
-      const uniqueName = generateUniqueViewName(
-        toolData.toolName,
-        existingViewNames,
-      );
+      const baseName = `${serverName}-${toolData.toolName}`;
+      const uniqueName = generateUniqueViewName(baseName, existingViewNames);
       return saveView(toolData, {
         name: uniqueName,
         defaultContext: currentDisplayContext,
       });
     },
-    [saveView, existingViewNames, currentDisplayContext],
+    [saveView, serverName, existingViewNames, currentDisplayContext],
   );
 
   return {
