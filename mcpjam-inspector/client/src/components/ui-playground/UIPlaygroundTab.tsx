@@ -107,7 +107,7 @@ export function UIPlaygroundTab({
     });
   }, []);
 
-  // Tools metadata for filtering OpenAI apps
+  // Tools metadata used for deterministic injection and invocation messaging
   const [toolsMetadata, setToolsMetadata] = useState<
     Record<string, Record<string, unknown>>
   >({});
@@ -117,6 +117,7 @@ export function UIPlaygroundTab({
     useToolExecution({
       serverName,
       selectedTool,
+      toolsMetadata,
       formFields,
       setIsExecuting,
       setExecutionError,
