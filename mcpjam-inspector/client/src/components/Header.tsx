@@ -2,9 +2,11 @@ import { AuthUpperArea } from "./auth/auth-upper-area";
 import { SidebarTrigger } from "./ui/sidebar";
 import { useHeaderIpc } from "./ipc/use-header-ipc";
 import { WorkspaceSelector } from "./connection/WorkspaceSelector";
-import { WorkspaceMembers } from "./workspace/WorkspaceMembers";
+import { WorkspaceMembersFacepile } from "./workspace/WorkspaceMembersFacepile";
 import { Workspace } from "@/state/app-types";
 import { ActiveServerSelectorProps } from "./ActiveServerSelector";
+import { useConvexAuth } from "convex/react";
+import { useAuth } from "@workos-inc/authkit-react";
 
 interface HeaderProps {
   workspaces: Record<string, Workspace>;
@@ -32,6 +34,8 @@ export const Header = ({
   isLoadingWorkspaces,
 }: HeaderProps) => {
   const { activeIpc, dismissActiveIpc } = useHeaderIpc();
+  const { isAuthenticated } = useConvexAuth();
+  const { user } = useAuth();
 
   const activeWorkspace = workspaces[activeWorkspaceId];
 
@@ -53,13 +57,16 @@ export const Header = ({
             onDeleteWorkspace={onDeleteWorkspace}
             isLoading={isLoadingWorkspaces}
           />
-          <WorkspaceMembers
-            workspaceName={activeWorkspace?.name || "Workspace"}
-            workspaceServers={activeWorkspace?.servers || {}}
-            sharedWorkspaceId={activeWorkspace?.sharedWorkspaceId}
-            onWorkspaceShared={onWorkspaceShared}
-            onLeaveWorkspace={handleLeaveWorkspace}
-          />
+          {isAuthenticated && user && (
+            <WorkspaceMembersFacepile
+              workspaceName={activeWorkspace?.name || "Workspace"}
+              workspaceServers={activeWorkspace?.servers || {}}
+              currentUser={user}
+              sharedWorkspaceId={activeWorkspace?.sharedWorkspaceId}
+              onWorkspaceShared={onWorkspaceShared}
+              onLeaveWorkspace={handleLeaveWorkspace}
+            />
+          )}
         </div>
         <AuthUpperArea activeServerSelectorProps={activeServerSelectorProps} />
       </div>
