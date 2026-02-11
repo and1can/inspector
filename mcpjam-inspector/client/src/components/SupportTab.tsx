@@ -71,8 +71,8 @@ export function SupportTab() {
           </div>
           <p className="text-center text-sm text-muted-foreground">
             or email us at{" "}
-            <a className="underline" href="mailto:matthew@mcpjam.com">
-              matthew@mcpjam.com
+            <a className="underline" href="mailto:founders@mcpjam.com">
+              founders@mcpjam.com
             </a>
           </p>
         </div>
